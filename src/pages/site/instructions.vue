@@ -1,0 +1,81 @@
+<template>
+  <div class="min-h-screen pt-20 bg-white">
+    <section class="py-8 px-4 border-b border-gray-200">
+      <div class="max-w-4xl mx-auto text-center">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Treatment Instructions</h1>
+        <p class="text-base text-gray-700">General guidance for using FitByShot treatments safely and effectively</p>
+      </div>
+    </section>
+
+    <section class="py-12 bg-white">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="space-y-8">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Before You Begin</h2>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Complete the telehealth intake form thoroughly and accurately</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Wait for medical review and approval (0-48 hours)</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Review all product-specific instructions included with your prescription</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Contact our medical team with any questions before starting treatment</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Storage Guidelines</h2>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Store medications according to product-specific instructions</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Most injectable treatments require refrigeration</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Keep medications out of reach of children and pets</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Check expiration dates and do not use expired medications</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Administration</h2>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Follow dosing instructions exactly as prescribed by your medical provider</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>For injections, use proper sterile technique and rotate injection sites</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Dispose of needles and syringes safely in a sharps container</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Keep a treatment log to track your progress</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Monitoring &amp; Support</h2>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Track your progress and any side effects</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Report any concerning symptoms to our medical team immediately</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Attend follow-up consultations as recommended</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Contact us with any questions about your treatment</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">When to Seek Help</h2>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">Contact our medical team if you experience:</p>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Severe or unexpected side effects</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Allergic reactions (rash, difficulty breathing, swelling)</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Concerns about your treatment plan or progress</span></li>
+              <li class="flex items-start"><span class="text-emerald-600 mr-2 font-bold">•</span><span>Questions about dosing or administration</span></li>
+            </ul>
+            <p class="text-sm text-gray-700 leading-relaxed mt-3">For medical emergencies, call 911 or go to the nearest emergency room.</p>
+          </div>
+
+          <div class="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Product-Specific Instructions</h3>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              Each treatment comes with detailed product-specific instructions. Always refer to the instructions included with your prescription for complete information about your specific treatment, including dosing, administration technique, storage, and potential side effects.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<route lang="yaml">
+meta:
+  layout: public
+  public: true
+</route>

@@ -1,0 +1,153 @@
+@tailwind components;
+@tailwind utilities;
+
+.public-site {
+  font-family: 'Open Sans', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.public-site * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.public-site img,
+.public-site video {
+  max-width: 100%;
+  height: auto;
+}
+
+.public-site .btn-primary {
+  background: linear-gradient(to right, #059669, #2563eb);
+  color: #fff;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+  text-align: center;
+  font-size: 0.875rem;
+}
+.public-site .btn-primary:hover {
+  background: linear-gradient(to right, #047857, #1d4ed8);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+.public-site .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.public-site .btn-secondary {
+  background: #fff;
+  color: #047857;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: color 0.2s;
+  border: 2px solid #059669;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+.public-site .btn-secondary:hover {
+  background: #f9fafb;
+}
+
+.public-site .card {
+  background: #fff;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+.public-site .card:hover {
+  border-color: #6ee7b7;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.public-site .gradient-bg {
+  background: linear-gradient(to bottom right, #10b981, #2563eb);
+}
+
+.public-site .gradient-bg-light {
+  background: linear-gradient(to bottom right, #ecfdf5, #eff6ff);
+}
+
+.public-site .section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+@media (min-width: 768px) {
+  .public-site .section-title {
+    font-size: 1.875rem;
+  }
+}
+
+.public-site .text-stroke {
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.8),
+    1px -1px 0 rgba(0, 0, 0, 0.8),
+    -1px 1px 0 rgba(0, 0, 0, 0.8),
+    1px 1px 0 rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(0, 0, 0, 0.3);
+}
+
+.public-site .text-stroke-light {
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.5),
+    1px -1px 0 rgba(0, 0, 0, 0.5),
+    -1px 1px 0 rgba(0, 0, 0, 0.5),
+    1px 1px 0 rgba(0, 0, 0, 0.5),
+    0 0 6px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.public-site .animate-fadeInUp {
+  animation: fadeInUp 0.8s ease-out;
+  will-change: opacity, transform;
+}
+
+.public-site .scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.public-site .scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.public-site .line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.public-site .line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.public-site .scroll-mt-24 {
+  scroll-margin-top: 6rem;
+}
+
+.public-site a {
+  text-decoration: none;
+}
