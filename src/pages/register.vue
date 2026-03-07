@@ -81,7 +81,7 @@ const onSubmit = () => {
   refVForm.value?.validate().then(({ valid: isValid }) => {
     if (isValid){
       // register()
-      authDataStore.register({}, {
+      authDataStore.register({
         firstName: firstName.value,
         lastName: lastName.value,
         email: email.value,

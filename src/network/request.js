@@ -1,5 +1,48 @@
 import { getApiToken } from "@/store/authData"
+import { LOGIN_URL, VERIFY_2FA_URL } from "@/network/const"
 import axios from "axios"
+import { devLog } from '@/utils/devLogger'
+
+const clearSessionAndRedirect = () => {
+  try {
+    localStorage.removeItem('userData')
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('userAbilities')
+  } catch (e) {
+    // localStorage might be unavailable, ignore
+  }
+  if (typeof window !== 'undefined' && window.location?.pathname !== '/login') {
+    devLog('Auth interceptor redirecting to login')
+    window.location.href = '/login'
+  }
+}
+
+const AUTH_FAILURE_IGNORE_ENDPOINTS = [
+  LOGIN_URL,
+  VERIFY_2FA_URL,
+]
+
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    const status = error?.response?.status
+    const url = error?.config?.url || ""
+    const shouldIgnoreEndpoint = AUTH_FAILURE_IGNORE_ENDPOINTS.some(endpoint => endpoint && url.includes(endpoint))
+    let hasToken = false
+    try {
+      hasToken = !!localStorage.getItem('accessToken')
+    } catch (e) {
+      hasToken = false
+    }
+    const isOtpRoute = typeof window !== 'undefined' && window.location?.pathname === '/otp'
+    const shouldHandleLogout = (status === 401 || status === 419) && !shouldIgnoreEndpoint && hasToken && !isOtpRoute
+    if (shouldHandleLogout) {
+      devLog('Auth interceptor clearing session due to 401/419', { url, status })
+      clearSessionAndRedirect()
+    }
+    return Promise.reject(error)
+  },
+)
 
 export function getRequest(url, headers, params, callback) {    
   headers.token = getApiToken()

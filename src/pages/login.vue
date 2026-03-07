@@ -14,6 +14,7 @@ import { storeToRefs } from 'pinia'
 import { watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { VForm } from 'vuetify/components'
+import { devLog } from '@/utils/devLogger'
 
 const authThemeImg = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
 const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
@@ -37,12 +38,29 @@ const rememberMe = ref(false)
 
 const onSubmit = () => {
   refVForm.value?.validate().then(({ valid: isValid }) => {
-    if (isValid)      
-      authDataStore.login({
-        email: email.value,
-        password: password.value,
-      })
+    if (!isValid) return
+    handleLogin()
   })
+}
+
+const handleLogin = async () => {
+  try {
+    devLog('Auth submitting login form', { email: email.value })
+    const result = await authDataStore.login({
+      email: email.value,
+      password: password.value,
+    })
+    devLog('Auth login result', result)
+    if (result?.requiresTwoFactor) {
+      devLog('Auth redirecting to OTP challenge')
+      router.push('/otp')
+      return
+    }
+    // If backend already returned a session, lobby watcher will fire
+  } catch (error) {
+    devLog('Auth login handler error', { message: error?.message })
+    // Errors surface via the auth store watcher/toast
+  }
 }
 
 /**
@@ -160,9 +178,12 @@ watch(error, value => {
                     v-model="rememberMe"
                     label="Remember me"
                   />                  
-                  <a href="/forgot-password" class="text-primary ms-2 mb-1">
+                  <RouterLink
+                    class="text-primary ms-2 mb-1"
+                    :to="{ name: 'forgot-password' }"
+                  >
                     Forgot Password?
-                  </a>
+                  </RouterLink>
                 </div>
 
                 <VBtn

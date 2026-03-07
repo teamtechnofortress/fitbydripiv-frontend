@@ -1,4 +1,5 @@
 import { canNavigate } from '@/@layouts/plugins/casl';
+import EmailVerification from '@/views/EmailVerification.vue';
 import NProgress from 'nprogress';
 import { setupLayouts } from 'virtual:generated-layouts';
 import { createRouter, createWebHistory } from 'vue-router';
@@ -16,6 +17,12 @@ const router = createRouter({
       path: '/pages/account-settings',
       redirect: () => ({ name: 'pages-account-settings-tab', params: { tab: 'account' } }),
     },    
+    {
+      path: '/email-verify',
+      name: 'EmailVerification',
+      component: EmailVerification,
+      meta: { public: true },
+    },
     ...setupLayouts(routes),
   ],
 })
@@ -26,7 +33,9 @@ router.beforeEach((to, from) => {
     NProgress.set(0.1);
   }
 
-  const isPublicRoute = to.meta?.public || (to.name && String(to.name).startsWith('site'))
+  const isPublicRoute = to.meta?.public
+    || to.path === '/otp'
+    || (to.name && String(to.name).startsWith('site'))
   if (isPublicRoute) {
     return;
   }

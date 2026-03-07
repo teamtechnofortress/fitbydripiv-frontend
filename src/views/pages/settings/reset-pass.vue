@@ -49,7 +49,7 @@ function saveForm() {
             }
 
             //submit
-            Network.postRequest(Const.RESET_PASSWORD_URL, {}, {newPassword: password.value}, 
+            Network.postRequest(Const.CHANGE_PASSWORD_URL, {}, {newPassword: password.value}, 
                 (response)=>{
                     if(response.data.success){
                         toast.success(`Successfully Resettled Password.`);

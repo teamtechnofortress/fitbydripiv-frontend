@@ -10,9 +10,20 @@ import Pages from 'vite-plugin-pages'
 import Layouts from 'vite-plugin-vue-layouts'
 import vuetify from 'vite-plugin-vuetify'
 
+const devLoggerPlugin = {
+  name: 'dev-logger-plugin',
+  configureServer(server) {
+    server.ws.on('custom:debug-log', data => {
+      const timestamp = new Date().toISOString()
+      console.log(`【${timestamp}】[DEV LOG] ${data?.message || ''}`, data?.payload ?? '')
+    })
+  },
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    devLoggerPlugin,
     vue(),
     vueJsx(),
 

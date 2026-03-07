@@ -1,8 +1,9 @@
 <script setup>
 import * as Network from "@/network";
 import * as Const from "@/network/const";
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useToast } from "vue-toastification";
+import { devLog } from '@/utils/devLogger'
 
 const toast = useToast();
 const loading = ref(false);
@@ -19,17 +20,21 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 function updateDialog(value) {
+  devLog('Security dialog update', { open: value })
   emit('update:modelValue', value)
 }
 
 function saveForm() {      
+  devLog('Security dialog save triggered', { count: memberList.value.length })
   loading.value = true;
   Network.postRequest(Const.SECURITY_SAVE_URL, {}, {userList: [...memberList.value]}, 
     (response)=>{
       loading.value = false;
       if(response.data.success){
+          devLog('Security dialog save success')
           toast.success(`Successfully Saved Security Settings.`);          
       }else{
+          devLog('Security dialog save failed', { error: response.data.err_msg })
           toast.error(`Password is incorrect. Please try again.`);          
       }
       setTimeout(() => {
@@ -40,37 +45,56 @@ function saveForm() {
 }
 
 function closeDialog() {
+  devLog('Security dialog closed')
   emit('update:modelValue', false)
 }
 
+const hasAccessToken = () => {
+  try {
+    return !!localStorage.getItem('accessToken')
+  } catch (error) {
+    return false
+  }
+}
+
 const getAllMembers = () => {
+  if (!hasAccessToken()) {
+    devLog('Security dialog skipped getAllMembers: missing token')
+    return
+  }
+  devLog('Security dialog fetching members')
   loading.value = true;
   Network.getRequest(`${Const.GET_ALL_MEMBERS}`, {}, {}, 
     (response) => {
       loading.value = false;
       if(response.data.success){        
         const data = response.data.data;
-        memberList.value = data.membersList.map(user => {
-          return {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role,
-            status: user.status == 1 ? true : false
-          };
-        }) || [];
+        memberList.value = data.membersList.map(user => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          status: user.status == 1,
+        })) || [];
+        devLog('Security dialog members fetched', { count: memberList.value.length })
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        devLog('Security dialog members fetch failed', { error: response.data.err_msg })
         toast.error(response.data.err_msg || "Failed to load members.");
       }
     }
   );
 }
 
+watch(() => props.modelValue, value => {
+  if (value) {
+    getAllMembers()
+  }
+})
+
 onMounted(() => {
-  if(loading.value == false){
-    getAllMembers();  
+  if (props.modelValue) {
+    getAllMembers();
   }
 });
 

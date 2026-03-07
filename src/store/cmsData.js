@@ -3,7 +3,7 @@ import axios from 'axios'
 
 const isLocalDevHost = ["localhost", "127.0.0.1"].includes(window.location.hostname)
 const API_BASE = isLocalDevHost
-  ? "http://localhost:8000/api/v1/cms"
+  ? "http://localhost:8001/api/v1/cms"
   : "/api/v1/cms"
 
 export const useCmsDataStore = defineStore('cmsData', {

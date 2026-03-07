@@ -1,11 +1,9 @@
 // In local Vite dev (localhost:5173), API runs on Laravel localhost:8001.
 // In staging/prod, same-origin is preferred.
 const isLocalDevHost = ["localhost", "127.0.0.1"].includes(window.location.hostname)
-
 const defaultApiBase = isLocalDevHost
   ? "http://localhost:8001/api/v1"
   : `${window.location.origin}/api/v1`
-
 const SERVER_URL = (
   import.meta.env.VITE_API_BASE_URL
   || defaultApiBase
@@ -17,8 +15,17 @@ export const SERVER_DOMAIN = SERVER_URL.replace(/\/api\/v1$/, '')
 export const LOGIN_URL = SERVER_URL + "/auth/login"
 export const LOGOUT_URL = SERVER_URL + "/auth/logout"
 export const REGISTER_URL = SERVER_URL + "/auth/register"
+export const FORGOT_PASSWORD_URL = SERVER_URL + "/auth/forgot-password"
 export const RESET_PASSWORD_URL  = SERVER_URL + "/auth/reset-password"
+export const CHANGE_PASSWORD_URL  = SERVER_URL + "/auth/change-password"
 export const CONFIRM_PASSWORD_URL  = SERVER_URL + "/auth/confirm-password"
+export const VERIFY_2FA_URL = SERVER_URL + "/auth/verify-2fa"
+export const ENABLE_2FA_URL = SERVER_URL + "/auth/enable-2fa"
+export const CONFIRM_2FA_URL = SERVER_URL + "/auth/confirm-2fa"
+export const DISABLE_2FA_URL = SERVER_URL + "/auth/disable-2fa"
+export const REGENERATE_2FA_URL = SERVER_URL + "/auth/regenerate-2fa"
+export const GET_EMAIL_STATUS_URL = SERVER_URL + "/auth/email/status"
+export const SEND_EMAIL_VERIFICATION_URL = SERVER_URL + "/auth/email/send-verification"
 export const SECURITY_SAVE_URL  = SERVER_URL + "/auth/security-save"
 export const GET_PATIENT_BY_NAME = SERVER_URL + "/get/patient-by-name"
 export const GET_PATIENT_BY_PHONE = SERVER_URL + "/get/patient-by-phone"
@@ -28,6 +35,7 @@ export const GET_PATIENT_AND_ENCOUNTER_BY_ID = SERVER_URL + "/get/patient-encoun
 export const SAVE_INTAKE1_URL = SERVER_URL + "/save/intake1"
 export const SAVE_INTAKE2_URL = SERVER_URL + "/save/intake2"
 export const SAVE_INTAKE3_URL = SERVER_URL + "/save/intake3"
+export const GET_TWO_FACTOR_STATUS_URL = SERVER_URL + "/auth/2fa-status"
 
 export const GET_ALL_MEMBERS    = SERVER_URL + "/get/members"
 export const GET_ALL_STAFFS    = SERVER_URL + "/get/staffs"
