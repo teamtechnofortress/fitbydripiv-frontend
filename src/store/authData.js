@@ -4,6 +4,7 @@ import {
   // FORGOT_PASSWORD_URL,
   LOGIN_URL,
   REGISTER_URL,
+  SIMPLE_REGISTER_URL,
   VERIFY_2FA_URL,
   ENABLE_2FA_URL,
   CONFIRM_2FA_URL,
@@ -228,6 +229,31 @@ export const useAuthDataStore = defineStore('authData', {
       } catch (error) {
         const message = buildErrorMessage(error, "Unable to register")
         this.setAuthError("Register Failed", message)
+        this.clearPersistedSession()
+        throw new Error(message)
+      } finally {
+        this.loading = false
+      }
+    },
+    async simpleRegister(data) {
+      this.error = null
+      this.loading = true
+      try {
+        devLog('Auth simple register attempt', { email: data?.email })
+        const response = await axios.post(SIMPLE_REGISTER_URL, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          password: data.password,
+        })
+        const payload = extractPayload(response)
+        devLog('Auth simple register success', { userId: payload?.user?.id })
+        this.persistAuthSession(payload)
+        return payload
+      } catch (error) {
+        devLog('Auth simple register failed', { message: error?.message })
+        const message = buildErrorMessage(error, "Unable to register")
+        this.setAuthError("Simple Register Failed", message)
         this.clearPersistedSession()
         throw new Error(message)
       } finally {

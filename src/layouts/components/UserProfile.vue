@@ -11,6 +11,7 @@ const router = useRouter()
 const ability = useAppAbility()
 const userData = ref(JSON.parse(localStorage.getItem('userData') || 'null'))
 const toast = useToast()
+const EMAIL_PROMPT_STORAGE_KEY = 'pendingEmailVerificationPrompt'
 const showResetPassDialog = ref(false)
 const twoFactorLoading = ref(false)
 const twoFactorStatus = ref({
@@ -25,6 +26,7 @@ const emailStatus = ref({
   email_verified_at: userData.value?.email_verified_at || null,
 })
 const emailVerified = computed(() => !!emailStatus.value?.email_verified)
+const showEmailVerifyDialog = ref(false)
 
 const logout = () => {
   Network.postRequest(Const.LOGOUT_URL, {}, null, response => {
@@ -68,7 +70,49 @@ const fetchEmailStatus = () => {
         email_verified_at: payload.email_verified_at || null,
       }
     }
+    maybePromptForEmailVerification()
   })
+}
+
+const hasPendingEmailPrompt = () => {
+  try {
+    return localStorage.getItem(EMAIL_PROMPT_STORAGE_KEY) === 'true'
+  } catch (error) {
+    return false
+  }
+}
+
+const clearPendingEmailPrompt = () => {
+  try {
+    localStorage.removeItem(EMAIL_PROMPT_STORAGE_KEY)
+  } catch (error) {
+    // ignore storage errors
+  }
+}
+
+const maybePromptForEmailVerification = () => {
+  if (emailVerified.value) {
+    clearPendingEmailPrompt()
+    showEmailVerifyDialog.value = false
+    return
+  }
+  if (hasPendingEmailPrompt()) {
+    setTimeout(() => {
+      if (!emailVerified.value) {
+        showEmailVerifyDialog.value = true
+      }
+      clearPendingEmailPrompt()
+    }, 600)
+  }
+}
+
+const goToEmailVerificationPage = () => {
+  showEmailVerifyDialog.value = false
+  router.push({ path: '/email-verification' })
+}
+
+const dismissEmailVerificationPrompt = () => {
+  showEmailVerifyDialog.value = false
 }
 
 onMounted(() => {
@@ -268,7 +312,42 @@ onMounted(() => {
       <!-- !SECTION -->
     </VAvatar>
   </VBadge>
-<ResetPass v-model="showResetPassDialog" />          
+<ResetPass v-model="showResetPassDialog" />
+
+<VDialog
+  v-model="showEmailVerifyDialog"
+  persistent
+  max-width="520"
+>
+  <VCard class="pa-4">
+    <VCardTitle class="text-h5 pb-1">
+      Verify your email
+    </VCardTitle>
+    <VCardText class="pt-0">
+      <p class="text-body-1 mb-2">
+        We need to confirm your email ({{ emailStatus.email || 'your email' }}) before unlocking every feature.
+      </p>
+      <p class="text-body-2 mb-0">
+        Click below to open the verification page and send yourself a new link. You can continue exploring and verify later if you prefer.
+      </p>
+    </VCardText>
+    <VCardActions class="justify-end gap-2 flex-wrap">
+      <VBtn
+        variant="text"
+        color="secondary"
+        @click="dismissEmailVerificationPrompt"
+      >
+        Remind me later
+      </VBtn>
+      <VBtn
+        color="primary"
+        @click="goToEmailVerificationPage"
+      >
+        Go to Email Verification
+      </VBtn>
+    </VCardActions>
+  </VCard>
+</VDialog>          
 </template>
 
 <style scoped>

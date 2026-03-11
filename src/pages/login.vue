@@ -192,6 +192,16 @@ watch(error, value => {
                 >
                   Login
                 </VBtn>
+
+                <VBtn
+                  block
+                  variant="outlined"
+                  class="mt-3"
+                  color="primary"
+                  @click="router.push({ name: 'simple-register' })"
+                >
+                  Create Account
+                </VBtn>
               </VCol>
 
               <VCol

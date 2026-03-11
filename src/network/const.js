@@ -15,6 +15,7 @@ export const SERVER_DOMAIN = SERVER_URL.replace(/\/api\/v1$/, '')
 export const LOGIN_URL = SERVER_URL + "/auth/login"
 export const LOGOUT_URL = SERVER_URL + "/auth/logout"
 export const REGISTER_URL = SERVER_URL + "/auth/register"
+export const SIMPLE_REGISTER_URL = SERVER_URL + "/auth/simple-register"
 export const FORGOT_PASSWORD_URL = SERVER_URL + "/auth/forgot-password"
 export const RESET_PASSWORD_URL  = SERVER_URL + "/auth/reset-password"
 export const CHANGE_PASSWORD_URL  = SERVER_URL + "/auth/change-password"
