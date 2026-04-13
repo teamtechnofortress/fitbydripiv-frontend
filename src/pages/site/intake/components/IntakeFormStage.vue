@@ -1,5 +1,46 @@
 <template>
   <div class="intake-form-stage">
+    <div v-if="submissionComplete || validationError || submitError" class="status-stack">
+      <div v-if="submissionComplete" class="status-banner status-banner-success">
+        <div class="status-banner-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="status-banner-copy">
+          <strong class="status-banner-title">Intake submitted</strong>
+          <span class="status-banner-text">{{ submissionMessage }}</span>
+        </div>
+      </div>
+
+      <div v-if="validationError" class="status-banner status-banner-error">
+        <div class="status-banner-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="status-banner-copy">
+          <strong class="status-banner-title">Please review this step</strong>
+          <span class="status-banner-text">{{ validationError }}</span>
+        </div>
+      </div>
+
+      <div v-if="submitError" class="status-banner status-banner-error status-banner-submit">
+        <div class="status-banner-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M15 9l-6 6m0-6l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="status-banner-copy">
+          <strong class="status-banner-title">Submission failed</strong>
+          <span class="status-banner-text">{{ submitError }}</span>
+        </div>
+      </div>
+    </div>
+
     <div v-if="confirmedPatient" class="patient-info-card">
       <div class="patient-card-header">
         <div class="patient-badge">Existing Patient</div>
@@ -17,6 +58,10 @@
         <div class="patient-detail">
           <span class="detail-label">Email</span>
           <span class="detail-value">{{ confirmedPatient.email }}</span>
+        </div>
+        <div v-if="confirmedPatient.phone" class="patient-detail">
+          <span class="detail-label">Phone</span>
+          <span class="detail-value">{{ confirmedPatient.phone }}</span>
         </div>
         <div v-if="confirmedPatient.dateOfBirth" class="patient-detail">
           <span class="detail-label">DOB</span>
@@ -55,30 +100,6 @@
         <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
       </div>
     </nav>
-
-    <div v-if="submissionComplete" class="success-banner">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M6 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>{{ submissionMessage }}</span>
-    </div>
-
-    <div v-if="validationError" class="error-banner">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      <span>{{ validationError }}</span>
-    </div>
-
-    <div v-if="submitError" class="error-banner">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M15 9l-6 6m0-6l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>{{ submitError }}</span>
-    </div>
 
     <div v-if="currentStep === 1" class="form-section">
       <div class="section-header">
@@ -276,6 +297,10 @@
         </div>
         <div class="field-row three-col">
           <div class="field-group">
+            <label class="field-label">Phone Number</label>
+            <input v-model="form.page3.person.phone" type="tel" class="form-input" placeholder="(555) 123-4567">
+          </div>
+          <div class="field-group">
             <label class="field-label">State <span class="required-star">*</span></label>
             <input v-model="form.page3.person.state" type="text" class="form-input" placeholder="TX">
           </div>
@@ -442,6 +467,64 @@ const toggleMedicalHistory = (value) => {
 
 <style scoped>
 .intake-form-stage { margin-top: 20px; display: flex; flex-direction: column; gap: 24px; }
+.status-stack {
+  position: sticky;
+  top: 18px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.status-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 20px;
+  border-radius: calc(var(--radius-lg) + 2px);
+  border: 1px solid transparent;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12), 0 4px 10px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(10px);
+}
+.status-banner-success {
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.96), rgba(209, 250, 229, 0.94));
+  border-color: rgba(5, 150, 105, 0.22);
+  color: var(--green-dark);
+}
+.status-banner-error {
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.98), rgba(254, 226, 226, 0.96));
+  border-color: rgba(220, 38, 38, 0.2);
+  color: #991b1b;
+}
+.status-banner-submit {
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.99), rgba(255, 228, 230, 0.97));
+}
+.status-banner-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+.status-banner-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.status-banner-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.status-banner-text {
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 500;
+}
 .patient-info-card {
   background: linear-gradient(135deg, var(--green-light), rgba(167,243,208,.3));
   border: 1.5px solid var(--green-mid);
@@ -569,30 +652,6 @@ const toggleMedicalHistory = (value) => {
   background: var(--gradient);
   border-radius: 99px;
   transition: width .4s cubic-bezier(.4,0,.2,1);
-}
-.success-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: var(--green-light);
-  border: 1px solid var(--green-mid);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  color: var(--green-dark);
-  font-size: 14px;
-  font-weight: 500;
-}
-.error-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  color: #b91c1c;
-  font-size: 14px;
-  font-weight: 500;
 }
 .form-section {
   display: flex;
@@ -921,5 +980,18 @@ const toggleMedicalHistory = (value) => {
   clip: rect(0,0,0,0);
   white-space: nowrap;
   border: 0;
+}
+@media (max-width: 640px) {
+  .status-stack {
+    top: 10px;
+  }
+  .status-banner {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .status-banner-icon {
+    width: 38px;
+    height: 38px;
+  }
 }
 </style>

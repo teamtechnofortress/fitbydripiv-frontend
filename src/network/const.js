@@ -1,9 +1,11 @@
 // In local Vite dev (localhost:5173), API runs on Laravel localhost:8001.
 // In staging/prod, same-origin is preferred.
 const isLocalDevHost = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+
 const defaultApiBase = isLocalDevHost
   ? "http://localhost:8001/api/v1"
   : `${window.location.origin}/api/v1`
+
 const SERVER_URL = (
   import.meta.env.VITE_API_BASE_URL
   || defaultApiBase
@@ -27,6 +29,12 @@ export const DISABLE_2FA_URL = SERVER_URL + "/auth/disable-2fa"
 export const REGENERATE_2FA_URL = SERVER_URL + "/auth/regenerate-2fa"
 export const GET_EMAIL_STATUS_URL = SERVER_URL + "/auth/email/status"
 export const SEND_EMAIL_VERIFICATION_URL = SERVER_URL + "/auth/email/send-verification"
+export const PROFILE_PROGRESS_URL = SERVER_URL + "/profile-progress"
+export const PROFILE_PROGRESS_STEP2_URL = PROFILE_PROGRESS_URL + "/step-2"
+export const PROFILE_PROGRESS_STEP3_URL = PROFILE_PROGRESS_URL + "/step-3"
+export const PROFILE_PROGRESS_STEP4_URL = PROFILE_PROGRESS_URL + "/step-4"
+export const PROFILE_PROGRESS_STEP5_URL = PROFILE_PROGRESS_URL + "/step-5"
+export const PROFILE_PROGRESS_SKIP_URL = PROFILE_PROGRESS_URL + "/skip"
 export const SECURITY_SAVE_URL  = SERVER_URL + "/auth/security-save"
 export const GET_PATIENT_BY_NAME = SERVER_URL + "/get/patient-by-name"
 export const GET_PATIENT_BY_PHONE = SERVER_URL + "/get/patient-by-phone"
@@ -137,7 +145,7 @@ export const DELETE_APPOINTMENT_REPORT = SERVER_URL + "/delete/appointment-repor
 export const SAVE_REWARD_REPORT = SERVER_URL + "/save/reward-report"
 export const ALL_REWARD_REPORT = SERVER_URL + "/get/all-reward-report"
 export const DELETE_REWARD_REPORT = SERVER_URL + "/delete/reward-report"
-
+export const CHECKOUT_DRAFT_URL = SERVER_URL + "/checkout/draft"
 export const SAVE_STAFF_REPORT = SERVER_URL + "/save/staff-report"
 export const ALL_STAFF_REPORT = SERVER_URL + "/get/all-staff-report"
 export const DELETE_STAFF_REPORT = SERVER_URL + "/delete/staff-report"
@@ -160,6 +168,10 @@ export const DELETE_INVOICING_SALES_REPORT = SERVER_URL + "/delete/invoicing-sal
 
 export const SAVE_SIGNATURE_URL = SERVER_URL + "/save/signature"
 export const GET_SIGNATURE_URL = SERVER_URL + "/get/signature"
+export const PATIENT_INTAKE_FORM_URL = SERVER_URL + "/patients/intake-form"
+export const getIntakeSubmissionUrl = orderUuid => `${SERVER_URL}/intake/${orderUuid}`
+export const getPatientIntakesUrl = patientId => `${SERVER_URL}/patients/${patientId}/intakes`
+export const getPatientIntakeDetailUrl = (patientId, intakeId) => `${SERVER_URL}/patients/${patientId}/intakes/${intakeId}`
 
 // CMS Public Endpoints
 export const CMS_GET_CATEGORIES = SERVER_URL + "/cms/categories"
@@ -185,3 +197,12 @@ export const CMS_ADMIN_CONTACT_SUBMISSIONS = SERVER_URL + "/cms/admin/contact-su
 export const CMS_ADMIN_UPLOAD_PRODUCT_IMAGE = SERVER_URL + "/cms/admin/upload/product-image"
 export const CMS_ADMIN_UPLOAD_CATEGORY_VIDEO = SERVER_URL + "/cms/admin/upload/category-video"
 export const CMS_ADMIN_UPLOAD_HERO_VIDEO = SERVER_URL + "/cms/admin/upload/hero-video"
+
+// Orders
+export const getOrderBySessionUrl = sessionId => `${SERVER_URL}/orders/by-session/${sessionId}`
+export const ADMIN_ORDERS_URL = `${SERVER_URL}/admin/orders`
+export const ADMIN_SUBSCRIPTIONS_URL = `${SERVER_URL}/admin/subscriptions`
+export const getAdminOrderDetailUrl = orderId => `${SERVER_URL}/admin/orders/${orderId}`
+export const getAdminSubscriptionDetailUrl = subscriptionId => `${SERVER_URL}/admin/subscriptions/${subscriptionId}`
+export const getAdminWebhookDetailUrl = webhookId => `${SERVER_URL}/admin/webhooks/${webhookId}`
+export const cancelSubscriptionUrl = subscriptionId => `${SERVER_URL}/subscriptions/${subscriptionId}/cancel`

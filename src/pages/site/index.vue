@@ -181,9 +181,9 @@ const scroll = (direction) => {
         <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">How It Works</h2>
         <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
           <div v-for="(step, i) in [
-            { title: 'Step 1: Intake evaluation', desc: 'Complete our secure online health questionnaire about your medical history and wellness goals', icon: '/images/Step-1 (only icon).png' },
-            { title: 'Step 2: Prescription/Approval', desc: 'Our licensed medical providers review your information and determine eligibility', icon: '/images/Step-2 (only icon).png' },
-            { title: 'Step 3: Fast Shipping', desc: 'Your prescription is compounded and shipped directly to your door with tracking', icon: '/images/Step-3 (only icon).png' },
+            { title: 'Step 1: Intake evaluation', desc: 'Complete our secure online health questionnaire about your medical history and wellness goals', icon: '/images/step-1-only-icon.png' },
+            { title: 'Step 2: Prescription/Approval', desc: 'Our licensed medical providers review your information and determine eligibility', icon: '/images/step-2-only-icon.png' },
+            { title: 'Step 3: Fast Shipping', desc: 'Your prescription is compounded and shipped directly to your door with tracking', icon: '/images/step-3-only-icon.png' },
           ]" :key="i" class="text-center group">
             <div class="w-32 h-32 mx-auto mb-4 bg-white rounded-full border-2 border-emerald-200 flex items-center justify-center p-8 shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
               <img :src="step.icon" :alt="step.title" class="w-full h-full object-contain" />

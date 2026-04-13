@@ -8,6 +8,7 @@ import Export from '@/views/pages/admin/export.vue';
 import Inventory from '@/views/pages/admin/inventory.vue';
 import Notes from '@/views/pages/admin/notes.vue';
 import Signature from '@/views/pages/admin/notes/signature.vue';
+import Payments from '@/views/pages/admin/payments.vue';
 import Payroll from '@/views/pages/admin/payroll.vue';
 import Report from '@/views/pages/admin/report.vue';
 import Schedule from '@/views/pages/admin/schedule.vue';
@@ -34,6 +35,11 @@ const tabs = [
     icon: 'tabler-map-dollar',
     tab: 'payroll',
   },    
+  {
+    title: 'PAYMENTS / SUBSCRIPTIONS',
+    icon: 'tabler-credit-card',
+    tab: 'payments',
+  },
   {
     title: 'INVENTORY',
     icon: 'tabler-basket',
@@ -117,6 +123,11 @@ const tabs = [
       <!-- payroll -->
       <VWindowItem value="payroll">
         <Payroll />
+      </VWindowItem>      
+
+      <!-- payments -->
+      <VWindowItem value="payments">
+        <Payments />
       </VWindowItem>      
 
       <!-- inventory -->

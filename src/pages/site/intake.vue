@@ -88,6 +88,7 @@ const form = reactive({
       firstName: '',
       middleName: '',
       lastName: '',
+      phone: '',
       address: '',
       city: '',
       state: '',
@@ -151,6 +152,7 @@ const applyIntakePrefill = (data) => {
     firstName: data.firstName ?? '',
     middleName: data.middleName ?? '',
     lastName: data.lastName ?? '',
+    phone: data.phone ?? '',
     address: data.address ?? '',
     city: data.city ?? '',
     state: data.state ?? '',
@@ -353,6 +355,7 @@ const buildPayload = () => {
     firstName: formatText(person.firstName),
     middleName: formatText(person.middleName),
     lastName: formatText(person.lastName),
+    phone: formatText(person.phone),
     address: formatText(person.address),
     city: formatText(person.city),
     state: formatText(person.state),
@@ -384,6 +387,7 @@ const buildPayload = () => {
 
 const extractErrorMessage = (error) => {
   const responseData = error?.response?.data
+  if (typeof responseData === 'string' && responseData.trim()) return responseData
   if (responseData?.errors) {
     const errors = responseData.errors
     if (Array.isArray(errors) && errors.length > 0) return errors[0]
@@ -392,7 +396,10 @@ const extractErrorMessage = (error) => {
     if (Array.isArray(firstVal)) return firstVal[0]
     if (typeof firstVal === 'string') return firstVal
   }
+  if (typeof responseData?.err_msg === 'string' && responseData.err_msg.trim()) return responseData.err_msg
+  if (typeof responseData?.error === 'string' && responseData.error.trim()) return responseData.error
   if (typeof responseData?.message === 'string') return responseData.message
+  if (typeof error?.message === 'string' && error.message.trim()) return error.message
   return 'Unable to submit intake. Please review your answers and try again.'
 }
 
@@ -411,6 +418,7 @@ const handleSubmit = async () => {
     const intakeUrl = orderUuid.value ? getIntakeSubmissionUrl(orderUuid.value) : null
     if (!intakeUrl) {
       submitError.value = 'Your checkout session has expired. Please start again from the pricing page.'
+      scrollToTop()
       return
     }
     const { data } = await axios.post(intakeUrl, payload, {
@@ -438,6 +446,7 @@ const handleSubmit = async () => {
     scrollToTop()
   } catch (error) {
     submitError.value = extractErrorMessage(error)
+    scrollToTop()
   } finally {
     isSubmitting.value = false
   }
@@ -469,6 +478,7 @@ const resetForm = () => {
     firstName: '',
     middleName: '',
     lastName: '',
+    phone: '',
     address: '',
     city: '',
     state: '',
@@ -487,6 +497,10 @@ const resetForm = () => {
 }
 
 const goBack = () => router.back()
+const redirectToHome = () => {
+  submitError.value = null
+  router.push('/')
+}
 
 onMounted(() => scrollToTop(false))
 </script>
@@ -540,7 +554,7 @@ onMounted(() => scrollToTop(false))
         :next-step-title="nextStepTitle"
         :progress-percentage="progressPercentage"
         :validation-error="validationError"
-        :submit-error="submitError"
+        :submit-error="null"
         :submission-complete="submissionComplete"
         :submission-message="submissionMessage"
         :is-submitting="isSubmitting"
@@ -551,6 +565,17 @@ onMounted(() => scrollToTop(false))
         @submit="handleSubmit"
         @reset-patient="goBackFromForm"
       />
+    </div>
+
+    <div v-if="submitError" class="error-dialog-backdrop" role="presentation">
+      <div class="error-dialog" role="dialog" aria-modal="true" aria-labelledby="intake-submit-error-title">
+        <div class="error-dialog-badge">Submission Error</div>
+        <h2 id="intake-submit-error-title" class="error-dialog-title">We couldn't submit your intake form</h2>
+        <p class="error-dialog-text">{{ submitError }}</p>
+        <button class="error-dialog-btn" type="button" @click="redirectToHome">
+          Go to Home
+        </button>
+      </div>
     </div>
   </div>
 
@@ -680,6 +705,86 @@ onMounted(() => scrollToTop(false))
   margin: 10px 0 0;
   max-width: 560px;
   line-height: 1.6;
+}
+.error-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.52);
+  backdrop-filter: blur(10px);
+}
+.error-dialog {
+  width: min(100%, 520px);
+  background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(249,250,251,.98) 100%);
+  border: 1px solid var(--green-mid);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+}
+.error-dialog-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--green-light);
+  color: var(--green-dark);
+  border: 1px solid var(--green-mid);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.error-dialog-title {
+  margin: 16px 0 10px;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.15;
+  color: var(--text);
+}
+.error-dialog-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+.error-dialog-btn {
+  margin-top: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 170px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--gradient);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(37,99,235,.18);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.error-dialog-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  box-shadow: 0 18px 36px rgba(37,99,235,.26);
+}
+@media (max-width: 640px) {
+  .error-dialog-backdrop {
+    padding: 16px;
+  }
+  .error-dialog {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+  .error-dialog-btn {
+    width: 100%;
+  }
 }
 </style>
 

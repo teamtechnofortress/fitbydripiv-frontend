@@ -12,7 +12,7 @@ const isLoading = ref(false);
 const form = ref({
   start_time: '',
   end_time: '',
-  company_name: 'FitByDrip',
+  company_name: 'FitByShot',
   invoice_intro_text: ''
 });
 
@@ -46,7 +46,7 @@ onMounted(async () => {
       twillio_sid: data.twillio_sid || '',
       twillio_auth_token: data.twillio_auth_token || '',
       twillio_phone_number: data.twillio_phone_number || '',
-      company_name: data.company_name || 'FitByDrip',
+      company_name: data.company_name || 'FitByShot',
       invoice_intro_text: data.invoice_intro_text || ''
     }
   }

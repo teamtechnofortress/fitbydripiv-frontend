@@ -4,4 +4,5 @@ export default [
     icon: { icon: 'tabler-shield' },
     to: {name: 'admin-tab', params: {tab: 'staffing'}},
   },
+
 ]

@@ -12,7 +12,7 @@ const { width: windowWidth } = useWindowSize();
 
 export const { themeConfig, layoutConfig } = defineThemeConfig({
   app: {
-    title: 'FitByDrip',
+    title: 'FitByShot',
     logo: h(VIcon, {
       icon: 'tabler-flame',
       size: 28,
