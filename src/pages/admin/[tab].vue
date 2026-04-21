@@ -7,6 +7,7 @@ import CmsProducts from '@/views/pages/admin/cms/products.vue';
 import Export from '@/views/pages/admin/export.vue';
 import Inventory from '@/views/pages/admin/inventory.vue';
 import Notes from '@/views/pages/admin/notes.vue';
+import ProductsModule from '@/views/pages/admin/products-module.vue';
 import Signature from '@/views/pages/admin/notes/signature.vue';
 import Payments from '@/views/pages/admin/payments.vue';
 import Payroll from '@/views/pages/admin/payroll.vue';
@@ -16,7 +17,37 @@ import Staffing from '@/views/pages/admin/staffing.vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute()
-const activeTab = ref(route.params.tab)
+const normalizeTab = tab => ['products', 'product_drafts', 'add_product'].includes(tab) ? 'products' : tab
+const activeTab = ref(normalizeTab(route.params.tab))
+
+watch(
+  () => route.params.tab,
+  tab => {
+    if (typeof tab === 'string')
+      activeTab.value = normalizeTab(tab)
+  },
+)
+
+const getTabTarget = tab => {
+  if (tab === 'products') {
+    if (typeof route.params.id === 'string' && route.params.id) {
+      return {
+        path: `/admin/products/${route.params.id}`,
+        query: { section: 'add' },
+      }
+    }
+
+    if (route.query.section === 'drafts' || route.query.section === 'add') {
+      return {
+        name: 'admin-tab',
+        params: { tab },
+        query: { section: route.query.section },
+      }
+    }
+  }
+
+  return { name: 'admin-tab', params: { tab } }
+}
 
 // tabs
 const tabs = [
@@ -76,6 +107,11 @@ const tabs = [
     tab: 'cms-products',
   },
   {
+    title: 'PRODUCTS',
+    icon: 'tabler-packages',
+    tab: 'products',
+  },
+  {
     title: 'EXPORT',
     icon: 'tabler-file-export',
     tab: 'export',
@@ -98,7 +134,7 @@ const tabs = [
         v-for="item in tabs"
         :key="item.icon"
         :value="item.tab"
-        :to="{ name: 'admin-tab', params: { tab: item.tab } }"
+        :to="getTabTarget(item.tab)"
       >
         <VIcon size="20" start :icon="item.icon"/>
         {{ item.title }}
@@ -159,6 +195,10 @@ const tabs = [
       <!-- CMS Products -->
       <VWindowItem value="cms-products">
         <CmsProducts />
+      </VWindowItem>
+      <!-- Products -->
+      <VWindowItem value="products">
+        <ProductsModule />
       </VWindowItem>
       <!-- report -->
       <VWindowItem value="export">

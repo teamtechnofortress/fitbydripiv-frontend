@@ -197,6 +197,21 @@ export const CMS_ADMIN_CONTACT_SUBMISSIONS = SERVER_URL + "/cms/admin/contact-su
 export const CMS_ADMIN_UPLOAD_PRODUCT_IMAGE = SERVER_URL + "/cms/admin/upload/product-image"
 export const CMS_ADMIN_UPLOAD_CATEGORY_VIDEO = SERVER_URL + "/cms/admin/upload/category-video"
 export const CMS_ADMIN_UPLOAD_HERO_VIDEO = SERVER_URL + "/cms/admin/upload/hero-video"
+export const ADMIN_MEDIA_UPLOAD_URL = SERVER_URL + "/admin/media/upload"
+export const ADMIN_PRODUCTS_LIST_URL = SERVER_URL + "/admin/products"
+export const ADMIN_PRODUCTS_DRAFTS_URL = SERVER_URL + "/admin/products/drafts"
+export const getAdminProductDeleteUrl = productId => `${SERVER_URL}/admin/products/${productId}`
+export const getAdminProductPublishStatusUrl = productId => `${SERVER_URL}/admin/products/${productId}/publish-status`
+export const getAdminProductPublishUrl = productId => `${SERVER_URL}/admin/products/${productId}/publish`
+export const getAdminProductUnpublishUrl = productId => `${SERVER_URL}/admin/products/${productId}/unpublish`
+export const ADMIN_PRODUCTS_STEP1_URL = SERVER_URL + "/admin/products/step-1"
+export const ADMIN_PRODUCTS_STEP2_URL = SERVER_URL + "/admin/products/step-2"
+export const ADMIN_PRODUCTS_STEP3_URL = SERVER_URL + "/admin/products/step-3"
+export const ADMIN_PRODUCTS_STEP4_URL = SERVER_URL + "/admin/products/step-4"
+export const ADMIN_PRODUCTS_STEP5_URL = SERVER_URL + "/admin/products/step-5"
+export const ADMIN_INGREDIENTS_URL = SERVER_URL + "/admin/ingredients"
+export const getAdminProductStepStatusUrl = productId => `${SERVER_URL}/admin/products/${productId}/step-status`
+export const getAdminProductStepUrl = (productId, step) => `${SERVER_URL}/admin/products/${productId}/step-${step}`
 
 // Orders
 export const getOrderBySessionUrl = sessionId => `${SERVER_URL}/orders/by-session/${sessionId}`
