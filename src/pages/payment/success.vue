@@ -24,25 +24,17 @@ const goSupport = () => {
 
 const pricingLabel = computed(() => {
   if (!order.value) return ''
-  const map = { base: 'Standard', micro_dose: 'Micro Dose', sample: 'Sample' }
-  return map[order.value.pricing_type] || 'Selected'
+  return order.value.pricing_option?.label || order.value.pricing_type || 'Selected'
 })
 
 const amountPaid = computed(() => {
-  if (!order.value?.product) return null
-  const p = order.value.product
-  const lookup = {
-    base: p.base_price,
-    micro_dose: p.micro_dose_price,
-    sample: p.sample_price,
-  }
-  const price = lookup[order.value.pricing_type] ?? p.base_price ?? null
+  const price = order.value?.pricing_option?.final_price ?? order.value?.pricing_option?.price ?? null
   return price != null ? Number(price) : null
 })
 
 const formattedAmount = computed(() => {
   const amount = amountPaid.value
-  const currency = order.value?.product?.currency || 'USD'
+  const currency = order.value?.currency || 'USD'
   if (amount == null || Number.isNaN(amount)) return null
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
 })
@@ -70,7 +62,7 @@ const fetchOrder = async () => {
       getOrderBySessionUrl(sessionId),
       { headers: { Accept: 'application/json' } },
     )
-    order.value = data
+    order.value = data?.data || data
   } catch (err) {
     if (err?.response?.status === 404) {
       error.value = 'We couldn’t locate this order. Please reach out to support.'

@@ -8,6 +8,7 @@ import Export from '@/views/pages/admin/export.vue';
 import Inventory from '@/views/pages/admin/inventory.vue';
 import Notes from '@/views/pages/admin/notes.vue';
 import ProductsModule from '@/views/pages/admin/products-module.vue';
+import SiteSettings from '@/views/pages/admin/site-settings.vue';
 import Signature from '@/views/pages/admin/notes/signature.vue';
 import Payments from '@/views/pages/admin/payments.vue';
 import Payroll from '@/views/pages/admin/payroll.vue';
@@ -112,6 +113,11 @@ const tabs = [
     tab: 'products',
   },
   {
+    title: 'SITE SETTINGS',
+    icon: 'tabler-settings',
+    tab: 'site-settings',
+  },
+  {
     title: 'EXPORT',
     icon: 'tabler-file-export',
     tab: 'export',
@@ -199,6 +205,10 @@ const tabs = [
       <!-- Products -->
       <VWindowItem value="products">
         <ProductsModule />
+      </VWindowItem>
+      <!-- Site Settings -->
+      <VWindowItem value="site-settings">
+        <SiteSettings />
       </VWindowItem>
       <!-- report -->
       <VWindowItem value="export">

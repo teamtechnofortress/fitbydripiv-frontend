@@ -7,6 +7,7 @@ import Export from '@/views/pages/admin/export.vue';
 import Inventory from '@/views/pages/admin/inventory.vue';
 import Notes from '@/views/pages/admin/notes.vue';
 import ProductsModule from '@/views/pages/admin/products-module.vue';
+import SiteSettings from '@/views/pages/admin/site-settings.vue';
 import Signature from '@/views/pages/admin/notes/signature.vue';
 import Payments from '@/views/pages/admin/payments.vue';
 import Payroll from '@/views/pages/admin/payroll.vue';
@@ -87,6 +88,11 @@ const tabs = [
     title: 'PRODUCTS',
     icon: 'tabler-packages',
     tab: 'products',
+  },
+  {
+    title: 'SITE SETTINGS',
+    icon: 'tabler-settings',
+    tab: 'site-settings',
   },
   {
     title: 'EXPORT',
@@ -190,6 +196,10 @@ const getTabTarget = tab => {
 
       <VWindowItem value="products">
         <ProductsModule />
+      </VWindowItem>
+
+      <VWindowItem value="site-settings">
+        <SiteSettings />
       </VWindowItem>
 
       <VWindowItem value="export">

@@ -1,5 +1,5 @@
 <script setup>
-import DynamicContentPage from './new/components/DynamicContentPage.vue'
+import DynamicContentPage from './components/DynamicContentPage.vue'
 </script>
 
 <template>

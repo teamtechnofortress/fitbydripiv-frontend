@@ -6,6 +6,21 @@ const API_BASE = isLocalDevHost
   ? "http://localhost:8001/api/v1/cms"
   : "/api/v1/cms"
 
+const normalizeCmsProduct = product => {
+  if (!product || typeof product !== 'object')
+    return product
+
+  return {
+    ...product,
+    images: Array.isArray(product.images) ? product.images : [],
+    benefits: Array.isArray(product.benefits) ? product.benefits : [],
+    faqs: Array.isArray(product.faqs) ? product.faqs : [],
+    research_links: Array.isArray(product.research_links) ? product.research_links : [],
+    ingredients: Array.isArray(product.ingredients) ? product.ingredients : [],
+    pricing: Array.isArray(product.pricing) ? product.pricing : [],
+  }
+}
+
 export const useCmsDataStore = defineStore('cmsData', {
   state: () => ({
     categories: [],
@@ -96,7 +111,7 @@ export const useCmsDataStore = defineStore('cmsData', {
       this.loading = true
       try {
         const { data } = await axios.get(`${API_BASE}/products/${slug}`)
-        if (data?.success) this.currentProduct = data.data
+        if (data?.success) this.currentProduct = normalizeCmsProduct(data.data)
       } catch (e) {
         this.error = e.message
       } finally {

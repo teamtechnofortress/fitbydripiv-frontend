@@ -177,13 +177,18 @@ export const getPatientIntakeDetailUrl = (patientId, intakeId) => `${SERVER_URL}
 export const CMS_GET_CATEGORIES = SERVER_URL + "/cms/categories"
 export const CMS_GET_CATEGORY_BY_SLUG = SERVER_URL + "/cms/categories"
 export const CMS_GET_PRODUCTS_BY_CATEGORY = SERVER_URL + "/cms/categories"
+export const getCmsCategoryUrl = slug => `${SERVER_URL}/cms/categories/${slug}`
+export const getCmsCategoryProductsUrl = slug => `${SERVER_URL}/cms/categories/${slug}/products`
 export const CMS_GET_FEATURED_PRODUCTS = SERVER_URL + "/cms/products/featured"
 export const CMS_GET_PRODUCT_BY_SLUG = SERVER_URL + "/cms/products"
 export const CMS_GET_PRODUCT_PRICING = SERVER_URL + "/cms/products"
+export const getPublicProductPricingUrl = slug => `${SERVER_DOMAIN}/api/v1/products/${slug}/pricing`
 export const CMS_GET_PRODUCTS_SELECTOR = SERVER_URL + "/cms/products/selector"
 export const CMS_GET_FAQS = SERVER_URL + "/cms/faqs"
 export const CMS_GET_SITE_SETTINGS = SERVER_URL + "/cms/site-settings"
 export const CMS_SUBMIT_CONTACT = SERVER_URL + "/cms/contact"
+export const getContentPageUrl = slug => `${SERVER_URL}/content/pages/${slug}`
+export const PUBLIC_LAYOUT_URL = SERVER_URL + "/layout"
 
 // CMS Admin Endpoints
 export const CMS_ADMIN_CATEGORIES = SERVER_URL + "/cms/admin/categories"
@@ -198,12 +203,22 @@ export const CMS_ADMIN_UPLOAD_PRODUCT_IMAGE = SERVER_URL + "/cms/admin/upload/pr
 export const CMS_ADMIN_UPLOAD_CATEGORY_VIDEO = SERVER_URL + "/cms/admin/upload/category-video"
 export const CMS_ADMIN_UPLOAD_HERO_VIDEO = SERVER_URL + "/cms/admin/upload/hero-video"
 export const ADMIN_MEDIA_UPLOAD_URL = SERVER_URL + "/admin/media/upload"
+export const ADMIN_CONTENT_SETTINGS_URL = SERVER_URL + "/admin/content/settings"
+export const getAdminContentSettingDeleteUrl = settingId => `${SERVER_URL}/admin/content/settings/${settingId}`
+export const ADMIN_CONTENT_PAGES_URL = SERVER_URL + "/admin/content/pages"
+export const ADMIN_CONTENT_LAYOUT_URL = SERVER_URL + "/admin/content/layout"
+export const getAdminContentPageUrl = pageId => `${SERVER_URL}/admin/content/pages/${pageId}`
+export const getAdminContentPageSectionsUrl = pageId => `${SERVER_URL}/admin/content/pages/${pageId}/sections`
+export const ADMIN_CONTENT_SECTIONS_URL = SERVER_URL + "/admin/content/sections"
+export const getAdminContentSectionUrl = sectionId => `${SERVER_URL}/admin/content/sections/${sectionId}`
+export const getAdminContentSectionsReorderUrl = pageId => `${SERVER_URL}/admin/content/pages/${pageId}/sections/reorder`
 export const ADMIN_PRODUCTS_LIST_URL = SERVER_URL + "/admin/products"
 export const ADMIN_PRODUCTS_DRAFTS_URL = SERVER_URL + "/admin/products/drafts"
 export const getAdminProductDeleteUrl = productId => `${SERVER_URL}/admin/products/${productId}`
 export const getAdminProductPublishStatusUrl = productId => `${SERVER_URL}/admin/products/${productId}/publish-status`
 export const getAdminProductPublishUrl = productId => `${SERVER_URL}/admin/products/${productId}/publish`
 export const getAdminProductUnpublishUrl = productId => `${SERVER_URL}/admin/products/${productId}/unpublish`
+export const getAdminProductPreviewUrl = productId => `${SERVER_URL}/admin/products/${productId}/preview`
 export const ADMIN_PRODUCTS_STEP1_URL = SERVER_URL + "/admin/products/step-1"
 export const ADMIN_PRODUCTS_STEP2_URL = SERVER_URL + "/admin/products/step-2"
 export const ADMIN_PRODUCTS_STEP3_URL = SERVER_URL + "/admin/products/step-3"

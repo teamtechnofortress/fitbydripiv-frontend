@@ -1,10 +1,10 @@
 <script setup>
 import axios from 'axios'
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { v4 as uuidv4 } from 'uuid'
-import { CHECKOUT_DRAFT_URL } from '@/network/const'
+import { CHECKOUT_DRAFT_URL, getPublicProductPricingUrl } from '@/network/const'
 import { useCmsDataStore } from '@/store/cmsData'
 
 const store = useCmsDataStore()
@@ -17,15 +17,29 @@ const isPricingRoute = () => {
   return route.path === '/pricing' || name.includes('site-pricing') || name.endsWith('pricing')
 }
 
-const getProductSlug = () => String(route.query.slug || store.currentProduct?.slug || '')
+const getProductSlug = () => String(route.query.slug || '')
 
 const loading = ref(true)
-const pricingData = ref(null)
-const selectedFrequency = ref(1)
+const pricingResponse = ref(null)
 const selectedOptionId = ref(null)
 const submitting = ref(false)
 const showCancelModal = ref(false)
 const addToCartError = ref('')
+
+const pricingProduct = computed(() => pricingResponse.value?.product || null)
+const subscriptionGroup = computed(() => pricingResponse.value?.pricing?.subscription || null)
+const oneTimeGroup = computed(() => pricingResponse.value?.pricing?.one_time || null)
+const productImage = computed(() => pricingProduct.value?.cover_image?.image_url || '')
+
+const normalizePricingOptions = group => {
+  if (!group?.is_active) return []
+
+  const options = Array.isArray(group.options) ? group.options.filter(Boolean) : []
+  if (options.length > 0) return options
+  if (group.default_option?.id) return [group.default_option]
+
+  return []
+}
 
 const emitPricingDebug = (slug, payload) => {
   if (!import.meta.env.DEV) return
@@ -50,145 +64,79 @@ const loadPricing = async () => {
   if (!slug) { router.replace('/products/select'); return }
   window.scrollTo(0, 0)
   selectedOptionId.value = null
-  selectedFrequency.value = 1
   loading.value = true
-  const [_, pricing] = await Promise.all([
-    store.getProductBySlug(slug),
-    store.getProductPricing(slug),
-  ])
-  pricingData.value = pricing
+
+  try {
+    const { data } = await axios.get(getPublicProductPricingUrl(slug), {
+      headers: { Accept: 'application/json' },
+    })
+    pricingResponse.value = data?.data || null
+  } catch (error) {
+    pricingResponse.value = null
+    const message = error?.response?.data?.message || 'Unable to load product pricing.'
+    toast.error(message)
+    loading.value = false
+    return
+  }
+
   emitPricingDebug(slug, {
-    pricingResponse: pricing,
-    pricingOptions: store.currentProduct?.pricing_options || [],
-    subscriptionDiscounts: (store.currentProduct?.subscription_discounts || []).map(d => ({
-      id: d.id ?? d.uuid ?? null,
-      months: Number(d.frequency_months),
-      percentage: Number(d.discount_percentage),
-    })),
+    pricingResponse: pricingResponse.value,
   })
+
+  const defaultOptionId = subscriptionGroup.value?.default_option?.id || oneTimeGroup.value?.default_option?.id || null
+  if (defaultOptionId)
+    selectedOptionId.value = `plan-${defaultOptionId}`
+
   loading.value = false
 }
 
 onMounted(loadPricing)
 watch(() => route.query.slug, loadPricing)
 
-const getAvailableDiscounts = computed(() => {
-  if (!store.currentProduct?.subscription_discounts) return []
-  return store.currentProduct.subscription_discounts.map(d => ({
-    id: d.id ?? d.uuid ?? null,
-    months: Number(d.frequency_months),
-    percentage: Number(d.discount_percentage),
-  }))
-})
-
-/* ─── Split purchase options into two groups ─── */
 const subscriptionOptions = computed(() => {
-  const product = pricingData.value || store.currentProduct
-  if (!product) return []
-  const pricingOptions = store.currentProduct?.pricing_options || []
-  const discounts = store.currentProduct?.subscription_discounts || []
-  const basePrice = parseFloat(product.base_price) || 0
+  const group = subscriptionGroup.value
+  const options = normalizePricingOptions(group)
+  if (options.length === 0) return []
 
-  // If explicit pricing_options exist, use the monthly ones
-  if (pricingOptions.length > 0) {
-    return pricingOptions
-      .filter(p => p.billing_cycle === 'monthly')
-      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-      .map(p => ({
-        id: `plan-${p.id}`,
-        type: 'subscription',
-        title: p.plan_name || 'Plan',
-        description: p.description || '',
-        price: parseFloat(p.price) || 0,
-        originalPrice: null,
-        discountPercentage: null,
-        frequencyMonths: 1,
-        supportsFrequency: false,
-      }))
-  }
-
-  // Build 3 explicit frequency cards from base price + discounts
-  if (basePrice > 0) {
-    return [1, 2, 3].map(freq => {
-      const discount = discounts.find(d => parseInt(d.frequency_months, 10) === freq)
-      const discountPct = discount ? parseFloat(discount.discount_percentage) : 0
-      const finalPrice = discountPct > 0 ? basePrice * (1 - discountPct / 100) : basePrice
-      return {
-        id: `subscription-${freq}`,
-        type: 'subscription',
-        title: `${freq} Month${freq > 1 ? 's' : ''}`,
-        subtitle: `${freq * 1000} MG`,
-        description: `Delivered every ${freq} month${freq > 1 ? 's' : ''}`,
-        price: Math.round(finalPrice * 100) / 100,
-        originalPrice: discountPct > 0 ? basePrice : null,
-        discountPercentage: discountPct > 0 ? discountPct : null,
-        frequencyMonths: freq,
-        supportsFrequency: false,
-        isBestValue: freq === 3,
-      }
-    })
-  }
-
-  return []
+  return options
+    .slice()
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map(option => ({
+      id: `plan-${option.id}`,
+      type: 'subscription',
+      title: option.label || 'Plan',
+      subtitle: option.metadata?.mg || '',
+      description: option.metadata?.tagline || group.description || '',
+      price: Number(option.final_price || option.price || 0),
+      originalPrice: Number(option.discount_percent || 0) > 0 ? Number(option.price || 0) : null,
+      discountPercentage: Number(option.discount_percent || 0) || null,
+      frequencyMonths: Number(option.interval_count || 1),
+      supportsFrequency: false,
+      isBestValue: !!option.is_default || option.metadata?.badge === 'Most Popular',
+      badge: option.metadata?.badge || '',
+      pricingOptionId: option.id,
+    }))
 })
 
 const oneTimeOptions = computed(() => {
-  const product = pricingData.value || store.currentProduct
-  if (!product) return []
-  const pricingOptions = store.currentProduct?.pricing_options || []
-  const basePrice = parseFloat(product.base_price) || 0
-  const microDosePrice = parseFloat(product.micro_dose_price) || 0
-  const samplePrice = parseFloat(product.sample_price) || 0
-  const options = []
+  const group = oneTimeGroup.value
+  const options = normalizePricingOptions(group)
+  if (options.length === 0) return []
 
-  // Non-monthly explicit pricing options
-  if (pricingOptions.length > 0) {
-    const oneTime = pricingOptions
-      .filter(p => p.billing_cycle !== 'monthly')
-      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-      .map(p => ({
-        id: `plan-${p.id}`,
-        type: 'one-time',
-        title: p.plan_name || 'Plan',
-        description: p.description || '',
-        price: parseFloat(p.price) || 0,
-        originalPrice: null,
-        discountPercentage: null,
-      }))
-    return oneTime
-  }
-
-  if (basePrice > 0) {
-    options.push({
-      id: 'one-time',
-      type: 'one-time',
-      icon: '📦',
-      title: '1 Month Supply',
-      description: 'One-time purchase · No subscription',
-      price: basePrice,
-    })
-  }
-  if (microDosePrice > 0) {
-    options.push({
-      id: 'micro-dose',
-      type: 'micro-dose',
-      icon: '💊',
-      title: 'Micro-Dose',
-      description: '1 Month Supply · Low dose',
-      price: microDosePrice,
-    })
-  }
-  if (samplePrice > 0) {
-    options.push({
-      id: 'sample',
-      type: 'sample',
-      icon: '🧪',
-      title: 'Sample / Trial',
-      description: 'Single 1 Week Supply',
-      price: samplePrice,
-    })
-  }
   return options
+    .slice()
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map(option => ({
+      id: `plan-${option.id}`,
+      type: 'one-time',
+      title: option.label || 'Plan',
+      description: option.metadata?.tagline || group.description || '',
+      price: Number(option.final_price || option.price || 0),
+      originalPrice: Number(option.discount_percent || 0) > 0 ? Number(option.price || 0) : null,
+      discountPercentage: Number(option.discount_percent || 0) || null,
+      badge: option.metadata?.badge || '',
+      pricingOptionId: option.id,
+    }))
 })
 
 const findSelectedOption = () => {
@@ -199,32 +147,19 @@ const findSelectedOption = () => {
   )
 }
 
-const findDiscountByFrequency = freq => {
-  if (!freq) return null
-  return getAvailableDiscounts.value.find(d => Number(d.months) === Number(freq)) || null
-}
-
 const buildCheckoutDraftPayload = () => {
   const option = findSelectedOption()
   const slug = getProductSlug()
   if (!option || !slug) return null
 
-  const payload = { product_slug: slug, pricing_type: 'base' }
-  const planRecord = (store.currentProduct?.pricing_options || []).find(p => `plan-${p.id}` === option.id)
-
-  if (planRecord?.id) {
-    payload.pricing_option_id = planRecord.id
-  } else {
-    switch (option.type) {
-      case 'micro-dose': payload.pricing_type = 'micro_dose'; break
-      case 'sample': payload.pricing_type = 'sample'; break
-      default: payload.pricing_type = 'base'
-    }
-    if (option.type === 'subscription') {
-      const discount = findDiscountByFrequency(option.frequencyMonths)
-      if (discount?.id) payload.subscription_discount_id = discount.id
-    }
+  const payload = {
+    product_slug: slug,
+    pricing_type: option.type === 'subscription' ? 'subscription' : 'one_time',
   }
+
+  if (option.pricingOptionId)
+    payload.pricing_option_id = option.pricingOptionId
+
   return { payload, option }
 }
 
@@ -283,7 +218,7 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
     </div>
 
     <!-- Not Found -->
-    <div v-else-if="!store.currentProduct" class="max-w-3xl mx-auto px-4 py-12 text-center">
+    <div v-else-if="!pricingProduct" class="max-w-3xl mx-auto px-4 py-12 text-center">
       <h1 class="text-3xl font-bold text-gray-900 mb-4">Product Not Found</h1>
       <p class="text-gray-600 mb-8">We couldn't find the product you're looking for.</p>
       <button class="btn-primary" @click="navigate('/products/select')">Select a Product</button>
@@ -305,10 +240,13 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
 
       <!-- Header -->
       <div class="mb-10">
+        <div v-if="productImage" class="mb-5 pricing-product-media">
+          <img :src="productImage" :alt="pricingProduct.name" class="pricing-product-media__img">
+        </div>
         <p class="text-xs font-semibold tracking-widest text-emerald-600 uppercase mb-2">Select Your Plan</p>
-        <h1 class="text-3xl font-bold text-gray-900 mb-1 leading-tight">{{ store.currentProduct.name }}</h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-1 leading-tight">{{ pricingProduct.name }}</h1>
         <p class="text-sm text-gray-500 mt-3 leading-relaxed max-w-lg">
-          Pricing is customized based on your individual health goals and treatment plan. Our medical team will discuss specific pricing during your telehealth consultation.
+          {{ pricingProduct.description || 'Pricing is customized based on your individual health goals and treatment plan. Our medical team will discuss specific pricing during your telehealth consultation.' }}
         </p>
       </div>
 
@@ -325,8 +263,8 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
               </svg>
             </div>
             <div>
-              <h2 class="section-title">Subscription Plans</h2>
-              <p class="section-subtitle">Save more with longer commitments · Cancel anytime</p>
+              <h2 class="section-title">{{ subscriptionGroup?.title || 'Subscription Plans' }}</h2>
+              <p class="section-subtitle">{{ subscriptionGroup?.description || 'Save more with longer commitments · Cancel anytime' }}</p>
             </div>
           </div>
           <div class="section-header__badge">Most Popular</div>
@@ -402,8 +340,8 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
               </svg>
             </div>
             <div>
-              <h2 class="section-title">One-Time Purchase</h2>
-              <p class="section-subtitle">No commitment · Order as needed</p>
+              <h2 class="section-title">{{ oneTimeGroup?.title || 'One-Time Purchase' }}</h2>
+              <p class="section-subtitle">{{ oneTimeGroup?.description || 'No commitment · Order as needed' }}</p>
             </div>
           </div>
         </div>

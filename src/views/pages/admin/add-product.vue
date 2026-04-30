@@ -4,6 +4,7 @@ import axios from 'axios'
 import { useToast } from 'vue-toastification'
 import { useRoute, useRouter } from 'vue-router'
 import { requiredValidator } from '@/@core/utils/validators'
+import ProductPreviewDrawer from '@/views/pages/admin/components/ProductPreviewDrawer.vue'
 import {
   ADMIN_INGREDIENTS_URL,
   ADMIN_MEDIA_UPLOAD_URL,
@@ -24,6 +25,7 @@ const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 const routeProductId = computed(() => (typeof route.params.id === 'string' ? route.params.id : ''))
+const previewDrawerOpen = ref(false)
 const statusLoading = ref(false)
 const stepDataLoading = ref(false)
 const completedStepLookup = ref({})
@@ -148,6 +150,7 @@ const pricingDrafts = reactive({
 const createInitialProductState = productId => ({
   id: productId,
   name: '',
+  slug: '',
   category: '',
   description: '',
   images: [],
@@ -189,6 +192,7 @@ const completionLabel = computed(() => {
   if (completionPercentage.value > 0) return 'In Progress'
   return 'Not Started'
 })
+const canPreviewProduct = computed(() => !!productState.id && isStepCompleted(1))
 const selectedStepDefinition = computed(() => STEP_DEFINITIONS.find(step => step.id === selectedStep.value) || STEP_DEFINITIONS[0])
 const unlockedMaxStep = computed(() => {
   const step = Number(productState.completion_step || 1)
@@ -409,6 +413,15 @@ const onDrop = async event => {
 
 const openFilePicker = () => {
   fileInputRef.value?.click()
+}
+
+const openPreviewDrawer = () => {
+  if (!canPreviewProduct.value) {
+    toast.error('Save Product Basics first to preview the product.')
+    return
+  }
+
+  previewDrawerOpen.value = true
 }
 
 const addBenefit = () => {
@@ -759,6 +772,7 @@ const applyStepStatus = payload => {
 const hydrateStep1 = payload => {
   productState.id = payload.product_id || productState.id
   productState.name = payload.name || ''
+  productState.slug = payload.slug || ''
   productState.category = payload.category || ''
   productState.description = payload.description || ''
   productState.cover_image_id = payload.cover_image_id || ''
@@ -953,6 +967,10 @@ const saveStepOne = () => {
 
       const payload = response?.data?.data || {}
       productState.id = payload.product_id || productState.id
+      productState.name = payload.name || productState.name
+      productState.slug = payload.slug || productState.slug
+      productState.category = payload.category || productState.category
+      productState.description = payload.description || productState.description
       productState.completion_status = payload.completion_status || productState.completion_status
       productState.completion_percentage = payload.completion_percentage ?? productState.completion_percentage
       productState.completion_step = payload.completion_step ?? productState.completion_step
@@ -1261,15 +1279,31 @@ watch(routeProductId, nextId => {
               </p>
             </div>
 
-            <div class="setup-header-card__status">
-              <VChip color="primary" variant="flat" size="small">
-                {{ completionPercentage }}% Complete
-              </VChip>
-              <div class="text-caption text-medium-emphasis mt-2">
-                Status: {{ completionLabel }}
+            <div class="setup-header-card__status d-flex flex-column align-start align-lg-end">
+              <div v-if="canPreviewProduct" class="setup-header-card__actions mb-3">
+                <VBtn
+                  color="secondary"
+                  variant="flat"
+                  prepend-icon="tabler-eye"
+                  @click="openPreviewDrawer"
+                >
+                  Preview Product
+                </VBtn>
               </div>
-              <div v-if="productState.id" class="text-caption text-medium-emphasis mt-1">
-                Product ID: {{ productState.id }}
+
+              <div class="setup-header-card__meta">
+                <VChip color="primary" variant="flat" size="small">
+                  {{ completionPercentage }}% Complete
+                </VChip>
+                <div class="text-caption text-medium-emphasis mt-2">
+                  Status: {{ completionLabel }}
+                </div>
+                <div v-if="productState.id" class="text-caption text-medium-emphasis mt-1">
+                  Product ID: {{ productState.id }}
+                </div>
+                <div v-if="productState.slug" class="text-caption text-medium-emphasis mt-1">
+                  Slug: {{ productState.slug }}
+                </div>
               </div>
             </div>
           </VCardText>
@@ -1404,6 +1438,18 @@ watch(routeProductId, nextId => {
                     variant="outlined"
                     density="comfortable"
                     hide-details="auto"
+                  />
+                </VCol>
+
+                <VCol cols="12" md="6">
+                  <VTextField
+                    :model-value="productState.slug"
+                    label="Slug"
+                    placeholder="Auto-generated after save"
+                    variant="outlined"
+                    density="comfortable"
+                    hide-details="auto"
+                    readonly
                   />
                 </VCol>
 
@@ -2580,6 +2626,11 @@ watch(routeProductId, nextId => {
         </VCard>
       </VCol>
     </VRow>
+
+    <ProductPreviewDrawer
+      v-model="previewDrawerOpen"
+      :product-id="productState.id"
+    />
   </div>
 </template>
 
@@ -2604,6 +2655,16 @@ watch(routeProductId, nextId => {
 
 .setup-header-card__status {
   min-width: 180px;
+}
+
+.setup-header-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.setup-header-card__meta {
+  width: 100%;
 }
 
 .steps-list {
