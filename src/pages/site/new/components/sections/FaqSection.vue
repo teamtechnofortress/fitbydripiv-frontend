@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   section: {
     type: Object,
@@ -6,28 +8,39 @@ const props = defineProps({
   },
 })
 
-const isAccordion = props.section.content?.layout !== 'list'
+const heading = computed(() => props.section.content?.headline || props.section.title || 'Frequently Asked Questions')
+const description = computed(() => props.section.content?.description || '')
+const isAccordion = computed(() => props.section.content?.layout !== 'list')
 </script>
 
 <template>
-  <section class="faq-shell">
-    <div class="faq-shell__inner">
-      <div class="faq-grid">
+  <section class="py-12 px-4 border-t border-gray-200">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-8">
+        <h2 class="section-title">{{ heading }}</h2>
+        <p v-if="description" class="text-sm text-gray-600 mt-2">{{ description }}</p>
+      </div>
+
+      <div class="grid gap-4">
         <article
           v-for="faq in section.faqs"
           :key="faq.id || faq.question"
-          class="faq-card"
+          class="card p-5"
         >
           <template v-if="isAccordion">
-            <details>
-              <summary>{{ faq.question }}</summary>
-              <p>{{ faq.answer }}</p>
+            <details class="faq-details">
+              <summary class="text-base font-semibold text-gray-900 cursor-pointer list-none">
+                {{ faq.question }}
+              </summary>
+              <p class="text-sm text-gray-600 leading-7 mt-3">
+                {{ faq.answer }}
+              </p>
             </details>
           </template>
 
           <template v-else>
-            <h3>{{ faq.question }}</h3>
-            <p>{{ faq.answer }}</p>
+            <h3 class="text-base font-semibold text-gray-900">{{ faq.question }}</h3>
+            <p class="text-sm text-gray-600 leading-7 mt-3">{{ faq.answer }}</p>
           </template>
         </article>
       </div>
@@ -36,48 +49,7 @@ const isAccordion = props.section.content?.layout !== 'list'
 </template>
 
 <style scoped>
-.faq-shell {
-  padding: 0 1.5rem 4rem;
-}
-
-.faq-shell__inner {
-  max-width: 1040px;
-  margin: 0 auto;
-}
-
-.faq-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.faq-card {
-  padding: 1.15rem 1.2rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
-}
-
-.faq-card details {
-  display: block;
-}
-
-.faq-card summary,
-.faq-card h3 {
-  color: #0f172a;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  list-style: none;
-}
-
-.faq-card summary::-webkit-details-marker {
+.faq-details summary::-webkit-details-marker {
   display: none;
-}
-
-.faq-card p {
-  margin: 0.85rem 0 0;
-  color: #475569;
-  line-height: 1.7;
 }
 </style>

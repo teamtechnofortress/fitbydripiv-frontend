@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { normalizePublicSitePath } from '../../composables/normalizePublicSitePath'
 
 const props = defineProps({
   section: {
@@ -12,132 +14,80 @@ const props = defineProps({
   },
 })
 
-const category = computed(() => props.section.category || {})
+const router = useRouter()
 
-const backgroundStyle = computed(() => {
-  const bannerImage = category.value?.landscape_banner || category.value?.banner_image || props.section.image
+const title = computed(() => props.section.headline || props.pageSlug)
+const words = computed(() => String(title.value || '').split(' ').filter(Boolean))
+const description = computed(() =>
+  props.section.description || 'Explore treatments tailored to this category.'
+)
+const eyebrow = computed(() => String(props.section.subtitle || props.section.eyebrow || '').trim())
 
-  if (category.value?.background_video)
+const cta = computed(() => props.section.cta || props.section.content?.button || {})
+const background = computed(() => props.section.background || null)
+
+const backgroundImageStyle = computed(() => {
+  if (background.value?.type !== 'image' || !background.value?.url)
     return null
 
-  if (bannerImage)
-    return { backgroundImage: `url(${bannerImage})` }
-
-  return null
+  return { backgroundImage: `url(${background.value.url})` }
 })
+
+const navigate = path => {
+  const target = normalizePublicSitePath(path)
+  if (!target) return
+  router.push(target)
+  window.scrollTo(0, 0)
+}
 </script>
 
 <template>
-  <section class="category-hero">
+  <section class="relative overflow-hidden px-4 pt-24 pb-12 min-h-[420px] flex items-center justify-center">
     <video
-      v-if="category?.background_video"
+      v-if="background?.type === 'video' && background?.url"
       autoplay
       loop
       muted
       playsinline
-      class="category-hero__media"
+      class="absolute inset-0 w-full h-full object-cover opacity-75"
     >
-      <source :src="category.background_video" type="video/mp4">
+      <source :src="background.url" type="video/mp4">
     </video>
+
     <div
-      v-else-if="backgroundStyle"
-      class="category-hero__media category-hero__media--image"
-      :style="backgroundStyle"
-    />
-    <div
-      v-else
-      class="category-hero__media category-hero__media--fallback"
+      v-else-if="backgroundImageStyle"
+      class="absolute inset-0 bg-cover bg-center bg-no-repeat"
+      :style="backgroundImageStyle"
     />
 
-    <div class="category-hero__overlay" />
+    <div v-else class="absolute inset-0 bg-gray-800" />
 
-    <div class="category-hero__inner">
-      <div v-if="section.subtitle" class="category-hero__eyebrow">
-        {{ section.subtitle }}
-      </div>
-      <h1 class="category-hero__title">
-        {{ category?.name || section.content?.headline || pageSlug }}
+    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(17,24,39,0.4), rgba(17,24,39,0.25), rgba(17,24,39,0.4));" />
+
+    <div class="max-w-5xl mx-auto text-center relative z-10">
+      <!-- <div
+        v-if="eyebrow"
+        class="inline-flex px-4 py-2 rounded-full border border-white/25 bg-white/10 text-xs font-semibold uppercase tracking-[0.14em] text-white mb-5"
+      >
+        {{ eyebrow }}
+      </div> -->
+
+      <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 min-h-[80px] flex flex-wrap justify-center items-center gap-x-3 gap-y-2 text-stroke">
+        <span
+          v-for="(word, index) in words"
+          :key="`${word}-${index}`"
+          class="inline-block animate-fadeInUp"
+          :style="{ animationDelay: `${index * 0.12}s`, opacity: 0, animationFillMode: 'forwards' }"
+        >{{ word }}</span>
       </h1>
-      <p class="category-hero__description">
-        {{ category?.description || section.content?.description || 'Explore treatments tailored to this category.' }}
+
+      <p class="text-lg text-white/95 mb-6 max-w-3xl mx-auto text-stroke-light">
+        {{ description }}
       </p>
+
+      <button v-if="cta.link" class="btn-primary" @click="navigate(cta.link)">
+        {{ cta.label || 'Start my journey' }}
+      </button>
     </div>
   </section>
 </template>
-
-<style scoped>
-.category-hero {
-  position: relative;
-  min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  padding: 4rem 1rem;
-}
-
-.category-hero__media,
-.category-hero__overlay {
-  position: absolute;
-  inset: 0;
-}
-
-.category-hero__media {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.category-hero__media--image {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-.category-hero__media--fallback {
-  background: #1f2937;
-}
-
-.category-hero__overlay {
-  background: linear-gradient(to bottom, rgba(17, 24, 39, 0.4), rgba(17, 24, 39, 0.25), rgba(17, 24, 39, 0.4));
-}
-
-.category-hero__inner {
-  position: relative;
-  z-index: 1;
-  max-width: 64rem;
-  margin: 0 auto;
-  text-align: center;
-  color: #fff;
-}
-
-.category-hero__eyebrow {
-  display: inline-block;
-  margin-bottom: 1rem;
-  padding: 0.45rem 0.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 0.82rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.category-hero__title {
-  margin: 0 0 1rem;
-  font-size: clamp(2.5rem, 5vw, 3.5rem);
-  font-weight: 800;
-  line-height: 1.05;
-  text-shadow: 0 2px 10px rgba(15, 23, 42, 0.35);
-}
-
-.category-hero__description {
-  max-width: 48rem;
-  margin: 0 auto;
-  font-size: 1.08rem;
-  line-height: 1.75;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.35);
-}
-
-</style>

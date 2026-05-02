@@ -102,11 +102,11 @@ const tabs = [
     icon: 'tabler-category',
     tab: 'cms-categories',
   },
-  {
-    title: 'CMS PRODUCTS',
-    icon: 'tabler-pill',
-    tab: 'cms-products',
-  },
+  // {
+  //   title: 'CMS PRODUCTS',
+  //   icon: 'tabler-pill',
+  //   tab: 'cms-products',
+  // },
   {
     title: 'PRODUCTS',
     icon: 'tabler-packages',

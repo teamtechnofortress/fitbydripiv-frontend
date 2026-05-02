@@ -1,13 +1,3 @@
-const createCategoryItem = sortOrder => ({
-  title: '',
-  description: '',
-  icon: 'activity',
-  image: '',
-  cta_text: 'View Products',
-  cta_link: '',
-  sort_order: sortOrder,
-})
-
 const createProcessItem = sortOrder => ({
   title: '',
   description: '',
@@ -81,10 +71,8 @@ export const createSectionDraft = (type = 'section_header', sortOrder = 1) => {
     }
   } else if (safeType === 'category_cards') {
     base.content = {
-      variant: 'soft_cards',
       cta_label: 'View Products',
     }
-    base.items = [createCategoryItem(1)]
   } else if (safeType === 'process') {
     base.content = {
       variant: 'icon_steps',
@@ -164,15 +152,13 @@ export const buildSectionPayload = section => {
     content: deepClone(section.content || {}),
   }
 
-  if (section.type === 'category_cards' || section.type === 'process') {
+  if (section.type === 'process') {
     payload.items = (section.items || []).map((item, index) => ({
       id: item.id || undefined,
       title: item.title || '',
       description: item.description || '',
       icon: item.icon || '',
       image: item.image || '',
-      cta_text: item.cta_text || undefined,
-      cta_link: item.cta_link || undefined,
       sort_order: index + 1,
     }))
   }
@@ -191,10 +177,7 @@ export const buildSectionPayload = section => {
 }
 
 export const createSectionItemDraft = (type, sortOrder) => {
-  if (type === 'process')
-    return createProcessItem(sortOrder)
-
-  return createCategoryItem(sortOrder)
+  return createProcessItem(sortOrder)
 }
 
 export const createFaqDraft = sortOrder => createFaqItem(sortOrder)

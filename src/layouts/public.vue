@@ -15,7 +15,7 @@ const fallbackLayout = {
   header: {
     data: {
       brand: {
-        name: 'FitByShot',
+        name: '',
         logo: null,
         description: 'Prescription Weight Loss, Longevity, and Wellness specific to your goals.',
         home_url: '/',
@@ -106,7 +106,7 @@ const normalizePath = value => {
   if (!value) return ''
   const path = String(value).trim()
   if (!path) return ''
-  if (/^https?:\/\//i.test(path)) return path
+  if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(path)) return path
   if (path === 'home' || path === '/home') return '/'
   return path.startsWith('/') ? path : `/${path}`
 }
@@ -138,6 +138,10 @@ const isActive = path => {
 const openLink = link => {
   const href = resolveLinkHref(link)
   if (!href) return
+  if (/^(?:mailto:|tel:|sms:)/i.test(href)) {
+    window.location.href = href
+    return
+  }
   if (link.external) {
     window.open(href, '_blank', 'noopener,noreferrer')
     return
@@ -152,9 +156,18 @@ const getSocialIcon = icon => {
     instagram: 'tabler-brand-instagram',
     twitter: 'tabler-brand-x',
     x: 'tabler-brand-x',
+    whatsapp: 'tabler-brand-whatsapp',
     email: 'tabler-mail',
+    mail: 'tabler-mail',
     youtube: 'tabler-brand-youtube',
     linkedin: 'tabler-brand-linkedin',
+    tiktok: 'tabler-brand-tiktok',
+    telegram: 'tabler-brand-telegram',
+    pinterest: 'tabler-brand-pinterest',
+    snapchat: 'tabler-brand-snapchat',
+    discord: 'tabler-brand-discord',
+    threads: 'tabler-brand-threads',
+    github: 'tabler-brand-github',
   }
 
   return iconMap[String(icon || '').toLowerCase()] || 'tabler-link'
@@ -181,50 +194,15 @@ onMounted(() => {
   <div class="public-site">
     <div class="min-h-screen bg-white" style="display: flex; flex-direction: column;">
       <!-- Header -->
-      <header class="fixed w-full top-0 z-50 bg-white border-b border-gray-200">
-        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="relative flex items-center h-16">
-            <div class="flex items-center gap-2 min-w-0 flex-1">
-              <div class="hidden md:flex items-center gap-2">
-                <template
-                  v-for="item in headerMenu"
-                  :key="`${item.type}-${item.label}`"
-                >
-                  <div
-                    v-if="item.type === 'group'"
-                    class="relative group"
-                  >
-                    <button class="public-nav-link public-nav-link--group">
-                      <span>{{ item.label }}</span>
-                      <VIcon icon="tabler-chevron-down" size="16" />
-                    </button>
-
-                    <div class="public-nav-dropdown">
-                      <button
-                        v-for="entry in item.items || []"
-                        :key="resolveLinkHref(entry) || entry.label"
-                        class="public-nav-dropdown__item"
-                        @click="openLink(entry)"
-                      >
-                        {{ entry.label }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    v-else
-                    class="public-nav-link"
-                    :class="{ 'public-nav-link--active': isActive(resolveLinkHref(item)) }"
-                    @click="openLink(item)"
-                  >
-                    {{ item.label }}
-                  </button>
-                </template>
-              </div>
-
+      <header class="public-header">
+        <nav class="public-header__nav">
+          <div class="public-header__row">
+            <div class="flex min-w-0 flex-1">
               <button
                 v-if="headerConfig.layout?.show_menu_toggle !== false"
-                class="p-2 text-gray-600 hover:text-gray-900 md:hidden"
+                class="public-menu-toggle"
+                :aria-expanded="mobileMenuOpen"
+                aria-label="Toggle navigation menu"
                 @click="mobileMenuOpen = !mobileMenuOpen"
               >
                 <svg v-if="!mobileMenuOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -233,42 +211,50 @@ onMounted(() => {
             </div>
 
             <div
-              class="absolute inset-x-0 flex justify-center pointer-events-none"
+              class="public-header__brand-shell pointer-events-none"
               :class="centeredBrand ? '' : 'md:justify-start md:pl-20'"
             >
               <div
-                class="cursor-pointer flex items-center gap-3 hover:opacity-80 transition-opacity duration-200 pointer-events-auto"
+                class="public-layout__brand public-layout__brand--header cursor-pointer hover:opacity-80 transition-opacity duration-200 pointer-events-auto"
                 @click="navigate(brandConfig.home_url || '/')"
               >
-                <img
-                  v-if="brandConfig.logo"
-                  :src="resolveAssetUrl(brandConfig.logo)"
-                  :alt="brandConfig.name"
-                  class="public-layout__brand-logo"
-                >
-                <h1 class="text-xl font-bold text-gray-900">{{ brandConfig.name }}</h1>
+                <span v-if="brandConfig.logo" class="public-layout__brand-mark">
+                  <img
+                    :src="resolveAssetUrl(brandConfig.logo)"
+                    :alt="brandConfig.name"
+                    class="public-layout__brand-logo public-layout__brand-logo--header"
+                  >
+                </span>
               </div>
+            </div>
+
+            <div class="flex justify-end flex-1">
+              <div
+                v-if="headerConfig.layout?.show_menu_toggle !== false"
+                class="public-header__spacer"
+                aria-hidden="true"
+              />
             </div>
           </div>
 
-          <!-- Mobile Menu -->
-          <div v-if="mobileMenuOpen" class="py-3 space-y-1 border-t border-gray-200">
+          <div
+            v-if="mobileMenuOpen"
+            class="public-mobile-menu"
+          >
             <template
               v-for="item in headerMenu"
               :key="`${item.type}-${item.label}`"
             >
               <div
                 v-if="item.type === 'group'"
-                class="border-t border-gray-200 pt-2"
+                class="public-mobile-menu__group"
               >
-                <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">{{ item.label }}</div>
+                <div class="public-mobile-menu__label">{{ item.label }}</div>
                 <button
                   v-for="entry in item.items || []"
                   :key="resolveLinkHref(entry) || entry.label"
-                  class="block w-full text-left px-4 py-2 text-sm font-medium rounded"
-                  :class="isActive(resolveLinkHref(entry))
-                    ? 'text-emerald-700 font-semibold gradient-bg-light'
-                    : 'text-gray-700 hover:text-emerald-600 hover:bg-gray-50'"
+                  class="public-mobile-menu__item"
+                  :class="{ 'public-mobile-menu__item--active': isActive(resolveLinkHref(entry)) }"
                   @click="openLink(entry)"
                 >
                   {{ entry.label }}
@@ -277,10 +263,8 @@ onMounted(() => {
 
               <button
                 v-else
-                class="block w-full text-left px-4 py-2 text-sm font-medium rounded"
-                :class="isActive(resolveLinkHref(item))
-                  ? 'text-emerald-700 font-semibold gradient-bg-light'
-                  : 'text-gray-700 hover:text-emerald-600 hover:bg-gray-50'"
+                class="public-mobile-menu__item"
+                :class="{ 'public-mobile-menu__item--active': isActive(resolveLinkHref(item)) }"
                 @click="openLink(item)"
               >
                 {{ item.label }}
@@ -291,7 +275,7 @@ onMounted(() => {
       </header>
 
       <!-- Main Content -->
-      <main style="flex: 1;">
+      <main class="public-main">
         <router-view />
       </main>
 
@@ -304,24 +288,54 @@ onMounted(() => {
               :key="`${column.type}-${column.title}-${index}`"
             >
               <div
-                v-if="column.type === 'brand'"
+                v-if="column.type === 'brand' || column.source === 'brand'"
                 class="lg:col-span-1"
               >
-                <div class="flex items-center gap-2 mb-3">
-                  <img
-                    v-if="column.logo"
-                    :src="resolveAssetUrl(column.logo)"
-                    :alt="column.title"
-                    class="public-layout__brand-logo"
-                  >
-                  <h3 class="text-xl font-bold text-gray-900">{{ column.title }}</h3>
+                <div
+                  class="public-layout__brand public-layout__brand--footer mb-3"
+                  :class="{ 'cursor-pointer': column.home_url }"
+                  @click="column.home_url ? navigate(column.home_url) : undefined"
+                >
+                  <span v-if="column.logo" class="public-layout__brand-mark public-layout__brand-mark--footer">
+                    <img
+                      :src="resolveAssetUrl(column.logo)"
+                      :alt="column.title"
+                      class="public-layout__brand-logo public-layout__brand-logo--header"
+                    >
+                  </span>
+                  <h3 v-else class="text-xl font-bold text-gray-900">{{ column.title }}</h3>
                 </div>
                 <p class="text-sm text-gray-600 leading-relaxed">
                   {{ column.content }}
                 </p>
               </div>
 
-              <div v-else-if="column.type === 'social_links'">
+              <div v-else-if="column.type === 'certification' || column.source === 'certification'">
+                <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
+                <div
+                  v-if="column.items?.[0]?.image || column.items?.[0]?.description"
+                  class="public-footer-certification"
+                >
+                  <div
+                    v-if="column.items?.[0]?.image"
+                    class="public-footer-certification__media"
+                  >
+                    <img
+                      :src="resolveAssetUrl(column.items[0].image)"
+                      :alt="column.title"
+                      class="public-footer-certification__image"
+                    >
+                  </div>
+                  <p
+                    v-if="column.items?.[0]?.description"
+                    class="public-footer-certification__description"
+                  >
+                    {{ column.items[0].description }}
+                  </p>
+                </div>
+              </div>
+
+              <div v-else-if="column.type === 'social_links' || column.source === 'social_links'">
                 <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
                 <div class="flex space-x-4 mb-4">
                   <a
@@ -381,78 +395,234 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.public-header {
+  position: fixed;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.public-header__nav {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.public-header__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 6rem;
+}
+
+.public-header__brand-shell {
+  position: absolute;
+  inset-inline: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.public-header__spacer {
+  width: 2.5rem;
+}
+
+.public-main {
+  flex: 1;
+  padding-top: 2rem;
+}
+
+.public-layout__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .public-layout__brand-logo {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.public-layout__brand--header {
+  gap: 0.85rem;
+}
+
+.public-layout__brand--footer {
+  gap: 0;
+}
+
+.public-layout__brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 88px;
+  padding: 0;
+}
+
+.public-layout__brand-logo--header {
+  width: 100%;
+  height: 100%;
+}
+
+.public-layout__brand-mark--footer {
+  width: 150px;
+  height: 88px;
+}
+
+.public-footer-certification {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(16, 185, 129, 0.16);
+  border-radius: 1rem;
+  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.94), rgba(236, 253, 245, 0.82));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.public-footer-certification:hover {
+  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.28);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.1);
+}
+
+.public-footer-certification__media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6.5rem;
+  padding: 0.85rem;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.public-footer-certification__image {
+  width: 100%;
+  max-height: 5.25rem;
   object-fit: contain;
 }
 
-.public-nav-link {
+.public-footer-certification__description {
+  margin: 0;
+  color: #475569;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.public-layout__brand-name {
+  font-size: 1.95rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.public-menu-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 999px;
-  color: #475569;
-  font-size: 0.92rem;
+  justify-content: center;
+  padding: 0.5rem;
+  color: #4b5563;
+  transition: color 0.2s ease;
+}
+
+.public-menu-toggle svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.public-menu-toggle:hover {
+  color: #111827;
+}
+
+.public-menu-toggle--spacer {
+  visibility: hidden;
+}
+
+@media (min-width: 640px) {
+  .public-header__nav {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .public-header__nav {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .public-layout__brand-mark {
+    width: 68px;
+    height: 68px;
+  }
+}
+
+@media (max-width: 767px) {
+  .public-layout__brand-name {
+    font-size: 1.4rem;
+  }
+}
+
+.public-mobile-menu {
+  padding: 0.75rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.public-mobile-menu > * + * {
+  margin-top: 0.25rem;
+}
+
+.public-mobile-menu__group {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.5rem;
+}
+
+.public-mobile-menu__label {
+  padding: 0.5rem 1rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1rem;
   font-weight: 600;
+  text-transform: uppercase;
+}
+
+.public-mobile-menu__item {
+  width: 100%;
+  display: block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  text-align: left;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.public-nav-link:hover,
-.public-nav-link--group:hover {
-  color: #0f172a;
-  background: rgba(15, 23, 42, 0.05);
+.public-mobile-menu__item:hover {
+  color: #059669;
+  background: #f9fafb;
 }
 
-.public-nav-link--active {
+.public-mobile-menu__item--active {
   color: #047857;
-  background: rgba(16, 185, 129, 0.12);
+  font-weight: 600;
+  background: linear-gradient(to bottom right, #ecfdf5, #eff6ff);
 }
 
-.public-nav-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  min-width: 220px;
-  padding: 0.9rem 0.5rem 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 30;
-}
-
-.group:hover .public-nav-dropdown {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.group {
-  padding-bottom: 0.9rem;
-  margin-bottom: -0.9rem;
-}
-
-.public-nav-dropdown__item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0.7rem 0.85rem;
-  border-radius: 0.8rem;
-  color: #334155;
-  font-size: 0.92rem;
-  font-weight: 500;
-  text-align: left;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.public-nav-dropdown__item:hover {
-  background: rgba(16, 185, 129, 0.08);
-  color: #047857;
-}
 </style>

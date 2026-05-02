@@ -8,6 +8,7 @@ import {
   ADMIN_PRODUCTS_LIST_URL,
   getAdminProductDeleteUrl,
   getAdminProductPublishUrl,
+  getAdminProductToggleFeaturedUrl,
   getAdminProductUnpublishUrl,
 } from '@/network/const'
 import { getApiToken } from '@/store/authData'
@@ -65,6 +66,7 @@ const deleteDialog = ref(false)
 const deleting = ref(false)
 const pendingDeleteProduct = ref(null)
 const publishActionId = ref('')
+const featuredActionId = ref('')
 const products = ref([])
 const meta = ref({
   current_page: 1,
@@ -234,6 +236,48 @@ const togglePublish = async (item, shouldPublish) => {
     toast.error(error?.response?.data?.message || error?.message || 'Unable to update publish status.')
   } finally {
     publishActionId.value = ''
+  }
+}
+
+const toggleFeatured = async item => {
+  if (!item?.id) return
+
+  featuredActionId.value = item.id
+  try {
+    const response = await axios.post(
+      getAdminProductToggleFeaturedUrl(item.id),
+      {},
+      {
+        headers: {
+          ...getAuthHeaders(),
+          Accept: 'application/json',
+        },
+      },
+    )
+
+    const payload = response?.data?.data || {}
+    const updatedProduct = payload.product || {}
+    const nextFeatured = typeof payload.is_featured === 'boolean'
+      ? payload.is_featured
+      : !!updatedProduct.is_featured
+
+    const target = products.value.find(product => product?.id === item.id)
+
+    if (target) {
+      target.is_featured = nextFeatured
+
+      if (updatedProduct && typeof updatedProduct === 'object')
+        Object.assign(target, updatedProduct)
+    }
+
+    toast.success(response?.data?.message || (nextFeatured ? 'Product marked as featured successfully.' : 'Product removed from featured successfully.'))
+
+    if ((filters.is_featured === '1' && !nextFeatured) || (filters.is_featured === '0' && nextFeatured))
+      fetchProducts()
+  } catch (error) {
+    toast.error(error?.response?.data?.message || error?.message || 'Unable to update featured status.')
+  } finally {
+    featuredActionId.value = ''
   }
 }
 
@@ -424,6 +468,16 @@ onMounted(() => {
                       @click="togglePublish(item, !item.is_published)"
                     >
                       <VIcon :icon="item.is_published ? 'tabler-eye-off' : 'tabler-world-upload'" />
+                    </VBtn>
+                    <VBtn
+                      :color="item.is_featured ? 'warning' : 'secondary'"
+                      variant="tonal"
+                      size="small"
+                      icon
+                      :loading="featuredActionId === item.id"
+                      @click="toggleFeatured(item)"
+                    >
+                      <VIcon :icon="item.is_featured ? 'tabler-star-filled' : 'tabler-star'" />
                     </VBtn>
                     <VBtn
                       color="primary"

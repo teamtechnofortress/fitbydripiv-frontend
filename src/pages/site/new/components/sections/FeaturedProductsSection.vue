@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { normalizePublicSitePath } from '../../composables/normalizePublicSitePath'
 
 const props = defineProps({
   section: {
@@ -14,11 +15,15 @@ const props = defineProps({
 })
 
 const router = useRouter()
-const products = computed(() => (props.section.products || []).slice(0, props.section.content?.limit || 6))
+const scrollContainer = ref(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(true)
 
+const products = computed(() => (props.section.products || []).slice(0, props.section.content?.limit || 6))
 const navigate = path => {
-  if (!path) return
-  router.push(path)
+  const target = normalizePublicSitePath(path)
+  if (!target) return
+  router.push(target)
   window.scrollTo(0, 0)
 }
 
@@ -26,186 +31,104 @@ const getProductPath = product => {
   if (product?.slug) return `/product/${product.slug}`
   return '/products/select'
 }
+
+const checkScrollButtons = () => {
+  if (!scrollContainer.value) return
+
+  const { scrollLeft, scrollWidth, clientWidth } = scrollContainer.value
+  canScrollLeft.value = scrollLeft > 0
+  canScrollRight.value = scrollLeft < scrollWidth - clientWidth - 10
+}
+
+const scroll = direction => {
+  if (!scrollContainer.value) return
+
+  const scrollAmount = scrollContainer.value.clientWidth * 0.8
+  const nextLeft = scrollContainer.value.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount)
+
+  scrollContainer.value.scrollTo({ left: nextLeft, behavior: 'smooth' })
+}
+
+watch(products, async () => {
+  await nextTick()
+  checkScrollButtons()
+}, { immediate: true })
+
+onMounted(async () => {
+  await nextTick()
+  checkScrollButtons()
+})
 </script>
 
 <template>
-  <section class="featured-shell">
-    <div class="featured-shell__inner">
-      <div v-if="loading && !products.length" class="featured-loading">
-        <div class="featured-loading__spinner" />
-        <span>Loading featured products...</span>
+  <section class="py-12 px-4 border-t border-gray-200 bg-gray-50">
+    <div class="max-w-7xl mx-auto">
+      <div v-if="loading && !products.length" class="min-h-[240px] flex items-center justify-center text-sm text-gray-500">
+        Loading featured products...
       </div>
 
-      <div v-else class="featured-grid">
-        <article
-          v-for="product in products"
-          :key="product.id"
-          class="featured-card"
-          @click="navigate(getProductPath(product))"
+      <div v-else-if="products.length > 0" class="relative group">
+        <button
+          v-if="canScrollLeft"
+          class="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-100 transition-all"
+          @click="scroll('left')"
         >
-          <div class="featured-card__copy">
-            <div class="featured-card__eyebrow">Featured Treatment</div>
-            <h3>{{ product.name }}</h3>
-            <p>{{ product.short_description || product.description }}</p>
-            <button
-              class="featured-card__button"
-              @click.stop="navigate(getProductPath(product))"
-            >
-              {{ section.content?.cta_label || 'View Details' }}
-            </button>
-          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+        </button>
+        <button
+          v-if="canScrollRight"
+          class="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-100 transition-all"
+          @click="scroll('right')"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+        </button>
 
-          <div class="featured-card__media">
-            <img
-              v-if="product.landscape_image || product.featured_image || product.cover_image?.image_url"
-              :src="product.landscape_image || product.featured_image || product.cover_image?.image_url"
-              :alt="product.name"
-            >
-            <div v-else class="featured-card__placeholder">
-              {{ product.name?.charAt(0) }}
+        <div
+          ref="scrollContainer"
+          class="flex gap-8 overflow-x-auto scrollbar-hide scroll-smooth px-8 py-2"
+          @scroll="checkScrollButtons"
+        >
+          <div
+            v-for="product in products"
+            :key="product.id"
+            class="flex-shrink-0 w-[700px] cursor-pointer group/card"
+            @click="navigate(getProductPath(product))"
+          >
+            <div class="relative bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
+                <div class="flex flex-col justify-center p-8">
+                  <h3 class="text-2xl font-bold text-gray-900 mb-3 group-hover/card:text-blue-600 transition-colors">
+                    {{ product.name }}
+                  </h3>
+                  <p class="text-sm text-gray-600 line-clamp-3 mb-4">
+                    {{ product.short_description || product.description }}
+                  </p>
+                  <span class="text-blue-600 font-medium text-sm hover:text-blue-700 inline-flex items-center">
+                    {{ section.content?.cta_label || 'View Details' }} →
+                  </span>
+                </div>
+                <div class="h-[280px] md:h-[400px] bg-gray-50 relative overflow-hidden p-4">
+                  <img
+                    v-if="product.landscape_image || product.featured_image || product.cover_image?.image_url"
+                    :src="product.landscape_image || product.featured_image || product.cover_image?.image_url"
+                    :alt="product.name"
+                    class="w-full h-full object-contain group-hover/card:scale-105 transition-transform duration-300"
+                  >
+                  <div v-else class="w-full h-full flex items-center justify-center">
+                    <div class="w-24 h-24 bg-white rounded-full border border-gray-200 flex items-center justify-center">
+                      <span class="text-5xl font-bold text-blue-600">{{ product.name?.charAt(0) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </article>
+        </div>
+      </div>
+
+      <div v-else class="text-center text-sm text-gray-500">
+        No featured products available right now.
       </div>
     </div>
   </section>
 </template>
-
-<style scoped>
-.featured-shell {
-  padding: 0 1.5rem;
-}
-
-.featured-shell__inner {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.featured-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
-}
-
-.featured-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 1.25rem;
-  padding: 1.4rem;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  cursor: pointer;
-}
-
-.featured-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(37, 99, 235, 0.22);
-  box-shadow: 0 24px 46px rgba(15, 23, 42, 0.08);
-}
-
-.featured-card__eyebrow {
-  color: #2563eb;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.8rem;
-}
-
-.featured-card__copy h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1.55rem;
-  line-height: 1.1;
-  color: #0f172a;
-}
-
-.featured-card__copy p {
-  margin: 0;
-  color: #475569;
-  line-height: 1.7;
-}
-
-.featured-card__button {
-  margin-top: 1.25rem;
-  border: none;
-  background: none;
-  color: #0f766e;
-  font-weight: 700;
-  padding: 0;
-}
-
-.featured-card__media {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 240px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #f8fafc, #eef2ff);
-  overflow: hidden;
-}
-
-.featured-card__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transition: transform 0.25s ease;
-}
-
-.featured-card:hover .featured-card__media img {
-  transform: scale(1.04);
-}
-
-.featured-card__placeholder {
-  width: 84px;
-  height: 84px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #dbeafe;
-  color: #2563eb;
-  font-size: 2rem;
-  font-weight: 800;
-}
-
-.featured-loading {
-  min-height: 260px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #475569;
-  gap: 0.85rem;
-}
-
-.featured-loading__spinner {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 3px solid rgba(37, 99, 235, 0.15);
-  border-top-color: #2563eb;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 959px) {
-  .featured-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .featured-card {
-    grid-template-columns: 1fr;
-  }
-
-  .featured-card__media {
-    min-height: 280px;
-  }
-}
-</style>

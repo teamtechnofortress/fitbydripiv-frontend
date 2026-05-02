@@ -40,6 +40,11 @@ const footerResearchDraft = reactive({
   doi: '',
 })
 
+const footerSocialDraft = reactive({
+  platform: 'facebook',
+  href: '',
+})
+
 const settingsSchema = {
   general: [
     { key: 'app_name', label: 'App Name', type: 'string', placeholder: 'FitByShot' },
@@ -142,8 +147,26 @@ const footerSourceOptions = [
   { title: 'Brand', value: 'brand' },
   { title: 'Categories', value: 'categories' },
   { title: 'Static Pages', value: 'static_pages' },
+  { title: 'Certification', value: 'certification' },
   { title: 'Research Links', value: 'research_links' },
   { title: 'Social Links', value: 'social_links' },
+]
+
+const footerSocialPlatformOptions = [
+  { title: 'Facebook', value: 'facebook', icon: 'tabler-brand-facebook' },
+  { title: 'Instagram', value: 'instagram', icon: 'tabler-brand-instagram' },
+  { title: 'Twitter', value: 'twitter', icon: 'tabler-brand-x' },
+  { title: 'WhatsApp', value: 'whatsapp', icon: 'tabler-brand-whatsapp' },
+  { title: 'YouTube', value: 'youtube', icon: 'tabler-brand-youtube' },
+  { title: 'LinkedIn', value: 'linkedin', icon: 'tabler-brand-linkedin' },
+  { title: 'TikTok', value: 'tiktok', icon: 'tabler-brand-tiktok' },
+  { title: 'Telegram', value: 'telegram', icon: 'tabler-brand-telegram' },
+  { title: 'Pinterest', value: 'pinterest', icon: 'tabler-brand-pinterest' },
+  { title: 'Snapchat', value: 'snapchat', icon: 'tabler-brand-snapchat' },
+  { title: 'Discord', value: 'discord', icon: 'tabler-brand-discord' },
+  { title: 'Threads', value: 'threads', icon: 'tabler-brand-threads' },
+  { title: 'GitHub', value: 'github', icon: 'tabler-brand-github' },
+  { title: 'Email', value: 'email', icon: 'tabler-mail' },
 ]
 
 const socialItemOptions = [
@@ -152,6 +175,16 @@ const socialItemOptions = [
   { title: 'Twitter / X', value: 'twitter' },
   { title: 'Email', value: 'email' },
 ]
+
+const SOCIAL_ITEM_KEYS = new Set(socialItemOptions.map(item => item.value))
+const FOOTER_SOCIAL_PLATFORM_KEYS = new Set(footerSocialPlatformOptions.map(item => item.value))
+const LEGACY_SOCIAL_SETTING_KEYS = {
+  facebook: 'facebook_url',
+  instagram: 'instagram_url',
+  twitter: 'twitter_url',
+  x: 'twitter_url',
+  email: 'contact_email',
+}
 
 const getAuthHeaders = (extraHeaders = {}) => {
   const token = getApiToken()
@@ -201,6 +234,72 @@ const normalizeLayoutResponse = body => {
   }
 }
 
+const normalizeSlugValue = value => {
+  if (!value) return ''
+
+  const raw = String(value).trim()
+  if (!raw) return ''
+  if (/^https?:\/\//i.test(raw)) return ''
+
+  return raw
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '')
+}
+
+const normalizeSocialItemValue = value => {
+  if (!value) return ''
+
+  const raw = String(value).trim().toLowerCase()
+  if (!raw) return ''
+  if (SOCIAL_ITEM_KEYS.has(raw)) return raw
+  if (raw.includes('facebook')) return 'facebook'
+  if (raw.includes('instagram')) return 'instagram'
+  if (raw.includes('twitter') || raw.includes('x.com') || raw === 'x') return 'twitter'
+  if (raw.includes('mail') || raw.includes('@')) return 'email'
+
+  return ''
+}
+
+const normalizeSelectableItemValue = (source, item) => {
+  if (!item) return ''
+
+  if (typeof item === 'string') {
+    if (source === 'social_links') return normalizeSocialItemValue(item)
+    if (source === 'manual') return item.trim()
+    return normalizeSlugValue(item)
+  }
+
+  if (typeof item !== 'object') return ''
+
+  if (source === 'social_links') {
+    return normalizeSocialItemValue(
+      item.value
+      || item.icon
+      || item.label
+      || item.title
+      || item.slug
+      || item.href,
+    )
+  }
+
+  if (source === 'manual') {
+    return String(item.label || item.title || item.slug || item.href || item.value || '').trim()
+  }
+
+  return normalizeSlugValue(item.value || item.slug || item.href || item.path)
+}
+
+const normalizeSourceItems = (source, items) => {
+  if (!Array.isArray(items)) return []
+  if (source === 'research_links') return items.filter(item => item && typeof item === 'object').map(item => ({ ...item }))
+
+  return Array.from(new Set(
+    items
+      .map(item => normalizeSelectableItemValue(source, item))
+      .filter(Boolean),
+  ))
+}
+
 const pageRows = computed(() => pages.value.slice().sort((a, b) => String(a?.title || '').localeCompare(String(b?.title || ''))))
 const categoryOptions = computed(() => categories.value.map(item => ({ title: item.name, value: item.slug })))
 const staticPageOptions = computed(() => pageRows.value.map(item => ({ title: item.title || item.slug, value: item.slug })))
@@ -217,6 +316,131 @@ const getFilePreviewUrl = value => {
 
 const isSourceSelectable = source => ['categories', 'static_pages', 'social_links', 'manual'].includes(source)
 const isLinkSource = source => source !== 'brand'
+
+const getFooterSocialPlatformMeta = value => {
+  const normalized = String(value || '').trim().toLowerCase()
+
+  return footerSocialPlatformOptions.find(item => item.value === normalized) || footerSocialPlatformOptions[0]
+}
+
+const getLegacySocialSettingValue = platform => {
+  const key = LEGACY_SOCIAL_SETTING_KEYS[platform]
+  if (!key) return ''
+
+  const draftValue = settingsForm[key]
+  if (typeof draftValue === 'string' && draftValue.trim()) return draftValue.trim()
+
+  const persistedValue = settingsByKey.value[key]?.value
+  return typeof persistedValue === 'string' ? persistedValue.trim() : ''
+}
+
+const normalizeFooterSocialPlatformValue = value => {
+  if (!value) return ''
+
+  const raw = String(value).trim().toLowerCase()
+  if (!raw) return ''
+  if (FOOTER_SOCIAL_PLATFORM_KEYS.has(raw)) return raw
+  if (raw === 'x' || raw.includes('twitter') || raw.includes('x.com')) return 'twitter'
+  if (raw.includes('facebook')) return 'facebook'
+  if (raw.includes('instagram')) return 'instagram'
+  if (raw.includes('whatsapp') || raw.includes('wa.me')) return 'whatsapp'
+  if (raw.includes('youtube')) return 'youtube'
+  if (raw.includes('linkedin')) return 'linkedin'
+  if (raw.includes('tiktok')) return 'tiktok'
+  if (raw.includes('telegram') || raw.includes('t.me')) return 'telegram'
+  if (raw.includes('pinterest')) return 'pinterest'
+  if (raw.includes('snapchat')) return 'snapchat'
+  if (raw.includes('discord')) return 'discord'
+  if (raw.includes('threads')) return 'threads'
+  if (raw.includes('github')) return 'github'
+  if (raw.includes('mail') || raw.includes('@')) return 'email'
+
+  return ''
+}
+
+const normalizeFooterSocialHref = (platform, value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+
+  if (platform === 'email' && raw.includes('@') && !raw.startsWith('mailto:')) return `mailto:${raw}`
+  return raw
+}
+
+const normalizeFooterSocialLinkItem = item => {
+  if (!item) return null
+
+  const platform = normalizeFooterSocialPlatformValue(
+    typeof item === 'string'
+      ? item
+      : item.platform || item.value || item.icon || item.label || item.title || item.href,
+  )
+
+  if (!platform) return null
+
+  const meta = getFooterSocialPlatformMeta(platform)
+  const href = normalizeFooterSocialHref(
+    platform,
+    typeof item === 'string'
+      ? getLegacySocialSettingValue(platform)
+      : item.href || item.url || getLegacySocialSettingValue(platform),
+  )
+
+  return {
+    platform,
+    icon: meta.icon,
+    label: typeof item === 'object' && item.label ? String(item.label).trim() : meta.title,
+    href,
+    external: typeof item === 'object' && typeof item.external === 'boolean'
+      ? item.external
+      : platform !== 'email',
+  }
+}
+
+const normalizeFooterColumnItems = (source, items) => {
+  if (source === 'certification' && !Array.isArray(items)) return [{ image: '', description: '' }]
+  if (!Array.isArray(items)) return []
+  if (source === 'research_links') return items.filter(item => item && typeof item === 'object').map(item => ({ ...item }))
+  if (source === 'social_links') return items.map(item => normalizeFooterSocialLinkItem(item)).filter(Boolean)
+  if (source === 'certification') {
+    const normalizedItems = items
+      .filter(item => item && typeof item === 'object')
+      .map(item => ({
+        image: String(item.image || item.logo || item.certificate || item.asset || '').trim(),
+        description: String(item.description || item.content || item.text || '').trim(),
+      }))
+      .filter(item => item.image || item.description)
+
+    return normalizedItems.length ? [normalizedItems[0]] : [{ image: '', description: '' }]
+  }
+
+  return normalizeSourceItems(source, items)
+}
+
+const serializeFooterSocialLinkItem = item => {
+  const normalized = normalizeFooterSocialLinkItem(item)
+  if (!normalized?.href) return null
+
+  return {
+    label: normalized.label,
+    href: normalized.href,
+    icon: normalized.platform === 'email' ? 'mail' : normalized.platform,
+    external: normalized.external,
+  }
+}
+
+const getFooterCertificationItem = column => {
+  return Array.isArray(column.items) && column.items[0] && typeof column.items[0] === 'object'
+    ? column.items[0]
+    : { image: '', description: '' }
+}
+
+const setFooterCertificationDescription = (column, value) => {
+  if (!Array.isArray(column.items) || !column.items.length || typeof column.items[0] !== 'object') {
+    column.items = [{ image: '', description: '' }]
+  }
+
+  column.items[0].description = String(value || '')
+}
 
 const createHeaderMenuItem = (type = 'group') => (
   type === 'link'
@@ -241,6 +465,23 @@ const createFooterColumn = source => (
         source: 'brand',
         title: 'FitByShot',
       }
+    : source === 'certification'
+      ? {
+          source: 'certification',
+          title: 'Certification',
+          items: [
+            {
+              image: '',
+              description: '',
+            },
+          ],
+        }
+    : source === 'social_links'
+      ? {
+          source: 'social_links',
+          title: 'Connect',
+          items: [],
+        }
     : source === 'research_links'
       ? {
           source: 'research_links',
@@ -290,7 +531,7 @@ const hydrateLayoutForm = payload => {
         type: item.type || 'group',
         label: item.label || '',
         source: item.source || 'categories',
-        items: Array.isArray(item.items) ? [...item.items] : [],
+        items: normalizeSourceItems(item.source || 'categories', item.items),
         slug: item.slug || '',
         href: item.href || '',
         external: !!item.external,
@@ -304,7 +545,7 @@ const hydrateLayoutForm = payload => {
       columns: (footer?.config?.columns || []).map(column => ({
         source: column.source || (column.type === 'brand' ? 'brand' : 'static_pages'),
         title: column.title || '',
-        items: Array.isArray(column.items) ? [...column.items] : [],
+        items: normalizeFooterColumnItems(column.source || (column.type === 'brand' ? 'brand' : 'static_pages'), column.items),
       })),
       bottom: {
         copyright: footer?.config?.bottom?.copyright || '',
@@ -453,8 +694,48 @@ const uploadLayoutAsset = async (files, sectionKey, fieldKey) => {
   }
 }
 
+const uploadFooterColumnAsset = async (files, column, fieldKey) => {
+  const file = Array.isArray(files) ? files[0] : files
+  if (!file) return
+
+  uploadingLayoutAssetKey.value = `footer.${column.source}.${fieldKey}`
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'misc')
+
+    const response = await axios.post(ADMIN_MEDIA_UPLOAD_URL, formData, {
+      headers: getAuthHeaders({ 'Content-Type': 'multipart/form-data' }),
+    })
+
+    const payload = response?.data?.data || {}
+    if (!Array.isArray(column.items) || !column.items.length || typeof column.items[0] !== 'object') {
+      column.items = [{ image: '', description: '' }]
+    }
+
+    const certificationItem = column.items[0]
+    certificationItem[fieldKey] = payload.path || payload.url || ''
+    toast.success(`${file.name} uploaded`)
+  } catch (error) {
+    toast.error(buildErrorMessage(error))
+  } finally {
+    uploadingLayoutAssetKey.value = ''
+  }
+}
+
 const addHeaderMenuItem = type => {
   layoutForm.header.config.menu.push(createHeaderMenuItem(type))
+}
+
+const updateHeaderMenuItemSource = (item, source) => {
+  item.source = source || 'categories'
+
+  if (item.source === 'categories') {
+    item.items = []
+    return
+  }
+
+  item.items = normalizeSourceItems(item.source, item.items)
 }
 
 const moveHeaderMenuItem = (index, direction) => {
@@ -483,8 +764,62 @@ const moveFooterColumn = (index, direction) => {
   layoutForm.footer.config.columns = columns
 }
 
+const updateFooterColumnSource = (column, source) => {
+  const nextColumn = createFooterColumn(source)
+  column.source = source
+
+  if (column.source === 'categories') {
+    column.items = []
+  } else {
+    column.items = Array.isArray(nextColumn.items) ? [...nextColumn.items] : []
+  }
+
+  if (!String(column.title || '').trim())
+    column.title = nextColumn.title || ''
+}
+
 const removeFooterColumn = index => {
   layoutForm.footer.config.columns.splice(index, 1)
+}
+
+const addFooterSocialLink = column => {
+  const platform = normalizeFooterSocialPlatformValue(footerSocialDraft.platform) || 'facebook'
+  const href = normalizeFooterSocialHref(platform, footerSocialDraft.href)
+
+  if (!href) {
+    toast.error('Social link URL is required.')
+    return
+  }
+
+  const meta = getFooterSocialPlatformMeta(platform)
+
+  column.items = [
+    ...(Array.isArray(column.items) ? column.items : []),
+    {
+      platform,
+      icon: meta.icon,
+      label: meta.title,
+      href,
+      external: platform !== 'email',
+    },
+  ]
+
+  footerSocialDraft.platform = 'facebook'
+  footerSocialDraft.href = ''
+}
+
+const removeFooterSocialLink = (column, index) => {
+  column.items = (column.items || []).filter((_, itemIndex) => itemIndex !== index)
+}
+
+const moveFooterSocialLink = (column, index, direction) => {
+  const targetIndex = index + direction
+  if (targetIndex < 0 || targetIndex >= (column.items || []).length) return
+
+  const items = [...column.items]
+  const [current] = items.splice(index, 1)
+  items.splice(targetIndex, 0, current)
+  column.items = items
 }
 
 const addFooterResearchLink = column => {
@@ -561,7 +896,9 @@ const buildHeaderPayload = () => ({
             type: 'group',
             label: item.label,
             source: item.source || 'categories',
-            items: Array.isArray(item.items) ? item.items.filter(Boolean) : [],
+            items: item.source === 'categories'
+              ? []
+              : normalizeSourceItems(item.source || 'categories', item.items),
           }
     )),
   },
@@ -582,7 +919,9 @@ const buildFooterPayload = () => ({
       return {
         source: column.source,
         title: column.title,
-        items: column.source === 'research_links'
+        items: column.source === 'categories'
+          ? []
+          : column.source === 'research_links'
           ? (Array.isArray(column.items) ? column.items.map((item, index) => ({
               title: item.title,
               article_url: item.article_url,
@@ -593,7 +932,20 @@ const buildFooterPayload = () => ({
               doi: item.doi || undefined,
               display_order: index,
             })) : [])
-          : (Array.isArray(column.items) ? column.items.filter(Boolean) : []),
+          : column.source === 'social_links'
+            ? (Array.isArray(column.items) ? column.items.map(item => serializeFooterSocialLinkItem(item)).filter(Boolean) : [])
+          : column.source === 'certification'
+            ? (() => {
+                const certificationItem = getFooterCertificationItem(column)
+
+                return certificationItem.image || certificationItem.description
+                  ? [{
+                      image: certificationItem.image || undefined,
+                      description: certificationItem.description || undefined,
+                    }]
+                  : []
+              })()
+          : normalizeSourceItems(column.source, column.items),
       }
     }),
     bottom: {
@@ -641,6 +993,7 @@ const openPanel = async action => {
 
   if (action === 'global-sections') {
     activeGlobalSection.value = ''
+    await fetchSettings()
     await Promise.all([fetchLayout(), fetchPages(), fetchCategories()])
   }
 }
@@ -1045,10 +1398,11 @@ const openPageBuilder = page => {
                         <template v-if="item.type === 'group'">
                           <VCol cols="12" md="4">
                             <VSelect
-                              v-model="item.source"
+                              :model-value="item.source"
                               :items="headerGroupSourceOptions"
                               label="Source"
                               variant="outlined"
+                              @update:model-value="updateHeaderMenuItemSource(item, $event)"
                             />
                           </VCol>
                           <VCol
@@ -1056,14 +1410,9 @@ const openPageBuilder = page => {
                             cols="12"
                             md="8"
                           >
-                            <VSelect
-                              v-model="item.items"
-                              :items="categoryOptions"
-                              label="Category Slugs"
-                              variant="outlined"
-                              multiple
-                              chips
-                            />
+                            <VAlert color="info" variant="tonal">
+                              All CMS categories will be shown automatically. No category selection is needed here.
+                            </VAlert>
                           </VCol>
                           <VCol
                             v-else-if="item.source === 'static_pages'"
@@ -1155,6 +1504,9 @@ const openPageBuilder = page => {
                     <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('static_pages')">
                       Static Pages
                     </VBtn>
+                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('certification')">
+                      Certification
+                    </VBtn>
                     <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('research_links')">
                       Research
                     </VBtn>
@@ -1185,10 +1537,11 @@ const openPageBuilder = page => {
                       <VRow>
                         <VCol cols="12" md="4">
                           <VSelect
-                            v-model="column.source"
+                            :model-value="column.source"
                             :items="footerSourceOptions"
                             label="Source"
                             variant="outlined"
+                            @update:model-value="value => updateFooterColumnSource(column, value)"
                           />
                         </VCol>
                         <VCol cols="12" md="8">
@@ -1211,14 +1564,9 @@ const openPageBuilder = page => {
                           v-else-if="column.source === 'categories'"
                           cols="12"
                         >
-                          <VSelect
-                            v-model="column.items"
-                            :items="categoryOptions"
-                            label="Category Slugs"
-                            variant="outlined"
-                            multiple
-                            chips
-                          />
+                          <VAlert color="info" variant="tonal">
+                            All CMS categories will be shown automatically. No category selection is needed here.
+                          </VAlert>
                         </VCol>
 
                         <VCol
@@ -1239,14 +1587,143 @@ const openPageBuilder = page => {
                           v-else-if="column.source === 'social_links'"
                           cols="12"
                         >
-                          <VSelect
-                            v-model="column.items"
-                            :items="socialItemOptions"
-                            label="Social Items"
-                            variant="outlined"
-                            multiple
-                            chips
-                          />
+                          <div class="research-links-editor">
+                            <VAlert color="info" variant="tonal" class="mb-4">
+                              Add each social platform with its public link. The footer icon is chosen automatically from the selected platform.
+                            </VAlert>
+
+                            <VRow>
+                              <VCol cols="12" md="5">
+                                <VSelect
+                                  v-model="footerSocialDraft.platform"
+                                  :items="footerSocialPlatformOptions"
+                                  label="Platform"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  hide-details="auto"
+                                />
+                              </VCol>
+                              <VCol cols="12" md="7">
+                                <VTextField
+                                  v-model="footerSocialDraft.href"
+                                  label="Profile URL or Email"
+                                  placeholder="https://instagram.com/fitbyshot"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  hide-details="auto"
+                                />
+                              </VCol>
+                            </VRow>
+
+                            <div class="d-flex justify-end mt-4">
+                              <VBtn color="primary" @click="addFooterSocialLink(column)">
+                                Add Social Link
+                              </VBtn>
+                            </div>
+
+                            <div
+                              v-if="column.items?.length"
+                              class="footer-research-list"
+                            >
+                              <div
+                                v-for="(item, itemIndex) in column.items"
+                                :key="`${item.platform}-${itemIndex}`"
+                                class="footer-research-card"
+                              >
+                                <div class="d-flex justify-space-between gap-4 mb-4">
+                                  <div class="d-flex align-center gap-3">
+                                    <VIcon :icon="item.icon || getFooterSocialPlatformMeta(item.platform).icon" size="20" />
+                                    <div class="text-subtitle-2 font-weight-bold">
+                                      {{ item.label || getFooterSocialPlatformMeta(item.platform).title }}
+                                    </div>
+                                  </div>
+
+                                  <div class="d-flex gap-2">
+                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-up" :disabled="itemIndex === 0" @click="moveFooterSocialLink(column, itemIndex, -1)" />
+                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-down" :disabled="itemIndex === column.items.length - 1" @click="moveFooterSocialLink(column, itemIndex, 1)" />
+                                    <VBtn size="x-small" color="error" variant="text" icon="tabler-trash" @click="removeFooterSocialLink(column, itemIndex)" />
+                                  </div>
+                                </div>
+
+                                <VRow>
+                                  <VCol cols="12" md="4">
+                                    <VSelect
+                                      v-model="item.platform"
+                                      :items="footerSocialPlatformOptions"
+                                      label="Platform"
+                                      variant="outlined"
+                                      density="comfortable"
+                                      hide-details="auto"
+                                      @update:model-value="value => { const meta = getFooterSocialPlatformMeta(value); item.icon = meta.icon; item.label = meta.title; item.external = value !== 'email'; item.href = normalizeFooterSocialHref(value, item.href) }"
+                                    />
+                                  </VCol>
+                                  <VCol cols="12" md="8">
+                                    <VTextField
+                                      v-model="item.href"
+                                      label="Profile URL or Email"
+                                      variant="outlined"
+                                      density="comfortable"
+                                      hide-details="auto"
+                                      @blur="item.href = normalizeFooterSocialHref(item.platform, item.href)"
+                                    />
+                                  </VCol>
+                                </VRow>
+                              </div>
+                            </div>
+                          </div>
+                        </VCol>
+
+                        <VCol
+                          v-else-if="column.source === 'certification'"
+                          cols="12"
+                        >
+                          <div class="research-links-editor">
+                            <VAlert color="info" variant="tonal" class="mb-4">
+                              Upload a certification badge or document image and add a short description for the footer.
+                            </VAlert>
+
+                            <div
+                              v-if="getFilePreviewUrl(getFooterCertificationItem(column).image)"
+                              class="site-setting-file__preview mb-4"
+                            >
+                              <img
+                                :src="getFilePreviewUrl(getFooterCertificationItem(column).image)"
+                                alt="Certification"
+                                class="site-setting-file__image"
+                              >
+                            </div>
+
+                            <VTextField
+                              :model-value="getFooterCertificationItem(column).image"
+                              label="Certificate File Path"
+                              variant="outlined"
+                              hide-details="auto"
+                              readonly
+                              class="mb-4"
+                            />
+
+                            <VFileInput
+                              label="Upload Certificate"
+                              variant="outlined"
+                              density="comfortable"
+                              prepend-icon="tabler-upload"
+                              hide-details="auto"
+                              accept="image/*"
+                              :loading="uploadingLayoutAssetKey === `footer.${column.source}.image`"
+                              class="mb-4"
+                              @update:model-value="value => uploadFooterColumnAsset(value, column, 'image')"
+                            />
+
+                            <VTextarea
+                              :model-value="getFooterCertificationItem(column).description"
+                              label="Description"
+                              placeholder="Licensed and verified by..."
+                              variant="outlined"
+                              rows="3"
+                              hide-details="auto"
+                              @update:model-value="value => setFooterCertificationDescription(column, value)"
+                            />
+                          </div>
                         </VCol>
 
                         <VCol

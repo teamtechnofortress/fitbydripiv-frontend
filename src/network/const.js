@@ -218,6 +218,7 @@ export const getAdminProductDeleteUrl = productId => `${SERVER_URL}/admin/produc
 export const getAdminProductPublishStatusUrl = productId => `${SERVER_URL}/admin/products/${productId}/publish-status`
 export const getAdminProductPublishUrl = productId => `${SERVER_URL}/admin/products/${productId}/publish`
 export const getAdminProductUnpublishUrl = productId => `${SERVER_URL}/admin/products/${productId}/unpublish`
+export const getAdminProductToggleFeaturedUrl = productId => `${SERVER_URL}/admin/products/${productId}/toggle-featured`
 export const getAdminProductPreviewUrl = productId => `${SERVER_URL}/admin/products/${productId}/preview`
 export const ADMIN_PRODUCTS_STEP1_URL = SERVER_URL + "/admin/products/step-1"
 export const ADMIN_PRODUCTS_STEP2_URL = SERVER_URL + "/admin/products/step-2"

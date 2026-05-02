@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   section: {
     type: Object,
@@ -6,86 +8,41 @@ const props = defineProps({
   },
 })
 
+const heading = computed(() => props.section.content?.headline || props.section.title || 'How It Works')
+const items = computed(() => props.section.items || [])
+
 const iconMap = {
   'clipboard-list': 'tabler-clipboard-list',
   stethoscope: 'tabler-stethoscope',
   truck: 'tabler-truck-delivery',
 }
+
+const getStepImage = item => item?.image || item?.icon_image || item?.icon_url || ''
 </script>
 
 <template>
-  <section class="process-shell">
-    <div class="process-shell__inner">
-      <article
-        v-for="item in section.items"
-        :key="item.title"
-        class="process-card"
-      >
-        <div class="process-card__orb">
-          <VIcon :icon="iconMap[item.icon] || 'tabler-circle'" size="28" color="primary" />
+  <section class="py-12 px-4 gradient-bg-light border-y border-gray-200">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">{{ heading }}</h2>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
+        <div
+          v-for="(item, index) in items"
+          :key="item.id || item.title || index"
+          class="text-center group"
+        >
+          <div class="w-32 h-32 mx-auto mb-4 bg-white rounded-full border-2 border-emerald-200 flex items-center justify-center p-8 shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+            <img
+              v-if="getStepImage(item)"
+              :src="getStepImage(item)"
+              :alt="item.title"
+              class="w-full h-full object-contain"
+            >
+            <VIcon v-else :icon="iconMap[item.icon] || 'tabler-circle'" size="54" color="primary" />
+          </div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">{{ item.title }}</h3>
+          <p class="text-sm text-gray-700 leading-relaxed">{{ item.description }}</p>
         </div>
-        <h3>{{ item.title }}</h3>
-        <p>{{ item.description }}</p>
-      </article>
+      </div>
     </div>
   </section>
 </template>
-
-<style scoped>
-.process-shell {
-  padding: 0 1.5rem 4rem;
-}
-
-.process-shell__inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  border-radius: 34px;
-  background:
-    radial-gradient(circle at top left, rgba(16, 185, 129, 0.12), transparent 28%),
-    linear-gradient(180deg, #effcf7, #eef7ff);
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.2rem;
-}
-
-.process-card {
-  padding: 1.5rem;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  text-align: center;
-}
-
-.process-card__orb {
-  width: 74px;
-  height: 74px;
-  margin: 0 auto 1rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
-}
-
-.process-card h3 {
-  margin: 0 0 0.7rem;
-  color: #0f172a;
-  font-size: 1.12rem;
-}
-
-.process-card p {
-  margin: 0;
-  color: #475569;
-  line-height: 1.7;
-}
-
-@media (max-width: 959px) {
-  .process-shell__inner {
-    grid-template-columns: 1fr;
-    padding: 1.25rem;
-  }
-}
-</style>
-

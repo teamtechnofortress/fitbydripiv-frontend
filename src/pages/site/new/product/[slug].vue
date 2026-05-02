@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCmsDataStore } from '@/store/cmsData'
+import { normalizePublicSitePath } from '../composables/normalizePublicSitePath'
 
 const store = useCmsDataStore()
 const router = useRouter()
@@ -37,8 +38,9 @@ onMounted(loadProduct)
 watch(() => route.params.slug, loadProduct)
 
 const navigate = path => {
-  if (!path) return
-  router.push(path)
+  const target = normalizePublicSitePath(path)
+  if (!target) return
+  router.push(target)
   window.scrollTo(0, 0)
 }
 
@@ -62,7 +64,7 @@ const categoryLabel = computed(() => {
 })
 
 const backPath = computed(() => (
-  categorySlug.value ? `/${categorySlug.value}` : '/'
+  categorySlug.value ? `/new/${categorySlug.value}` : '/new'
 ))
 
 const productImage = computed(() => (

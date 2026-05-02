@@ -41,9 +41,10 @@ const toast = useToast()
 const MAX_SERVER_VIDEO_UPLOAD_BYTES = 10 * 1024 * 1024
 
 const localSection = ref(createSectionDraft('section_header', props.nextSortOrder))
-const heroVideoInput = ref(null)
-const heroVideoUploading = ref(false)
-const heroVideoPreviewOpen = ref(false)
+const heroMediaInput = ref(null)
+const heroMediaUploading = ref(false)
+const heroMediaPreviewOpen = ref(false)
+const heroMediaDragActive = ref(false)
 
 const isEditing = computed(() => Boolean(props.section?.id))
 const isHero = computed(() => localSection.value.type === 'hero')
@@ -56,8 +57,10 @@ const isSpacer = computed(() => localSection.value.type === 'spacer')
 const isFaq = computed(() => localSection.value.type === 'faq')
 const isTelehealth = computed(() => localSection.value.type === 'telehealth_cta')
 
-const itemEditorLabel = computed(() => (isProcess.value ? 'Step' : 'Card'))
-const heroVideoUrl = computed(() => localSection.value.content?.background?.url || '')
+const itemEditorLabel = computed(() => 'Step')
+const heroMediaUrl = computed(() => localSection.value.content?.background?.url || '')
+const heroMediaType = computed(() => localSection.value.content?.background?.type || '')
+const isHeroVideo = computed(() => heroMediaType.value === 'video')
 
 const closeDialog = () => {
   emit('update:modelValue', false)
@@ -122,48 +125,92 @@ const updateDialog = value => {
   emit('update:modelValue', value)
 }
 
-const openHeroVideoPicker = () => {
-  heroVideoInput.value?.click()
+const inferMediaType = file => {
+  const mime = String(file?.type || '').toLowerCase()
+  const name = String(file?.name || '').toLowerCase()
+
+  if (mime.startsWith('image/'))
+    return 'image'
+  if (mime.startsWith('video/'))
+    return 'video'
+  if (/\.(png|jpe?g|webp|gif|svg)$/i.test(name))
+    return 'image'
+  if (/\.(mp4|webm|mov|m4v|ogg)$/i.test(name))
+    return 'video'
+
+  return ''
 }
 
-const uploadHeroVideo = async event => {
-  const file = event?.target?.files?.[0]
+const uploadAdminMedia = async file => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('type', 'product')
+
+  const response = await axios.post(ADMIN_MEDIA_UPLOAD_URL, formData, {
+    headers: getUploadHeaders(),
+  })
+
+  return response?.data?.data || {}
+}
+
+const openHeroMediaPicker = () => {
+  heroMediaInput.value?.click()
+}
+
+const applyHeroMedia = (mediaUrl, mediaType) => {
+  localSection.value.content.background.type = mediaType
+  localSection.value.content.background.url = mediaUrl || ''
+
+  if (mediaType !== 'video')
+    localSection.value.content.background.poster = ''
+}
+
+const handleHeroMediaFile = async file => {
   if (!file)
     return
 
-  if (String(file.type || '').startsWith('video/') && file.size > MAX_SERVER_VIDEO_UPLOAD_BYTES) {
-    toast.error('Video is larger than the current server upload limit of 10MB.')
-    if (event?.target)
-      event.target.value = ''
+  const mediaType = inferMediaType(file)
+  if (!mediaType) {
+    toast.error('Unsupported file type. Upload an image or video.')
     return
   }
 
-  heroVideoUploading.value = true
+  if (mediaType === 'video' && file.size > MAX_SERVER_VIDEO_UPLOAD_BYTES) {
+    toast.error('Video is larger than the current server upload limit of 10MB.')
+    return
+  }
+
+  heroMediaUploading.value = true
   try {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('type', 'product')
-
-    const response = await axios.post(ADMIN_MEDIA_UPLOAD_URL, formData, {
-      headers: getUploadHeaders(),
-    })
-
-    const media = response?.data?.data || {}
-    localSection.value.content.background.type = media.media_type === 'video' ? 'video' : localSection.value.content.background.type
-    localSection.value.content.background.url = media.url || ''
+    const media = await uploadAdminMedia(file)
+    const resolvedType = media.media_type === 'video' ? 'video' : media.media_type === 'image' ? 'image' : mediaType
+    applyHeroMedia(media.url || '', resolvedType)
     toast.success('Hero media uploaded successfully.')
   } catch (error) {
     toast.error(buildErrorMessage(error))
   } finally {
-    heroVideoUploading.value = false
-    if (event?.target)
-      event.target.value = ''
+    heroMediaUploading.value = false
   }
 }
 
-const removeHeroVideo = () => {
+const onHeroMediaInputChange = async event => {
+  const file = event?.target?.files?.[0]
+  await handleHeroMediaFile(file)
+  if (event?.target)
+    event.target.value = ''
+}
+
+const onHeroMediaDrop = async event => {
+  heroMediaDragActive.value = false
+  const file = event?.dataTransfer?.files?.[0]
+  await handleHeroMediaFile(file)
+}
+
+const removeHeroMedia = () => {
+  localSection.value.content.background.type = 'image'
   localSection.value.content.background.url = ''
-  heroVideoPreviewOpen.value = false
+  localSection.value.content.background.poster = ''
+  heroMediaPreviewOpen.value = false
 }
 
 const addItem = () => {
@@ -396,14 +443,14 @@ const saveSection = () => {
           />
           <VRow>
             <VCol cols="12" md="4">
-              <VSelect
-                v-model="localSection.content.background.type"
-                :items="['video', 'image']"
-                label="Background Type"
+              <VTextField
+                :model-value="heroMediaType || 'image'"
+                label="Detected Background Type"
                 variant="outlined"
+                readonly
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol cols="12" md="8">
               <VTextField
                 v-model="localSection.content.background.url"
                 label="Background URL"
@@ -442,60 +489,76 @@ const saveSection = () => {
               <div class="hero-media-uploader">
                 <div class="hero-media-uploader__copy">
                   <div class="text-subtitle-2 font-weight-semibold">
-                    Hero Video Upload
+                    Hero Media Upload
                   </div>
                   <p class="mb-0 text-body-2 text-medium-emphasis">
-                    Upload a video directly and its public URL will be saved into the hero background link.
+                    Drop an image or video here. The uploader will detect the media type and store its public URL in the hero background.
                   </p>
                 </div>
 
-                <div class="hero-media-uploader__actions">
-                  <input
-                    ref="heroVideoInput"
-                    type="file"
-                    accept="video/mp4,video/webm,video/quicktime,video/mov"
-                    class="d-none"
-                    @change="uploadHeroVideo"
-                  >
+                <input
+                  ref="heroMediaInput"
+                  type="file"
+                  accept="image/*,video/mp4,video/webm,video/quicktime,video/mov"
+                  class="d-none"
+                  @change="onHeroMediaInputChange"
+                >
 
-                  <VBtn
+                <div
+                  class="hero-media-uploader__dropzone"
+                  :class="{ 'hero-media-uploader__dropzone--active': heroMediaDragActive }"
+                  @click="openHeroMediaPicker"
+                  @dragenter.prevent="heroMediaDragActive = true"
+                  @dragover.prevent="heroMediaDragActive = true"
+                  @dragleave.prevent="heroMediaDragActive = false"
+                  @drop.prevent="onHeroMediaDrop"
+                >
+                  <VIcon
+                    :icon="heroMediaUploading ? 'tabler-loader-2' : 'tabler-cloud-upload'"
+                    :class="{ 'spin-icon': heroMediaUploading }"
+                    size="34"
                     color="primary"
-                    variant="tonal"
-                    prepend-icon="tabler-upload"
-                    :loading="heroVideoUploading"
-                    @click="openHeroVideoPicker"
-                  >
-                    Upload Video
-                  </VBtn>
+                    class="mb-3"
+                  />
+                  <div class="text-subtitle-1 font-weight-semibold mb-1">
+                    Drop hero media here or click to upload
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis text-center">
+                    Accepted: images and videos. Uploading a new file replaces the current hero media.
+                  </div>
                 </div>
 
                 <div
-                  v-if="heroVideoUrl"
+                  v-if="heroMediaUrl"
                   class="hero-media-uploader__preview"
                 >
                   <div class="hero-media-uploader__preview-copy">
-                    <div class="text-subtitle-2 font-weight-semibold">
-                      Uploaded Video
+                    <div class="d-flex align-center gap-2 mb-1">
+                      <div class="text-subtitle-2 font-weight-semibold">
+                        Current Hero Media
+                      </div>
+                      <VChip color="primary" variant="tonal" size="x-small">
+                        {{ isHeroVideo ? 'Video' : 'Image' }}
+                      </VChip>
                     </div>
                     <div class="text-body-2 text-medium-emphasis text-break">
-                      {{ heroVideoUrl }}
+                      {{ heroMediaUrl }}
                     </div>
                   </div>
-
                   <div class="d-flex align-center gap-2">
                     <VBtn
                       color="primary"
                       variant="text"
-                      prepend-icon="tabler-player-play"
-                      @click="heroVideoPreviewOpen = true"
+                      :prepend-icon="isHeroVideo ? 'tabler-player-play' : 'tabler-eye'"
+                      @click="heroMediaPreviewOpen = true"
                     >
-                      Play
+                      {{ isHeroVideo ? 'Play' : 'Preview' }}
                     </VBtn>
                     <VBtn
                       color="error"
                       variant="text"
                       icon="tabler-x"
-                      @click="removeHeroVideo"
+                      @click="removeHeroMedia"
                     />
                   </div>
                 </div>
@@ -564,18 +627,33 @@ const saveSection = () => {
           </VRow>
         </div>
 
-        <div v-else-if="isCategoryCards || isProcess" class="d-flex flex-column gap-4">
+        <div v-else-if="isCategoryCards" class="d-flex flex-column gap-4">
           <div class="text-subtitle-1 font-weight-semibold">
-            {{ isProcess ? 'Process Configuration' : 'Category Cards Configuration' }}
+            Category Cards Configuration
           </div>
 
           <VAlert
-            v-if="isCategoryCards"
             color="info"
             variant="tonal"
           >
-            Category data and product relationships should stay aligned with the categories configured elsewhere.
+            Categories are loaded automatically from the CMS categories module and ordered by each category's display order. This section only controls the shared CTA label.
           </VAlert>
+
+          <VRow>
+            <VCol cols="12" md="6">
+              <VTextField
+                v-model="localSection.content.cta_label"
+                label="Default CTA Label"
+                variant="outlined"
+              />
+            </VCol>
+          </VRow>
+        </div>
+
+        <div v-else-if="isProcess" class="d-flex flex-column gap-4">
+          <div class="text-subtitle-1 font-weight-semibold">
+            Process Configuration
+          </div>
 
           <VRow>
             <VCol cols="12" md="6">
@@ -587,8 +665,8 @@ const saveSection = () => {
             </VCol>
             <VCol cols="12" md="6">
               <VTextField
-                v-model="localSection.content[isProcess ? 'background_style' : 'cta_label']"
-                :label="isProcess ? 'Background Style' : 'Default CTA Label'"
+                v-model="localSection.content.background_style"
+                label="Background Style"
                 variant="outlined"
               />
             </VCol>
@@ -596,7 +674,7 @@ const saveSection = () => {
 
           <div class="d-flex align-center justify-space-between gap-4">
             <div class="text-subtitle-2 font-weight-semibold">
-              {{ isProcess ? 'Section Steps' : 'Section Items' }}
+              Section Steps
             </div>
             <VBtn
               color="primary"
@@ -647,28 +725,6 @@ const saveSection = () => {
                       label="Description"
                       variant="outlined"
                       rows="3"
-                    />
-                  </VCol>
-                  <VCol
-                    v-if="isCategoryCards"
-                    cols="12"
-                    md="6"
-                  >
-                    <VTextField
-                      v-model="item.cta_text"
-                      label="CTA Text"
-                      variant="outlined"
-                    />
-                  </VCol>
-                  <VCol
-                    v-if="isCategoryCards"
-                    cols="12"
-                    md="6"
-                  >
-                    <VTextField
-                      v-model="item.cta_link"
-                      label="CTA Link"
-                      variant="outlined"
                     />
                   </VCol>
                   <VCol cols="12">
@@ -1018,28 +1074,34 @@ const saveSection = () => {
   </VDialog>
 
   <VDialog
-    v-model="heroVideoPreviewOpen"
+    v-model="heroMediaPreviewOpen"
     max-width="900"
   >
     <VCard>
       <VCardTitle class="d-flex align-center justify-space-between gap-4 py-4 px-5">
         <div class="text-h6">
-          Hero Video Preview
+          Hero Media Preview
         </div>
         <VBtn
           icon="tabler-x"
           variant="text"
-          @click="heroVideoPreviewOpen = false"
+          @click="heroMediaPreviewOpen = false"
         />
       </VCardTitle>
       <VCardText class="px-5 pb-5">
         <video
-          v-if="heroVideoUrl"
-          :src="heroVideoUrl"
+          v-if="isHeroVideo && heroMediaUrl"
+          :src="heroMediaUrl"
           controls
           playsinline
           class="hero-video-dialog__video"
         />
+        <img
+          v-else-if="heroMediaUrl"
+          :src="heroMediaUrl"
+          alt="Hero media preview"
+          class="hero-video-dialog__image"
+        >
       </VCardText>
     </VCard>
   </VDialog>
@@ -1060,10 +1122,25 @@ const saveSection = () => {
   background: rgba(var(--v-theme-primary), 0.04);
 }
 
-.hero-media-uploader__actions {
+.hero-media-uploader__dropzone {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 24px;
+  border: 1px dashed rgba(var(--v-theme-primary), 0.28);
+  border-radius: 18px;
+  background: rgba(var(--v-theme-surface), 0.92);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.hero-media-uploader__dropzone--active {
+  border-color: rgba(var(--v-theme-primary), 0.6);
+  background: rgba(var(--v-theme-primary), 0.08);
+  transform: translateY(-1px);
 }
 
 .hero-media-uploader__preview {
@@ -1086,6 +1163,18 @@ const saveSection = () => {
   max-height: 70vh;
   border-radius: 18px;
   background: #000;
+}
+
+.hero-video-dialog__image {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+  border-radius: 18px;
+}
+
+.spin-icon {
+  animation: spin 0.9s linear infinite;
 }
 
 @media (max-width: 767px) {

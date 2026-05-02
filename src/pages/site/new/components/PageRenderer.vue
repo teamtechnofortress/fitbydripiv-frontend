@@ -18,10 +18,14 @@ const props = defineProps({
 })
 
 const orderedSections = computed(() => props.page?.sections || [])
+const needsHeaderOffset = computed(() => {
+  const firstSectionType = orderedSections.value[0]?.type
+  return firstSectionType !== 'hero'
+})
 </script>
 
 <template>
-  <div class="landing-page">
+  <div class="min-h-screen bg-white" :class="needsHeaderOffset ? 'pt-16' : ''">
     <SectionRenderer
       v-for="section in orderedSections"
       :key="section.section_key"
@@ -31,12 +35,3 @@ const orderedSections = computed(() => props.page?.sections || [])
     />
   </div>
 </template>
-
-<style scoped>
-.landing-page {
-  background:
-    radial-gradient(circle at top left, rgba(16, 185, 129, 0.08), transparent 24%),
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 20%),
-    linear-gradient(180deg, #f7fafc 0%, #ffffff 28%, #f6fbff 100%);
-}
-</style>

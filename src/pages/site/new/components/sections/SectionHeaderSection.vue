@@ -1,58 +1,43 @@
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   section: {
     type: Object,
     required: true,
   },
+  pageSlug: {
+    type: String,
+    default: '',
+  },
 })
+
+const heading = computed(() => props.section.content?.headline || props.section.title || '')
+const description = computed(() => props.section.content?.description || '')
+const eyebrow = computed(() => props.section.subtitle || '')
+const centered = computed(() => props.section.content?.alignment === 'center')
+const isDocumentPage = computed(() => ['terms', 'privacy', 'legal'].includes(String(props.pageSlug || '').toLowerCase()))
 </script>
 
 <template>
-  <section class="section-header-shell" :class="section.content?.alignment === 'center' ? 'section-header-shell--center' : ''">
-    <div class="section-header-shell__inner">
-      <div class="section-header-shell__eyebrow">{{ section.title }}</div>
-      <h2 class="section-header-shell__title">{{ section.content?.headline }}</h2>
-      <p v-if="section.content?.description" class="section-header-shell__description">
-        {{ section.content.description }}
+  <section :class="isDocumentPage ? 'px-4 py-8 border-b border-gray-200 bg-white' : 'px-4 py-12 border-t border-gray-200'">
+    <div class="max-w-4xl" :class="(centered || isDocumentPage) ? 'mx-auto text-center' : 'mx-auto'">
+      <!-- <p
+        v-if="eyebrow"
+        class="mb-3"
+        :class="isDocumentPage ? 'text-sm font-medium text-gray-700' : 'text-sm font-semibold uppercase tracking-[0.12em] text-emerald-600'"
+      >
+        {{ eyebrow }}
+      </p> -->
+      <h2
+        v-if="heading"
+        :class="isDocumentPage ? 'text-3xl font-bold text-gray-900 mb-2' : 'section-title mb-0'"
+      >
+        {{ heading }}
+      </h2>
+      <p v-if="description" class="text-base text-gray-600 mt-3 max-w-2xl" :class="(centered || isDocumentPage) ? 'mx-auto' : ''">
+        {{ description }}
       </p>
     </div>
   </section>
 </template>
-
-<style scoped>
-.section-header-shell {
-  padding: 4.25rem 1.5rem 1.35rem;
-}
-
-.section-header-shell--center .section-header-shell__inner {
-  text-align: center;
-  margin: 0 auto;
-}
-
-.section-header-shell__inner {
-  max-width: 760px;
-}
-
-.section-header-shell__eyebrow {
-  color: #0f766e;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.7rem;
-}
-
-.section-header-shell__title {
-  margin: 0;
-  color: #0f172a;
-  font-size: clamp(2rem, 3vw, 3rem);
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-}
-
-.section-header-shell__description {
-  margin: 1rem auto 0;
-  color: #475569;
-  line-height: 1.75;
-  max-width: 640px;
-}
-</style>

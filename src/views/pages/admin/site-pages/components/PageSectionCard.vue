@@ -30,7 +30,10 @@ const getSectionSummary = section => {
   if (section.type === 'featured_products')
     return `${section.products?.length || 0} featured products in preview`
 
-  if (section.type === 'category_cards' || section.type === 'process')
+  if (section.type === 'category_cards')
+    return 'Categories auto-load from CMS categories'
+
+  if (section.type === 'process')
     return `${section.items?.length || 0} items configured`
 
   if (section.type === 'content_block')

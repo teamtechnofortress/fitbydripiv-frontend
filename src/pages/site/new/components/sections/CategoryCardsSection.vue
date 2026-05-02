@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { normalizePublicSitePath } from '../../composables/normalizePublicSitePath'
 
 const props = defineProps({
   section: {
@@ -16,8 +17,9 @@ const orderedItems = computed(() => (
 ))
 
 const navigate = path => {
-  if (!path) return
-  router.push(path)
+  const target = normalizePublicSitePath(path)
+  if (!target) return
+  router.push(target)
   window.scrollTo(0, 0)
 }
 
@@ -45,100 +47,31 @@ const getContentPagePath = item => {
 
   return `/new/${item.title?.toLowerCase?.().replace(/\s+/g, '-')}`
 }
-
-const iconMap = {
-  activity: 'tabler-activity',
-  sparkles: 'tabler-sparkles',
-  'shield-heart': 'tabler-shield-heart',
-}
 </script>
 
 <template>
-  <section class="categories-shell">
-    <div class="categories-shell__inner">
-      <article
-        v-for="item in orderedItems"
-        :key="item.title"
-        class="category-card"
-        @click="navigate(getContentPagePath(item))"
-      >
-        <div class="category-card__icon">
-          <VIcon :icon="iconMap[item.icon] || 'tabler-circle'" size="24" color="primary" />
+  <section class="py-12 px-4 border-t border-gray-200">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div
+          v-for="item in orderedItems"
+          :key="item.title"
+          class="card overflow-hidden cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 relative"
+          style="background: linear-gradient(to bottom right, rgba(219,234,254,0.4), rgba(207,250,254,0.3), rgba(219,234,254,0.4));"
+          @click="navigate(getContentPagePath(item))"
+        >
+          <div class="relative z-10 p-6 text-center">
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{{ item.title }}</h3>
+            <p class="text-sm text-gray-700 mb-4">{{ item.description }}</p>
+            <button
+              class="text-emerald-600 font-semibold text-sm hover:text-emerald-700 transition-colors"
+              @click.stop="navigate(getContentPagePath(item))"
+            >
+              {{ item.cta_text || section.content?.cta_label || 'View Products' }} →
+            </button>
+          </div>
         </div>
-        <h3>{{ item.title }}</h3>
-        <p>{{ item.description }}</p>
-        <button class="category-card__button">{{ item.cta_text || section.content?.cta_label || 'View Products' }}</button>
-      </article>
+      </div>
     </div>
   </section>
 </template>
-
-<style scoped>
-.categories-shell {
-  padding: 0 1.5rem;
-}
-
-.categories-shell__inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.1rem;
-}
-
-.category-card {
-  position: relative;
-  padding: 1.5rem;
-  border-radius: 26px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background:
-    radial-gradient(circle at top right, rgba(16, 185, 129, 0.1), transparent 36%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 249, 255, 0.98));
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-}
-
-.category-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
-}
-
-.category-card__icon {
-  width: 52px;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  background: rgba(37, 99, 235, 0.08);
-  margin-bottom: 1rem;
-}
-
-.category-card h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1.35rem;
-  color: #0f172a;
-}
-
-.category-card p {
-  margin: 0;
-  color: #475569;
-  line-height: 1.7;
-}
-
-.category-card__button {
-  margin-top: 1.1rem;
-  border: none;
-  background: none;
-  color: #0f766e;
-  font-weight: 700;
-  padding: 0;
-}
-
-@media (max-width: 959px) {
-  .categories-shell__inner {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
