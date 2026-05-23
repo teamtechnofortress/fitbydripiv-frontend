@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { PATIENT_INTAKE_FORM_URL, getIntakeSubmissionUrl } from '@/network/const'
 import ConfirmPatientModal from './intake/components/ConfirmPatientModal.vue'
 import IntakeFormStage from './intake/components/IntakeFormStage.vue'
+import IntakeOrderConfirmation from './intake/components/IntakeOrderConfirmation.vue'
 import PatientSearchStage from './intake/components/PatientSearchStage.vue'
 import PatientTypeStage from './intake/components/PatientTypeStage.vue'
 import { riskQuestions, screeningQuestions } from './intake/formOptions'
@@ -427,22 +428,9 @@ const handleSubmit = async () => {
         Accept: 'application/json',
       },
     })
-    submissionResult.value = data
-    submissionMessage.value = data?.message || 'Your responses have been captured. Our clinical team will review your intake and follow up with next steps.'
+    submissionResult.value = data?.data || null
+    submissionMessage.value = data?.message || 'Patient intake submitted successfully.'
     submissionComplete.value = true
-    const checkoutUrl = data?.checkout?.checkout_url
-    if (checkoutUrl) {
-      const responseOrderUuid = data?.checkout?.order_uuid
-      if (responseOrderUuid && typeof window !== 'undefined') {
-        try {
-          window.sessionStorage.setItem('latestCheckoutOrderUuid', responseOrderUuid)
-        } catch (_) {
-          // ignore storage failures
-        }
-      }
-      window.location.href = checkoutUrl
-      return
-    }
     scrollToTop()
   } catch (error) {
     submitError.value = extractErrorMessage(error)
@@ -502,6 +490,10 @@ const redirectToHome = () => {
   router.push('/')
 }
 
+const updateSubmissionResult = value => {
+  submissionResult.value = value
+}
+
 onMounted(() => scrollToTop(false))
 </script>
 
@@ -544,6 +536,13 @@ onMounted(() => scrollToTop(false))
         @update:search-email="value => (searchEmail = value)"
       />
 
+      <IntakeOrderConfirmation
+        v-else-if="submissionComplete"
+        :confirmation-data="submissionResult"
+        :confirmation-message="submissionMessage"
+        @updated="updateSubmissionResult"
+      />
+
       <IntakeFormStage
         v-else
         :form="form"
@@ -555,8 +554,6 @@ onMounted(() => scrollToTop(false))
         :progress-percentage="progressPercentage"
         :validation-error="validationError"
         :submit-error="null"
-        :submission-complete="submissionComplete"
-        :submission-message="submissionMessage"
         :is-submitting="isSubmitting"
         :confirmed-patient="confirmedPatient"
         :is-step-unlocked="isStepUnlocked"

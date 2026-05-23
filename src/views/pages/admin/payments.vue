@@ -1,18 +1,73 @@
 <script setup>
 import axios from 'axios'
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ADMIN_ORDERS_URL, ADMIN_SUBSCRIPTIONS_URL, cancelSubscriptionUrl } from '@/network/const'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import CouponEditor from '@/views/pages/admin/payments/CouponEditor.vue'
+import {
+  ADMIN_COUPONS_URL,
+  ADMIN_ORDERS_URL,
+  ADMIN_SUBSCRIPTIONS_URL,
+  cancelSubscriptionUrl,
+  getAdminCouponDeleteUrl,
+  getAdminCouponToggleActiveUrl,
+} from '@/network/const'
 import { getApiToken } from '@/store/authData'
 
+const route = useRoute()
 const router = useRouter()
 const tab = ref('orders')
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+const couponDeleteDialogVisible = ref(false)
+const pendingDeleteCouponId = ref('')
+const togglingCouponId = ref('')
+
+const editingCouponId = computed(() => typeof route.query.coupon_id === 'string' ? route.query.coupon_id : '')
+const isCouponEditor = computed(() => {
+  const section = String(route.query.section || '')
+  return section === 'add-coupon' || (section === 'edit-coupon' && !!editingCouponId.value)
+})
+
+watch(
+  () => route.query.section,
+  section => {
+    if (String(section || '').includes('coupon'))
+      tab.value = 'coupons'
+  },
+  { immediate: true },
+)
+
+const setTab = nextTab => {
+  tab.value = nextTab
+
+  if (nextTab === 'coupons' && isCouponEditor.value)
+    router.replace('/admin/payments')
+  else if (nextTab !== 'coupons' && isCouponEditor.value)
+    router.replace('/admin/payments')
+}
+
 const authHeaders = computed(() => ({
   Authorization: `Bearer ${getApiToken()}`,
   Accept: 'application/json',
 }))
+
+const normalizeRows = body => {
+  if (Array.isArray(body?.data)) return body.data
+  if (Array.isArray(body?.data?.data)) return body.data.data
+  return []
+}
+
+const normalizeMeta = (body, page, perPage) => (
+  body?.meta
+  || body?.data?.meta
+  || {
+    current_page: page,
+    last_page: 1,
+    per_page: perPage,
+    total: normalizeRows(body).length,
+    from: normalizeRows(body).length ? 1 : 0,
+    to: normalizeRows(body).length,
+  }
+)
 
 const formatMoney = (amount, currency = 'USD') => {
   if (amount == null || amount === '') return '—'
@@ -28,21 +83,43 @@ const formatDate = dateStr => {
 
 const statusConfig = status => {
   const map = {
-    // order / payment statuses
-    paid:      { color: 'rgb(var(--v-theme-success))',  bg: 'rgba(var(--v-theme-success), 0.12)',  label: 'Paid' },
-    unpaid:    { color: 'rgb(var(--v-theme-warning))',  bg: 'rgba(var(--v-theme-warning), 0.12)',  label: 'Unpaid' },
-    failed:    { color: 'rgb(var(--v-theme-error))',    bg: 'rgba(var(--v-theme-error), 0.12)',    label: 'Failed' },
-    pending:   { color: 'rgb(var(--v-theme-info))',     bg: 'rgba(var(--v-theme-info), 0.12)',     label: 'Pending' },
-    completed: { color: 'rgb(var(--v-theme-success))',  bg: 'rgba(var(--v-theme-success), 0.12)',  label: 'Completed' },
+    paid: { color: 'rgb(var(--v-theme-success))', bg: 'rgba(var(--v-theme-success), 0.12)', label: 'Paid' },
+    unpaid: { color: 'rgb(var(--v-theme-warning))', bg: 'rgba(var(--v-theme-warning), 0.12)', label: 'Unpaid' },
+    failed: { color: 'rgb(var(--v-theme-error))', bg: 'rgba(var(--v-theme-error), 0.12)', label: 'Failed' },
+    pending: { color: 'rgb(var(--v-theme-info))', bg: 'rgba(var(--v-theme-info), 0.12)', label: 'Pending' },
+    completed: { color: 'rgb(var(--v-theme-success))', bg: 'rgba(var(--v-theme-success), 0.12)', label: 'Completed' },
     cancelled: { color: 'rgba(var(--v-theme-on-surface), 0.5)', bg: 'rgba(var(--v-theme-on-surface), 0.07)', label: 'Cancelled' },
-    // subscription statuses
-    active:    { color: 'rgb(var(--v-theme-success))',  bg: 'rgba(var(--v-theme-success), 0.12)',  label: 'Active' },
-    paused:    { color: 'rgb(var(--v-theme-warning))',  bg: 'rgba(var(--v-theme-warning), 0.12)',  label: 'Paused' },
+    active: { color: 'rgb(var(--v-theme-success))', bg: 'rgba(var(--v-theme-success), 0.12)', label: 'Active' },
+    paused: { color: 'rgb(var(--v-theme-warning))', bg: 'rgba(var(--v-theme-warning), 0.12)', label: 'Paused' },
   }
+
   return map[status] || { color: 'rgba(var(--v-theme-on-surface), 0.5)', bg: 'rgba(var(--v-theme-on-surface), 0.07)', label: status || '—' }
 }
 
-// ─── Orders ────────────────────────────────────────────────────────────────
+const getCouponScopeLabel = coupon => coupon?.scope === 'product_specific' ? 'Product Specific' : 'Global'
+const getCouponAppliesToLabel = coupon => {
+  const value = coupon?.applies_to
+  if (value === 'subscription') return 'Subscriptions'
+  if (value === 'one_time') return 'One-Time Orders'
+  return 'All Orders'
+}
+
+const getCouponValueLabel = coupon => {
+  if (!coupon) return '—'
+  return coupon.type === 'percent' ? `${coupon.value}%` : formatMoney(coupon.value)
+}
+
+const getCouponProductSummary = coupon => {
+  if (coupon?.scope === 'global')
+    return 'Global'
+
+  const names = Array.isArray(coupon?.products) ? coupon.products.map(product => product?.name).filter(Boolean) : []
+  if (names.length) return names.join(', ')
+  if (coupon?.products_count) return `${coupon.products_count} selected products`
+  return 'Product-specific'
+}
+
+// Orders
 const orders = ref([])
 const ordersMeta = ref({ current_page: 1, per_page: 20, total: 0, last_page: 1 })
 const ordersLoading = ref(false)
@@ -73,13 +150,13 @@ const fetchOrders = async () => {
   ordersError.value = ''
   try {
     const params = Object.fromEntries(
-      Object.entries({ ...orderFilters }).filter(([, v]) => v !== null && v !== ''),
+      Object.entries({ ...orderFilters }).filter(([, value]) => value !== null && value !== ''),
     )
     const { data } = await axios.get(ADMIN_ORDERS_URL, { params, headers: authHeaders.value })
     orders.value = data?.data || []
     ordersMeta.value = data?.meta || ordersMeta.value
-  } catch (e) {
-    ordersError.value = e?.response?.data?.message || 'Failed to load orders'
+  } catch (err) {
+    ordersError.value = err?.response?.data?.message || 'Failed to load orders'
   } finally {
     ordersLoading.value = false
   }
@@ -97,7 +174,7 @@ const resetOrderFilters = () => {
   fetchOrders()
 }
 
-// ─── Subscriptions ─────────────────────────────────────────────────────────
+// Subscriptions
 const subscriptions = ref([])
 const subscriptionsMeta = ref({ current_page: 1, per_page: 20, total: 0, last_page: 1 })
 const subscriptionsLoading = ref(false)
@@ -132,13 +209,13 @@ const fetchSubscriptions = async () => {
   subscriptionsError.value = ''
   try {
     const params = Object.fromEntries(
-      Object.entries({ ...subscriptionFilters }).filter(([, v]) => v !== null && v !== '' && v !== false),
+      Object.entries({ ...subscriptionFilters }).filter(([, value]) => value !== null && value !== '' && value !== false),
     )
     const { data } = await axios.get(ADMIN_SUBSCRIPTIONS_URL, { params, headers: authHeaders.value })
     subscriptions.value = data?.data || []
     subscriptionsMeta.value = data?.meta || subscriptionsMeta.value
-  } catch (e) {
-    subscriptionsError.value = e?.response?.data?.message || 'Failed to load subscriptions'
+  } catch (err) {
+    subscriptionsError.value = err?.response?.data?.message || 'Failed to load subscriptions'
   } finally {
     subscriptionsLoading.value = false
   }
@@ -165,6 +242,7 @@ const askCancelSubscription = id => {
 
 const cancelSubscription = async confirmed => {
   if (!confirmed || !targetSubscriptionId.value) return
+
   const id = targetSubscriptionId.value
   cancellingSubscriptions[id] = true
   subscriptionsError.value = ''
@@ -173,11 +251,189 @@ const cancelSubscription = async confirmed => {
     const { data } = await axios.post(cancelSubscriptionUrl(id), {}, { headers: authHeaders.value })
     subscriptionsMessage.value = data?.message || 'Subscription cancelled successfully'
     await fetchSubscriptions()
-  } catch (e) {
-    subscriptionsError.value = e?.response?.data?.message || 'Failed to cancel subscription'
+  } catch (err) {
+    subscriptionsError.value = err?.response?.data?.message || 'Failed to cancel subscription'
   } finally {
     cancellingSubscriptions[id] = false
     targetSubscriptionId.value = null
+  }
+}
+
+// Coupons
+const coupons = ref([])
+const couponsMeta = ref({ current_page: 1, per_page: 15, total: 0, last_page: 1 })
+const couponsLoading = ref(false)
+const couponsError = ref('')
+const couponsMessage = ref('')
+const couponSearchInput = ref('')
+
+const couponFilters = reactive({
+  page: 1,
+  per_page: 15,
+  scope: '',
+  type: '',
+  applies_to: '',
+  is_active: '',
+  search: '',
+})
+
+const couponRangeText = computed(() => {
+  const total = couponsMeta.value?.total || 0
+  if (!total) return 'No results'
+  const start = (couponsMeta.value.current_page - 1) * couponsMeta.value.per_page + 1
+  const end = Math.min(couponsMeta.value.current_page * couponsMeta.value.per_page, total)
+  return `${start}–${end} of ${total}`
+})
+
+const couponsTotalPages = computed(() => couponsMeta.value?.last_page || 1)
+
+const fetchCoupons = async () => {
+  couponsLoading.value = true
+  couponsError.value = ''
+  try {
+    const params = Object.fromEntries(
+      Object.entries({
+        search: couponFilters.search || undefined,
+        scope: couponFilters.scope || undefined,
+        type: couponFilters.type || undefined,
+        applies_to: couponFilters.applies_to || undefined,
+        is_active: couponFilters.is_active || undefined,
+        per_page: couponFilters.per_page,
+        page: couponFilters.page,
+      }).filter(([, value]) => value !== undefined && value !== ''),
+    )
+
+    const response = await axios.get(ADMIN_COUPONS_URL, {
+      headers: authHeaders.value,
+      params,
+    })
+
+    const body = response?.data || {}
+    coupons.value = normalizeRows(body)
+    couponsMeta.value = {
+      ...couponsMeta.value,
+      ...normalizeMeta(body, couponFilters.page, couponFilters.per_page),
+    }
+  } catch (err) {
+    couponsError.value = err?.response?.data?.message || 'Failed to load coupons'
+  } finally {
+    couponsLoading.value = false
+  }
+}
+
+const applyCouponSearch = () => {
+  couponFilters.search = couponSearchInput.value || ''
+  couponFilters.page = 1
+  fetchCoupons()
+}
+
+const resetCouponFilters = () => {
+  Object.assign(couponFilters, {
+    page: 1,
+    per_page: 15,
+    scope: '',
+    type: '',
+    applies_to: '',
+    is_active: '',
+    search: '',
+  })
+  couponSearchInput.value = ''
+  couponsMessage.value = ''
+  fetchCoupons()
+}
+
+const openCouponManager = () => {
+  tab.value = 'coupons'
+  if (isCouponEditor.value)
+    router.replace('/admin/payments')
+}
+
+const openCouponCreate = () => {
+  tab.value = 'coupons'
+  router.push({
+    path: '/admin/payments',
+    query: { section: 'add-coupon' },
+  })
+}
+
+const openCouponEdit = coupon => {
+  if (!coupon?.id) return
+
+  tab.value = 'coupons'
+  router.push({
+    path: '/admin/payments',
+    query: {
+      section: 'edit-coupon',
+      coupon_id: coupon.id,
+    },
+  })
+}
+
+const closeCouponEditor = () => {
+  tab.value = 'coupons'
+  router.replace('/admin/payments')
+}
+
+const handleCouponSaved = async () => {
+  await fetchCoupons()
+  closeCouponEditor()
+}
+
+const askDeleteCoupon = coupon => {
+  if (!coupon?.id) return
+  pendingDeleteCouponId.value = coupon.id
+  couponDeleteDialogVisible.value = true
+}
+
+const deleteCoupon = async confirmed => {
+  if (!confirmed || !pendingDeleteCouponId.value) return
+
+  couponsError.value = ''
+  couponsMessage.value = ''
+  try {
+    const response = await axios.delete(getAdminCouponDeleteUrl(pendingDeleteCouponId.value), {
+      headers: authHeaders.value,
+    })
+
+    couponsMessage.value = response?.data?.message || 'Coupon deleted successfully.'
+
+    if (coupons.value.length === 1 && couponFilters.page > 1)
+      couponFilters.page -= 1
+
+    await fetchCoupons()
+  } catch (err) {
+    couponsError.value = err?.response?.data?.message || 'Failed to delete coupon.'
+  } finally {
+    pendingDeleteCouponId.value = ''
+  }
+}
+
+const toggleCouponActive = async coupon => {
+  if (!coupon?.id) return
+
+  togglingCouponId.value = coupon.id
+  couponsError.value = ''
+  couponsMessage.value = ''
+  try {
+    const response = await axios.post(getAdminCouponToggleActiveUrl(coupon.id), {}, {
+      headers: authHeaders.value,
+    })
+
+    const payload = response?.data?.data || {}
+    const updatedCoupon = payload.coupon || {}
+    const target = coupons.value.find(item => item?.id === coupon.id)
+
+    if (target) {
+      target.is_active = typeof payload.is_active === 'boolean' ? payload.is_active : !target.is_active
+      if (Object.keys(updatedCoupon).length)
+        Object.assign(target, updatedCoupon)
+    }
+
+    couponsMessage.value = response?.data?.message || 'Coupon status updated successfully.'
+  } catch (err) {
+    couponsError.value = err?.response?.data?.message || 'Failed to update coupon status.'
+  } finally {
+    togglingCouponId.value = ''
   }
 }
 
@@ -187,13 +443,12 @@ const openSubscriptionDetail = id => router.push(`/admin/subscriptions/${id}`)
 onMounted(() => {
   fetchOrders()
   fetchSubscriptions()
+  fetchCoupons()
 })
 </script>
 
 <template>
   <section class="admin-billing-page">
-
-    <!-- ── Page Header ──────────────────────────────────── -->
     <div class="page-header">
       <div class="header-left">
         <div class="header-icon">
@@ -201,34 +456,46 @@ onMounted(() => {
         </div>
         <div>
           <h1 class="page-title">Payments & Billing</h1>
-          <p class="page-subtitle">Manage orders, subscriptions and billing records</p>
+          <p class="page-subtitle">Manage orders, subscriptions, coupons, and billing records</p>
         </div>
       </div>
       <div class="header-actions">
-        <!-- <VBtn
-          variant="tonal"
-          prepend-icon="tabler-plus"
-          class="action-btn action-btn--secondary"
-          @click="router.push('/admin/orders/create')"
-        >
-          New Order
-        </VBtn> -->
         <VBtn
+          v-if="tab !== 'coupons' && !isCouponEditor"
+          variant="tonal"
+          prepend-icon="tabler-ticket"
+          class="action-btn action-btn--secondary"
+          @click="openCouponManager"
+        >
+          Coupon Manager
+        </VBtn>
+
+        <VBtn
+          v-else-if="tab === 'coupons' && !isCouponEditor"
+          color="primary"
+          prepend-icon="tabler-plus"
+          class="action-btn"
+          @click="openCouponCreate"
+        >
+          Create Coupon
+        </VBtn>
+
+        <VBtn
+          v-if="!isCouponEditor"
           color="primary"
           prepend-icon="tabler-refresh"
           class="action-btn"
-          @click="tab === 'orders' ? fetchOrders() : fetchSubscriptions()"
+          @click="tab === 'orders' ? fetchOrders() : tab === 'subscriptions' ? fetchSubscriptions() : fetchCoupons()"
         >
           Refresh
         </VBtn>
       </div>
     </div>
 
-    <!-- ── Tab Navigation ───────────────────────────────── -->
     <div class="tab-nav">
       <button
         :class="['tab-btn', { 'tab-btn--active': tab === 'orders' }]"
-        @click="tab = 'orders'"
+        @click="setTab('orders')"
       >
         <span class="mdi mdi-receipt-outline tab-icon" />
         Orders
@@ -236,366 +503,533 @@ onMounted(() => {
       </button>
       <button
         :class="['tab-btn', { 'tab-btn--active': tab === 'subscriptions' }]"
-        @click="tab = 'subscriptions'"
+        @click="setTab('subscriptions')"
       >
         <span class="mdi mdi-calendar-sync-outline tab-icon" />
         Subscriptions
         <span v-if="subscriptionsMeta.total" class="tab-badge">{{ subscriptionsMeta.total }}</span>
       </button>
+      <button
+        :class="['tab-btn', { 'tab-btn--active': tab === 'coupons' }]"
+        @click="setTab('coupons')"
+      >
+        <span class="mdi mdi-ticket-percent-outline tab-icon" />
+        Coupons
+        <span v-if="couponsMeta.total" class="tab-badge">{{ couponsMeta.total }}</span>
+      </button>
     </div>
 
-    <!-- ══════════════════════════════════════════════════ -->
-    <!-- ORDERS TAB                                         -->
-    <!-- ══════════════════════════════════════════════════ -->
-    <div v-show="tab === 'orders'" class="tab-content">
+    <CouponEditor
+      v-if="isCouponEditor"
+      :coupon-id="editingCouponId"
+      @cancel="closeCouponEditor"
+      @saved="handleCouponSaved"
+    />
 
-      <!-- Filter bar -->
-      <div class="filter-bar">
-        <div class="filter-search">
-          <span class="mdi mdi-magnify search-icon" />
-          <input
-            v-model="orderSearchInput"
-            class="filter-input"
-            placeholder="Search UUID, patient name or email…"
-            @keyup.enter="applyOrderSearch"
-          />
-        </div>
-        <div class="filter-selects">
-          <VSelect
-            v-model="orderFilters.purchase_type"
-            :items="[{ title: 'All types', value: null }, { title: 'Subscription', value: 'subscription' }, { title: 'One-time', value: 'one_time' }]"
-            item-title="title"
-            item-value="value"
-            label="Type"
-            variant="outlined"
-            density="compact"
-            hide-details
-            class="filter-select"
-            @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
-          />
-          <VSelect
-            v-model="orderFilters.status"
-            :items="[{ title: 'All statuses', value: null }, 'pending', 'completed', 'cancelled']"
-            label="Status"
-            variant="outlined"
-            density="compact"
-            hide-details
-            class="filter-select"
-            @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
-          />
-          <VSelect
-            v-model="orderFilters.payment_status"
-            :items="[{ title: 'All payments', value: null }, 'paid', 'unpaid', 'failed']"
-            label="Payment"
-            variant="outlined"
-            density="compact"
-            hide-details
-            class="filter-select"
-            @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
-          />
-        </div>
-        <div class="filter-actions">
-          <button class="btn-apply" @click="applyOrderSearch">Apply</button>
-          <button class="btn-reset" @click="resetOrderFilters">Reset</button>
-        </div>
-      </div>
-
-      <!-- Alerts -->
-      <VAlert v-if="ordersError" type="error" variant="tonal" class="mb-4" closable>
-        {{ ordersError }}
-      </VAlert>
-
-      <!-- Loading bar -->
-      <div v-if="ordersLoading" class="loading-bar">
-        <div class="loading-bar__fill" />
-      </div>
-
-      <!-- Table -->
-      <div class="data-table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Patient</th>
-              <th>Product</th>
-              <th>Type</th>
-              <th>Payment</th>
-              <th class="text-right">Amount</th>
-              <th class="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in orders"
-              :key="item.id"
-              class="data-row"
-              @click="openOrderDetail(item.id)"
+    <template v-else>
+      <div v-show="tab === 'orders'" class="tab-content">
+        <div class="filter-bar">
+          <div class="filter-search">
+            <span class="mdi mdi-magnify search-icon" />
+            <input
+              v-model="orderSearchInput"
+              class="filter-input"
+              placeholder="Search UUID, patient name or email…"
+              @keyup.enter="applyOrderSearch"
             >
-              <td>
-                <div class="cell-primary font-mono">{{ item.order_uuid }}</div>
-                <div class="cell-meta">#{{ item.id }}</div>
-                <span
-                  class="status-pill"
-                  :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }"
-                >
-                  {{ statusConfig(item.status).label }}
-                </span>
-              </td>
-              <td>
-                <div class="cell-primary">{{ item.patient?.name || '—' }}</div>
-                <div class="cell-meta">{{ item.patient?.email || '—' }}</div>
-              </td>
-              <td>
-                <div class="cell-primary">{{ item.product?.name || '—' }}</div>
-                <div class="cell-meta">{{ item.product?.slug || '—' }}</div>
-              </td>
-              <td>
-                <span class="type-badge">
-                  <span
-                    v-if="item.purchase_type === 'subscription'"
-                    class="mdi mdi-calendar-sync-outline"
-                  />
-                  <span v-else class="mdi mdi-shopping-outline" />
-                  {{ item.purchase_type === 'subscription' ? 'Subscription' : 'One-time' }}
-                </span>
-              </td>
-              <td @click.stop>
-                <span
-                  class="status-pill"
-                  :style="{ color: statusConfig(item.payment_status).color, background: statusConfig(item.payment_status).bg }"
-                >
-                  {{ statusConfig(item.payment_status).label }}
-                </span>
-              </td>
-              <td class="text-right cell-amount">
-                {{ formatMoney(item.price, item.currency || 'USD') }}
-              </td>
-              <td class="text-right" @click.stop>
-                <button class="action-icon-btn" @click="openOrderDetail(item.id)">
-                  <span class="mdi mdi-eye-outline" />
-                  View
-                </button>
-              </td>
-            </tr>
-            <tr v-if="!ordersLoading && orders.length === 0">
-              <td colspan="7" class="empty-state">
-                <span class="mdi mdi-inbox-outline empty-icon" />
-                <span>No orders found</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="pagination-bar">
-        <div class="pagination-size">
-          <span class="pagination-label">Rows</span>
-          <VSelect
-            v-model="orderFilters.per_page"
-            :items="[10, 20, 50, 100]"
-            density="compact"
-            variant="outlined"
-            hide-details
-            style="width: 80px;"
-            @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
-          />
-        </div>
-        <span class="pagination-range">{{ orderRangeText }}</span>
-        <VPagination
-          v-model="orderFilters.page"
-          size="small"
-          :total-visible="5"
-          :length="ordersTotalPages"
-          @update:model-value="fetchOrders"
-        />
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════ -->
-    <!-- SUBSCRIPTIONS TAB                                  -->
-    <!-- ══════════════════════════════════════════════════ -->
-    <div v-show="tab === 'subscriptions'" class="tab-content">
-
-      <!-- Filter bar -->
-      <div class="filter-bar">
-        <div class="filter-search">
-          <span class="mdi mdi-magnify search-icon" />
-          <input
-            v-model="subscriptionSearchInput"
-            class="filter-input"
-            placeholder="Search by order UUID or patient…"
-            @keyup.enter="applySubscriptionSearch"
-          />
-        </div>
-        <div class="filter-selects">
-          <VSelect
-            v-model="subscriptionFilters.status"
-            :items="[{ title: 'All statuses', value: null }, 'active', 'cancelled', 'completed', 'paused']"
-            label="Status"
-            variant="outlined"
-            density="compact"
-            hide-details
-            class="filter-select"
-            @update:model-value="() => { subscriptionFilters.page = 1; fetchSubscriptions() }"
-          />
-          <div class="active-toggle">
-            <VSwitch
-              v-model="subscriptionFilters.active_only"
-              label="Active only"
-              color="primary"
-              inset
-              hide-details
+          </div>
+          <div class="filter-selects">
+            <VSelect
+              v-model="orderFilters.purchase_type"
+              :items="[{ title: 'All types', value: null }, { title: 'Subscription', value: 'subscription' }, { title: 'One-time', value: 'one_time' }]"
+              item-title="title"
+              item-value="value"
+              label="Type"
+              variant="outlined"
               density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
+            />
+            <VSelect
+              v-model="orderFilters.status"
+              :items="[{ title: 'All statuses', value: null }, 'pending', 'completed', 'cancelled']"
+              label="Status"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
+            />
+            <VSelect
+              v-model="orderFilters.payment_status"
+              :items="[{ title: 'All payments', value: null }, 'paid', 'unpaid', 'failed']"
+              label="Payment"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
+            />
+          </div>
+          <div class="filter-actions">
+            <button class="btn-apply" @click="applyOrderSearch">Apply</button>
+            <button class="btn-reset" @click="resetOrderFilters">Reset</button>
+          </div>
+        </div>
+
+        <VAlert v-if="ordersError" type="error" variant="tonal" class="mb-4" closable>
+          {{ ordersError }}
+        </VAlert>
+
+        <div v-if="ordersLoading" class="loading-bar">
+          <div class="loading-bar__fill" />
+        </div>
+
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Patient</th>
+                <th>Product</th>
+                <th>Type</th>
+                <th>Payment</th>
+                <th class="text-right">Amount</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="item in orders"
+                :key="item.id"
+                class="data-row"
+                @click="openOrderDetail(item.id)"
+              >
+                <td>
+                  <div class="cell-primary font-mono">{{ item.order_uuid }}</div>
+                  <div class="cell-meta">#{{ item.id }}</div>
+                  <span class="status-pill" :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }">
+                    {{ statusConfig(item.status).label }}
+                  </span>
+                </td>
+                <td>
+                  <div class="cell-primary">{{ item.patient?.name || '—' }}</div>
+                  <div class="cell-meta">{{ item.patient?.email || '—' }}</div>
+                </td>
+                <td>
+                  <div class="cell-primary">{{ item.product?.name || '—' }}</div>
+                  <div class="cell-meta">{{ item.product?.slug || '—' }}</div>
+                </td>
+                <td>
+                  <span class="type-badge">
+                    <span v-if="item.purchase_type === 'subscription'" class="mdi mdi-calendar-sync-outline" />
+                    <span v-else class="mdi mdi-shopping-outline" />
+                    {{ item.purchase_type === 'subscription' ? 'Subscription' : 'One-time' }}
+                  </span>
+                </td>
+                <td @click.stop>
+                  <span class="status-pill" :style="{ color: statusConfig(item.payment_status).color, background: statusConfig(item.payment_status).bg }">
+                    {{ statusConfig(item.payment_status).label }}
+                  </span>
+                </td>
+                <td class="text-right cell-amount">
+                  {{ formatMoney(item.price, item.currency || 'USD') }}
+                </td>
+                <td class="text-right" @click.stop>
+                  <button class="action-icon-btn" @click="openOrderDetail(item.id)">
+                    <span class="mdi mdi-eye-outline" />
+                    View
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!ordersLoading && orders.length === 0">
+                <td colspan="7" class="empty-state">
+                  <span class="mdi mdi-inbox-outline empty-icon" />
+                  <span>No orders found</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <div class="pagination-size">
+            <span class="pagination-label">Rows</span>
+            <VSelect
+              v-model="orderFilters.per_page"
+              :items="[10, 20, 50, 100]"
+              density="compact"
+              variant="outlined"
+              hide-details
+              style="width: 80px;"
+              @update:model-value="() => { orderFilters.page = 1; fetchOrders() }"
+            />
+          </div>
+          <span class="pagination-range">{{ orderRangeText }}</span>
+          <VPagination
+            v-model="orderFilters.page"
+            size="small"
+            :total-visible="5"
+            :length="ordersTotalPages"
+            @update:model-value="fetchOrders"
+          />
+        </div>
+      </div>
+
+      <div v-show="tab === 'subscriptions'" class="tab-content">
+        <div class="filter-bar">
+          <div class="filter-search">
+            <span class="mdi mdi-magnify search-icon" />
+            <input
+              v-model="subscriptionSearchInput"
+              class="filter-input"
+              placeholder="Search by order UUID or patient…"
+              @keyup.enter="applySubscriptionSearch"
+            >
+          </div>
+          <div class="filter-selects">
+            <VSelect
+              v-model="subscriptionFilters.status"
+              :items="[{ title: 'All statuses', value: null }, 'active', 'cancelled', 'completed', 'paused']"
+              label="Status"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { subscriptionFilters.page = 1; fetchSubscriptions() }"
+            />
+            <div class="active-toggle">
+              <VSwitch
+                v-model="subscriptionFilters.active_only"
+                label="Active only"
+                color="primary"
+                inset
+                hide-details
+                density="compact"
+                @update:model-value="() => { subscriptionFilters.page = 1; fetchSubscriptions() }"
+              />
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn-apply" @click="applySubscriptionSearch">Apply</button>
+            <button class="btn-reset" @click="resetSubscriptionFilters">Reset</button>
+          </div>
+        </div>
+
+        <VAlert v-if="subscriptionsMessage" type="success" variant="tonal" class="mb-4" closable>
+          {{ subscriptionsMessage }}
+        </VAlert>
+        <VAlert v-if="subscriptionsError" type="error" variant="tonal" class="mb-4" closable>
+          {{ subscriptionsError }}
+        </VAlert>
+
+        <div v-if="subscriptionsLoading" class="loading-bar">
+          <div class="loading-bar__fill" />
+        </div>
+
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Subscription</th>
+                <th>Patient</th>
+                <th>Product</th>
+                <th>Billing</th>
+                <th>Cycles</th>
+                <th>Status</th>
+                <th class="text-right">Next billing</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="item in subscriptions"
+                :key="item.id"
+                class="data-row"
+                @click="openSubscriptionDetail(item.id)"
+              >
+                <td>
+                  <div class="cell-primary">#{{ item.id }}</div>
+                  <div class="cell-meta font-mono">{{ item.order?.order_uuid || '—' }}</div>
+                </td>
+                <td>
+                  <div class="cell-primary">{{ item.patient?.name || '—' }}</div>
+                  <div class="cell-meta">{{ item.patient?.email || '—' }}</div>
+                </td>
+                <td>
+                  <div class="cell-primary">{{ item.order?.product?.name || '—' }}</div>
+                  <div class="cell-meta">{{ item.order?.product?.slug || '—' }}</div>
+                </td>
+                <td>
+                  <div class="cell-primary">
+                    {{ item.billing_frequency_months ? `Every ${item.billing_frequency_months} mo` : '—' }}
+                  </div>
+                  <div v-if="item.discount_percentage" class="cell-meta discount">
+                    {{ item.discount_percentage }}% off
+                  </div>
+                </td>
+                <td>
+                  <div class="cycle-track">
+                    <div class="cycle-fill" :style="{ width: item.total_cycles ? `${(item.current_cycle_number / item.total_cycles) * 100}%` : '0%' }" />
+                  </div>
+                  <div class="cell-meta">{{ item.current_cycle_number || 0 }} / {{ item.total_cycles || '—' }}</div>
+                </td>
+                <td @click.stop>
+                  <span class="status-pill" :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }">
+                    {{ statusConfig(item.status).label }}
+                  </span>
+                </td>
+                <td class="text-right" @click.stop>
+                  <div class="cell-primary">{{ formatDate(item.next_billing_date) }}</div>
+                  <div class="cell-meta">{{ formatMoney(item.order?.price, item.order?.currency || 'USD') }}</div>
+                </td>
+                <td class="text-right actions-cell" @click.stop>
+                  <button class="action-icon-btn" @click="openSubscriptionDetail(item.id)">
+                    <span class="mdi mdi-eye-outline" />
+                    View
+                  </button>
+                  <button
+                    v-if="item.status !== 'cancelled'"
+                    class="action-icon-btn action-icon-btn--danger"
+                    :disabled="!!cancellingSubscriptions[item.id]"
+                    @click="askCancelSubscription(item.id)"
+                  >
+                    <span :class="cancellingSubscriptions[item.id] ? 'mdi mdi-loading mdi-spin' : 'mdi mdi-cancel'" />
+                    Cancel
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!subscriptionsLoading && subscriptions.length === 0">
+                <td colspan="8" class="empty-state">
+                  <span class="mdi mdi-inbox-outline empty-icon" />
+                  <span>No subscriptions found</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <div class="pagination-size">
+            <span class="pagination-label">Rows</span>
+            <VSelect
+              v-model="subscriptionFilters.per_page"
+              :items="[10, 20, 50, 100]"
+              density="compact"
+              variant="outlined"
+              hide-details
+              style="width: 80px;"
               @update:model-value="() => { subscriptionFilters.page = 1; fetchSubscriptions() }"
             />
           </div>
-        </div>
-        <div class="filter-actions">
-          <button class="btn-apply" @click="applySubscriptionSearch">Apply</button>
-          <button class="btn-reset" @click="resetSubscriptionFilters">Reset</button>
-        </div>
-      </div>
-
-      <!-- Alerts -->
-      <VAlert v-if="subscriptionsMessage" type="success" variant="tonal" class="mb-4" closable>
-        {{ subscriptionsMessage }}
-      </VAlert>
-      <VAlert v-if="subscriptionsError" type="error" variant="tonal" class="mb-4" closable>
-        {{ subscriptionsError }}
-      </VAlert>
-
-      <div v-if="subscriptionsLoading" class="loading-bar">
-        <div class="loading-bar__fill" />
-      </div>
-
-      <!-- Table -->
-      <div class="data-table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Subscription</th>
-              <th>Patient</th>
-              <th>Product</th>
-              <th>Billing</th>
-              <th>Cycles</th>
-              <th>Status</th>
-              <th class="text-right">Next billing</th>
-              <th class="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in subscriptions"
-              :key="item.id"
-              class="data-row"
-              @click="openSubscriptionDetail(item.id)"
-            >
-              <td>
-                <div class="cell-primary">#{{ item.id }}</div>
-                <div class="cell-meta font-mono">{{ item.order?.order_uuid || '—' }}</div>
-              </td>
-              <td>
-                <div class="cell-primary">{{ item.patient?.name || '—' }}</div>
-                <div class="cell-meta">{{ item.patient?.email || '—' }}</div>
-              </td>
-              <td>
-                <div class="cell-primary">{{ item.order?.product?.name || '—' }}</div>
-                <div class="cell-meta">{{ item.order?.product?.slug || '—' }}</div>
-              </td>
-              <td>
-                <div class="cell-primary">
-                  {{ item.billing_frequency_months ? `Every ${item.billing_frequency_months} mo` : '—' }}
-                </div>
-                <div class="cell-meta discount" v-if="item.discount_percentage">
-                  {{ item.discount_percentage }}% off
-                </div>
-              </td>
-              <td>
-                <div class="cycle-track">
-                  <div
-                    class="cycle-fill"
-                    :style="{ width: item.total_cycles ? `${(item.current_cycle_number / item.total_cycles) * 100}%` : '0%' }"
-                  />
-                </div>
-                <div class="cell-meta">{{ item.current_cycle_number || 0 }} / {{ item.total_cycles || '—' }}</div>
-              </td>
-              <td @click.stop>
-                <span
-                  class="status-pill"
-                  :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }"
-                >
-                  {{ statusConfig(item.status).label }}
-                </span>
-              </td>
-              <td class="text-right" @click.stop>
-                <div class="cell-primary">{{ formatDate(item.next_billing_date) }}</div>
-                <div class="cell-meta">{{ formatMoney(item.order?.price, item.order?.currency || 'USD') }}</div>
-              </td>
-              <td class="text-right actions-cell" @click.stop>
-                <button class="action-icon-btn" @click="openSubscriptionDetail(item.id)">
-                  <span class="mdi mdi-eye-outline" />
-                  View
-                </button>
-                <button
-                  v-if="item.status !== 'cancelled'"
-                  class="action-icon-btn action-icon-btn--danger"
-                  :disabled="!!cancellingSubscriptions[item.id]"
-                  @click="askCancelSubscription(item.id)"
-                >
-                  <span
-                    :class="cancellingSubscriptions[item.id] ? 'mdi mdi-loading mdi-spin' : 'mdi mdi-cancel'"
-                  />
-                  Cancel
-                </button>
-              </td>
-            </tr>
-            <tr v-if="!subscriptionsLoading && subscriptions.length === 0">
-              <td colspan="8" class="empty-state">
-                <span class="mdi mdi-inbox-outline empty-icon" />
-                <span>No subscriptions found</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="pagination-bar">
-        <div class="pagination-size">
-          <span class="pagination-label">Rows</span>
-          <VSelect
-            v-model="subscriptionFilters.per_page"
-            :items="[10, 20, 50, 100]"
-            density="compact"
-            variant="outlined"
-            hide-details
-            style="width: 80px;"
-            @update:model-value="() => { subscriptionFilters.page = 1; fetchSubscriptions() }"
+          <span class="pagination-range">{{ subscriptionRangeText }}</span>
+          <VPagination
+            v-model="subscriptionFilters.page"
+            size="small"
+            :total-visible="5"
+            :length="subscriptionsTotalPages"
+            @update:model-value="fetchSubscriptions"
           />
         </div>
-        <span class="pagination-range">{{ subscriptionRangeText }}</span>
-        <VPagination
-          v-model="subscriptionFilters.page"
-          size="small"
-          :total-visible="5"
-          :length="subscriptionsTotalPages"
-          @update:model-value="fetchSubscriptions"
-        />
       </div>
-    </div>
 
-    <!-- ── Cancel Dialog ────────────────────────────────── -->
+      <div v-show="tab === 'coupons'" class="tab-content">
+        <div class="filter-bar">
+          <div class="filter-search">
+            <span class="mdi mdi-magnify search-icon" />
+            <input
+              v-model="couponSearchInput"
+              class="filter-input"
+              placeholder="Search coupon code, name, or description…"
+              @keyup.enter="applyCouponSearch"
+            >
+          </div>
+          <div class="filter-selects">
+            <VSelect
+              v-model="couponFilters.scope"
+              :items="[{ title: 'All scopes', value: '' }, { title: 'Global', value: 'global' }, { title: 'Product Specific', value: 'product_specific' }]"
+              item-title="title"
+              item-value="value"
+              label="Scope"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { couponFilters.page = 1; fetchCoupons() }"
+            />
+            <VSelect
+              v-model="couponFilters.type"
+              :items="[{ title: 'All types', value: '' }, { title: 'Percent', value: 'percent' }, { title: 'Fixed', value: 'fixed' }]"
+              item-title="title"
+              item-value="value"
+              label="Type"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { couponFilters.page = 1; fetchCoupons() }"
+            />
+            <VSelect
+              v-model="couponFilters.applies_to"
+              :items="[{ title: 'All targets', value: '' }, { title: 'All Orders', value: 'all' }, { title: 'One-Time Orders', value: 'one_time' }, { title: 'Subscriptions', value: 'subscription' }]"
+              item-title="title"
+              item-value="value"
+              label="Applies To"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { couponFilters.page = 1; fetchCoupons() }"
+            />
+            <VSelect
+              v-model="couponFilters.is_active"
+              :items="[{ title: 'All statuses', value: '' }, { title: 'Active', value: 'true' }, { title: 'Inactive', value: 'false' }]"
+              item-title="title"
+              item-value="value"
+              label="Status"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="filter-select"
+              @update:model-value="() => { couponFilters.page = 1; fetchCoupons() }"
+            />
+          </div>
+          <div class="filter-actions">
+            <button class="btn-apply" @click="applyCouponSearch">Apply</button>
+            <button class="btn-reset" @click="resetCouponFilters">Reset</button>
+          </div>
+        </div>
+
+        <VAlert v-if="couponsMessage" type="success" variant="tonal" class="mb-4" closable>
+          {{ couponsMessage }}
+        </VAlert>
+        <VAlert v-if="couponsError" type="error" variant="tonal" class="mb-4" closable>
+          {{ couponsError }}
+        </VAlert>
+
+        <div v-if="couponsLoading" class="loading-bar">
+          <div class="loading-bar__fill" />
+        </div>
+
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Coupon</th>
+                <th>Scope</th>
+                <th>Applies To</th>
+                <th>Discount</th>
+                <th>Products</th>
+                <th>Usage</th>
+                <th>Status</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="coupon in coupons" :key="coupon.id" class="data-row">
+                <td>
+                  <div class="cell-primary font-mono">{{ coupon.code }}</div>
+                  <div class="cell-meta">{{ coupon.name || '—' }}</div>
+                  <div v-if="coupon.description" class="cell-meta">{{ coupon.description }}</div>
+                </td>
+                <td>
+                  <span class="type-badge">
+                    <span :class="coupon.scope === 'product_specific' ? 'mdi mdi-package-variant-closed' : 'mdi mdi-earth'" />
+                    {{ getCouponScopeLabel(coupon) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="cell-primary">{{ getCouponAppliesToLabel(coupon) }}</div>
+                  <div class="cell-meta">{{ coupon.first_order_only ? 'First order only' : 'No first-order restriction' }}</div>
+                </td>
+                <td>
+                  <div class="cell-primary">{{ getCouponValueLabel(coupon) }}</div>
+                  <div class="cell-meta">Min: {{ coupon.min_order_amount ? formatMoney(coupon.min_order_amount) : 'None' }}</div>
+                </td>
+                <td>
+                  <div class="cell-primary coupon-products">{{ getCouponProductSummary(coupon) }}</div>
+                  <div class="cell-meta">{{ coupon.products_count || 0 }} product{{ Number(coupon.products_count || 0) === 1 ? '' : 's' }}</div>
+                </td>
+                <td>
+                  <div class="cell-primary">{{ coupon.redemptions_count || 0 }} redeemed</div>
+                  <div class="cell-meta">Limit: {{ coupon.usage_limit_total || 'Unlimited' }}</div>
+                </td>
+                <td @click.stop>
+                  <div class="coupon-status">
+                    <VSwitch
+                      :model-value="!!coupon.is_active"
+                      color="primary"
+                      inset
+                      hide-details
+                      density="compact"
+                      :loading="togglingCouponId === coupon.id"
+                      @update:model-value="toggleCouponActive(coupon)"
+                    />
+                    <span class="coupon-status__label">{{ coupon.is_active ? 'Active' : 'Inactive' }}</span>
+                  </div>
+                </td>
+                <td class="text-right actions-cell" @click.stop>
+                  <button class="action-icon-btn" @click="openCouponEdit(coupon)">
+                    <span class="mdi mdi-pencil-outline" />
+                    Edit
+                  </button>
+                  <button class="action-icon-btn action-icon-btn--danger" @click="askDeleteCoupon(coupon)">
+                    <span class="mdi mdi-trash-can-outline" />
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!couponsLoading && coupons.length === 0">
+                <td colspan="8" class="empty-state">
+                  <span class="mdi mdi-ticket-outline empty-icon" />
+                  <span>No coupons found</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <div class="pagination-size">
+            <span class="pagination-label">Rows</span>
+            <VSelect
+              v-model="couponFilters.per_page"
+              :items="[10, 15, 25, 50]"
+              density="compact"
+              variant="outlined"
+              hide-details
+              style="width: 80px;"
+              @update:model-value="() => { couponFilters.page = 1; fetchCoupons() }"
+            />
+          </div>
+          <span class="pagination-range">{{ couponRangeText }}</span>
+          <VPagination
+            v-model="couponFilters.page"
+            size="small"
+            :total-visible="5"
+            :length="couponsTotalPages"
+            @update:model-value="fetchCoupons"
+          />
+        </div>
+      </div>
+    </template>
+
     <ConfirmDialog
       v-model:isDialogVisible="cancelDialogVisible"
       confirmation-msg="Are you sure you want to cancel this subscription? This action cannot be undone."
       @confirm="cancelSubscription"
     />
+
+    <ConfirmDialog
+      v-model:isDialogVisible="couponDeleteDialogVisible"
+      confirmation-msg="Are you sure you want to delete this coupon? This action cannot be undone."
+      @confirm="deleteCoupon"
+    />
   </section>
 </template>
 
 <style scoped>
-/* ── Base ─────────────────────────────────────────────── */
 .admin-billing-page {
   padding: 28px 32px;
   min-height: 100vh;
@@ -603,7 +1037,6 @@ onMounted(() => {
   font-family: 'DM Sans', 'Outfit', system-ui, sans-serif;
 }
 
-/* ── Page Header ──────────────────────────────────────── */
 .page-header {
   display: flex;
   align-items: center;
@@ -651,6 +1084,7 @@ onMounted(() => {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .action-btn {
@@ -659,7 +1093,10 @@ onMounted(() => {
   letter-spacing: 0 !important;
 }
 
-/* ── Tab Nav ──────────────────────────────────────────── */
+.action-btn--secondary {
+  background: rgba(var(--v-theme-on-surface), 0.06) !important;
+}
+
 .tab-nav {
   display: flex;
   gap: 4px;
@@ -670,6 +1107,7 @@ onMounted(() => {
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   width: fit-content;
   box-shadow: 0 1px 4px rgba(var(--v-shadow-key-umbra-color), 0.06);
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -704,7 +1142,7 @@ onMounted(() => {
 }
 
 .tab-badge {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.25);
   color: inherit;
   font-size: 0.7rem;
   font-weight: 700;
@@ -719,17 +1157,15 @@ onMounted(() => {
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
 }
 
-/* ── Tab Content ──────────────────────────────────────── */
 .tab-content {
   animation: fadeIn 0.2s ease;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Filter Bar ───────────────────────────────────────── */
 .filter-bar {
   display: flex;
   align-items: center;
@@ -827,7 +1263,6 @@ onMounted(() => {
 
 .btn-reset:hover { background: rgba(var(--v-theme-on-surface), 0.1); }
 
-/* ── Loading Bar ──────────────────────────────────────── */
 .loading-bar {
   height: 3px;
   background: rgba(var(--v-border-color), var(--v-border-opacity));
@@ -845,11 +1280,10 @@ onMounted(() => {
 }
 
 @keyframes slide {
-  0%   { transform: translateX(-120%); }
+  0% { transform: translateX(-120%); }
   100% { transform: translateX(380%); }
 }
 
-/* ── Table ────────────────────────────────────────────── */
 .data-table-wrap {
   background: rgb(var(--v-theme-surface));
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
@@ -884,7 +1318,6 @@ onMounted(() => {
 
 .data-table tbody .data-row {
   border-bottom: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.6));
-  cursor: pointer;
   transition: background 0.12s;
 }
 
@@ -910,7 +1343,10 @@ onMounted(() => {
   margin-top: 2px;
 }
 
-.font-mono { font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 0.8rem; }
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  font-size: 0.8rem;
+}
 
 .cell-amount {
   font-weight: 700;
@@ -918,7 +1354,6 @@ onMounted(() => {
   color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
 }
 
-/* ── Status Pill ──────────────────────────────────────── */
 .status-pill {
   display: inline-block;
   padding: 3px 10px;
@@ -930,7 +1365,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* ── Type Badge ───────────────────────────────────────── */
 .type-badge {
   display: inline-flex;
   align-items: center;
@@ -943,7 +1377,6 @@ onMounted(() => {
   border-radius: 20px;
 }
 
-/* ── Cycle Track ──────────────────────────────────────── */
 .cycle-track {
   height: 4px;
   background: rgba(var(--v-border-color), var(--v-border-opacity));
@@ -965,7 +1398,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* ── Actions Cell ─────────────────────────────────────── */
 .actions-cell {
   white-space: nowrap;
 }
@@ -1007,7 +1439,22 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* ── Empty State ──────────────────────────────────────── */
+.coupon-products {
+  max-width: 240px;
+  white-space: normal;
+}
+
+.coupon-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coupon-status__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .empty-state {
   text-align: center;
   padding: 48px 24px !important;
@@ -1025,7 +1472,6 @@ onMounted(() => {
   opacity: 0.5;
 }
 
-/* ── Pagination ───────────────────────────────────────── */
 .pagination-bar {
   display: flex;
   align-items: center;
@@ -1051,5 +1497,26 @@ onMounted(() => {
 .pagination-range {
   font-size: 0.82rem;
   color: rgba(var(--v-theme-on-surface), var(--v-disabled-opacity));
+}
+
+@media (max-width: 960px) {
+  .admin-billing-page {
+    padding: 20px 16px;
+  }
+
+  .tab-nav {
+    width: 100%;
+  }
+
+  .actions-cell {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .action-icon-btn {
+    margin-left: 0;
+  }
 }
 </style>

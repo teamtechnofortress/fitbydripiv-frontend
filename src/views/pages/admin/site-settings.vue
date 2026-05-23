@@ -12,6 +12,7 @@ import {
   SERVER_DOMAIN,
 } from '@/network/const'
 import { getApiToken } from '@/store/authData'
+import { devLog } from '@/utils/devLogger'
 
 const router = useRouter()
 const toast = useToast()
@@ -45,6 +46,14 @@ const footerSocialDraft = reactive({
   href: '',
 })
 
+const footerLinkDraft = reactive({
+  label: '',
+  mode: 'internal',
+  slug: '',
+  href: '',
+  external: false,
+})
+
 const settingsSchema = {
   general: [
     { key: 'app_name', label: 'App Name', type: 'string', placeholder: 'FitByShot' },
@@ -61,6 +70,16 @@ const settingsSchema = {
     { key: 'facebook_url', label: 'Facebook URL', type: 'string', placeholder: 'https://facebook.com/...' },
     { key: 'twitter_url', label: 'Twitter URL', type: 'string', placeholder: 'https://x.com/...' },
   ],
+}
+
+const getSettingFileRecommendation = key => {
+  if (key === 'logo')
+    return 'Recommended size: 320 x 80 px (transparent PNG or SVG)'
+
+  if (key === 'favicon')
+    return 'Recommended size: 64 x 64 px (square PNG/ICO)'
+
+  return ''
 }
 
 const settingsForm = reactive(Object.fromEntries(
@@ -147,6 +166,7 @@ const footerSourceOptions = [
   { title: 'Brand', value: 'brand' },
   { title: 'Categories', value: 'categories' },
   { title: 'Static Pages', value: 'static_pages' },
+  { title: 'Custom Links', value: 'manual' },
   { title: 'Certification', value: 'certification' },
   { title: 'Research Links', value: 'research_links' },
   { title: 'Social Links', value: 'social_links' },
@@ -304,6 +324,9 @@ const pageRows = computed(() => pages.value.slice().sort((a, b) => String(a?.tit
 const categoryOptions = computed(() => categories.value.map(item => ({ title: item.name, value: item.slug })))
 const staticPageOptions = computed(() => pageRows.value.map(item => ({ title: item.title || item.slug, value: item.slug })))
 const settingsByKey = computed(() => Object.fromEntries(settingsRows.value.map(item => [item.key, item])))
+const staticPageTitleBySlug = computed(() => Object.fromEntries(
+  pageRows.value.map(item => [String(item.slug || '').trim(), item.title || item.slug || '']),
+))
 
 const activeLayoutConfig = computed(() => activeGlobalSection.value === 'footer' ? layoutForm.footer : layoutForm.header)
 
@@ -358,6 +381,60 @@ const normalizeFooterSocialPlatformValue = value => {
   return ''
 }
 
+const getFooterLinkMode = item => {
+  const href = String(item?.href || '').trim()
+  if (/^(?:https?:|mailto:|tel:|sms:|\/\/)/i.test(href)) return 'external'
+  if (item?.external && href) return 'external'
+  return 'internal'
+}
+
+const getFooterLinkLabel = item => {
+  if (typeof item?.label === 'string' && item.label.trim()) return item.label.trim()
+
+  const slug = normalizeSlugValue(item?.slug || item?.href)
+  if (slug && staticPageTitleBySlug.value[slug]) return staticPageTitleBySlug.value[slug]
+  if (slug) return slug
+
+  const href = String(item?.href || '').trim()
+  return href || ''
+}
+
+const normalizeFooterLinkItem = item => {
+  if (!item) return null
+
+  if (typeof item === 'string') {
+    const slug = normalizeSlugValue(item)
+    if (!slug) return null
+
+    return {
+      label: staticPageTitleBySlug.value[slug] || slug,
+      slug,
+      href: '',
+      external: false,
+    }
+  }
+
+  if (typeof item !== 'object') return null
+
+  const mode = getFooterLinkMode(item)
+  const slug = mode === 'internal' ? normalizeSlugValue(item.slug || item.href) : ''
+  const href = mode === 'external' ? String(item.href || item.url || '').trim() : ''
+  const label = getFooterLinkLabel({ ...item, slug, href })
+
+  if (!label) return null
+  if (mode === 'internal' && !slug) return null
+  if (mode === 'external' && !href) return null
+
+  return {
+    label,
+    slug,
+    href,
+    external: mode === 'external'
+      ? typeof item.external === 'boolean' ? item.external : true
+      : false,
+  }
+}
+
 const normalizeFooterSocialHref = (platform, value) => {
   const raw = String(value || '').trim()
   if (!raw) return ''
@@ -401,6 +478,8 @@ const normalizeFooterColumnItems = (source, items) => {
   if (!Array.isArray(items)) return []
   if (source === 'research_links') return items.filter(item => item && typeof item === 'object').map(item => ({ ...item }))
   if (source === 'social_links') return items.map(item => normalizeFooterSocialLinkItem(item)).filter(Boolean)
+  if (source === 'static_pages' || source === 'manual')
+    return items.map(item => normalizeFooterLinkItem(item)).filter(Boolean)
   if (source === 'certification') {
     const normalizedItems = items
       .filter(item => item && typeof item === 'object')
@@ -442,6 +521,79 @@ const setFooterCertificationDescription = (column, value) => {
   column.items[0].description = String(value || '')
 }
 
+const resetFooterLinkDraft = () => {
+  footerLinkDraft.label = ''
+  footerLinkDraft.mode = 'internal'
+  footerLinkDraft.slug = ''
+  footerLinkDraft.href = ''
+  footerLinkDraft.external = false
+}
+
+const addFooterCustomLink = column => {
+  const label = String(footerLinkDraft.label || '').trim()
+  const mode = footerLinkDraft.mode === 'external' ? 'external' : 'internal'
+  const slug = mode === 'internal' ? normalizeSlugValue(footerLinkDraft.slug) : ''
+  const href = mode === 'external' ? String(footerLinkDraft.href || '').trim() : ''
+
+  if (!label) {
+    toast.error('Link label is required.')
+    return
+  }
+
+  if (mode === 'internal' && !slug) {
+    toast.error('Select or enter a site page path.')
+    return
+  }
+
+  if (mode === 'external' && !href) {
+    toast.error('External URL is required.')
+    return
+  }
+
+  column.items = [
+    ...(Array.isArray(column.items) ? column.items : []),
+    {
+      label,
+      slug,
+      href,
+      external: mode === 'external' ? !!footerLinkDraft.external : false,
+    },
+  ]
+
+  resetFooterLinkDraft()
+}
+
+const removeFooterCustomLink = (column, index) => {
+  column.items = (column.items || []).filter((_, itemIndex) => itemIndex !== index)
+}
+
+const moveFooterCustomLink = (column, index, direction) => {
+  const targetIndex = index + direction
+  if (targetIndex < 0 || targetIndex >= (column.items || []).length) return
+
+  const items = [...column.items]
+  const [current] = items.splice(index, 1)
+  items.splice(targetIndex, 0, current)
+  column.items = items
+}
+
+const updateFooterCustomLinkMode = (item, value) => {
+  const mode = value === 'external' ? 'external' : 'internal'
+
+  if (mode === 'external') {
+    item.slug = ''
+    if (!item.href && /^https?:\/\//i.test(String(item.label || '').trim()))
+      item.href = String(item.label || '').trim()
+    item.external = true
+    return
+  }
+
+  item.external = false
+  if (item.href && !/^(?:https?:|mailto:|tel:|sms:|\/\/)/i.test(String(item.href).trim()))
+    item.slug = normalizeSlugValue(item.href)
+  item.href = ''
+}
+
 const createHeaderMenuItem = (type = 'group') => (
   type === 'link'
     ? {
@@ -459,11 +611,22 @@ const createHeaderMenuItem = (type = 'group') => (
       }
 )
 
-const createFooterColumn = source => (
-  source === 'brand'
+const createFooterColumnId = () => (
+  globalThis.crypto?.randomUUID?.()
+  || `footer-col-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+)
+
+const toFooterColumnSortOrder = (value, fallback) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback
+}
+
+const createFooterColumn = (source, overrides = {}) => {
+  const base = source === 'brand'
     ? {
         source: 'brand',
         title: 'FitByShot',
+        items: [],
       }
     : source === 'certification'
       ? {
@@ -488,12 +651,54 @@ const createFooterColumn = source => (
           title: 'Research & Resources',
           items: [],
         }
+    : source === 'manual'
+      ? {
+          source: 'manual',
+          title: 'Helpful Links',
+          items: [],
+        }
     : {
         source,
         title: '',
         items: [],
       }
+
+  return {
+    id: createFooterColumnId(),
+    sort_order: 1,
+    start_new_row: false,
+    ...base,
+    ...overrides,
+  }
+}
+
+const reindexFooterColumns = columns => (
+  (Array.isArray(columns) ? columns : []).map((column, index) => ({
+    ...column,
+    sort_order: index + 1,
+  }))
 )
+
+const normalizeFooterColumnsForDraft = columns => {
+  if (!Array.isArray(columns)) return []
+
+  const normalized = columns.map((column, index) => {
+    const source = column?.source || (column?.type === 'brand' ? 'brand' : 'static_pages')
+    const base = createFooterColumn(source)
+
+    return createFooterColumn(source, {
+      id: String(column?.id || '').trim() || base.id,
+      title: column?.title ?? base.title,
+      items: normalizeFooterColumnItems(source, column?.items ?? base.items),
+      sort_order: toFooterColumnSortOrder(column?.sort_order, index + 1),
+      start_new_row: !!column?.start_new_row,
+    })
+  })
+
+  normalized.sort((a, b) => a.sort_order - b.sort_order)
+
+  return reindexFooterColumns(normalized)
+}
 
 const hydrateSettingsForm = rows => {
   settingsRows.value = rows
@@ -519,7 +724,7 @@ const hydrateLayoutForm = payload => {
     config: {
       brand: {
         name: header?.config?.brand?.name || header?.data?.brand?.name || 'FitByShot',
-        logo: header?.config?.brand?.logo || header?.data?.brand?.logo || '',
+        logo: header?.config?.brand?.logo || header?.data?.brand?.logo || settingsForm.logo || '',
         description: header?.config?.brand?.description || header?.data?.brand?.description || '',
         home_url: header?.config?.brand?.home_url || header?.data?.brand?.home_url || '/',
       },
@@ -542,11 +747,7 @@ const hydrateLayoutForm = payload => {
   layoutForm.footer = {
     key: 'footer',
     config: {
-      columns: (footer?.config?.columns || []).map(column => ({
-        source: column.source || (column.type === 'brand' ? 'brand' : 'static_pages'),
-        title: column.title || '',
-        items: normalizeFooterColumnItems(column.source || (column.type === 'brand' ? 'brand' : 'static_pages'), column.items),
-      })),
+      columns: normalizeFooterColumnsForDraft(footer?.config?.columns || []),
       bottom: {
         copyright: footer?.config?.bottom?.copyright || '',
         credit: footer?.config?.bottom?.credit || '',
@@ -601,8 +802,16 @@ const fetchLayout = async () => {
       headers: getAuthHeaders({ Accept: 'application/json' }),
     })
 
-    hydrateLayoutForm(normalizeLayoutResponse(response?.data))
+    devLog('Global sections fetch response (admin)', response?.data)
+    const normalizedLayout = normalizeLayoutResponse(response?.data)
+    devLog('Global sections normalized payload (admin)', normalizedLayout)
+
+    hydrateLayoutForm(normalizedLayout)
   } catch (error) {
+    devLog('Global sections fetch error (admin)', {
+      message: error?.message,
+      response: error?.response?.data,
+    })
     toast.error(buildErrorMessage(error))
     hydrateLayoutForm({})
   } finally {
@@ -670,30 +879,6 @@ const uploadSettingFile = async (files, key) => {
   }
 }
 
-const uploadLayoutAsset = async (files, sectionKey, fieldKey) => {
-  const file = Array.isArray(files) ? files[0] : files
-  if (!file) return
-
-  uploadingLayoutAssetKey.value = `${sectionKey}.${fieldKey}`
-  try {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('type', 'misc')
-
-    const response = await axios.post(ADMIN_MEDIA_UPLOAD_URL, formData, {
-      headers: getAuthHeaders({ 'Content-Type': 'multipart/form-data' }),
-    })
-
-    const payload = response?.data?.data || {}
-    layoutForm[sectionKey].config.brand[fieldKey] = payload.path || payload.url || ''
-    toast.success(`${file.name} uploaded`)
-  } catch (error) {
-    toast.error(buildErrorMessage(error))
-  } finally {
-    uploadingLayoutAssetKey.value = ''
-  }
-}
-
 const uploadFooterColumnAsset = async (files, column, fieldKey) => {
   const file = Array.isArray(files) ? files[0] : files
   if (!file) return
@@ -752,7 +937,11 @@ const removeHeaderMenuItem = index => {
 }
 
 const addFooterColumn = source => {
-  layoutForm.footer.config.columns.push(createFooterColumn(source))
+  layoutForm.footer.config.columns.push(
+    createFooterColumn(source, {
+      sort_order: layoutForm.footer.config.columns.length + 1,
+    }),
+  )
 }
 
 const moveFooterColumn = (index, direction) => {
@@ -761,7 +950,7 @@ const moveFooterColumn = (index, direction) => {
   const columns = [...layoutForm.footer.config.columns]
   const [moved] = columns.splice(index, 1)
   columns.splice(targetIndex, 0, moved)
-  layoutForm.footer.config.columns = columns
+  layoutForm.footer.config.columns = reindexFooterColumns(columns)
 }
 
 const updateFooterColumnSource = (column, source) => {
@@ -780,6 +969,7 @@ const updateFooterColumnSource = (column, source) => {
 
 const removeFooterColumn = index => {
   layoutForm.footer.config.columns.splice(index, 1)
+  layoutForm.footer.config.columns = reindexFooterColumns(layoutForm.footer.config.columns)
 }
 
 const addFooterSocialLink = column => {
@@ -875,7 +1065,7 @@ const buildHeaderPayload = () => ({
   config: {
     brand: {
       name: layoutForm.header.config.brand.name || undefined,
-      logo: layoutForm.header.config.brand.logo || undefined,
+      logo: settingsForm.logo || undefined,
       description: layoutForm.header.config.brand.description || undefined,
       home_url: layoutForm.header.config.brand.home_url || '/',
     },
@@ -907,18 +1097,26 @@ const buildHeaderPayload = () => ({
 const buildFooterPayload = () => ({
   key: 'footer',
   config: {
-    columns: layoutForm.footer.config.columns.map(column => {
+    columns: layoutForm.footer.config.columns.map((column, index) => {
+      const sortOrder = index + 1
+
       if (column.source === 'brand') {
         return {
+          id: String(column.id || '').trim() || createFooterColumnId(),
           source: 'brand',
           title: column.title || 'FitByShot',
+          sort_order: sortOrder,
+          start_new_row: !!column.start_new_row,
           logo: layoutForm.footer.config.brandLogo || undefined,
         }
       }
 
       return {
+        id: String(column.id || '').trim() || createFooterColumnId(),
         source: column.source,
         title: column.title,
+        sort_order: sortOrder,
+        start_new_row: !!column.start_new_row,
         items: column.source === 'categories'
           ? []
           : column.source === 'research_links'
@@ -945,6 +1143,8 @@ const buildFooterPayload = () => ({
                     }]
                   : []
               })()
+          : column.source === 'static_pages' || column.source === 'manual'
+            ? (Array.isArray(column.items) ? column.items.map(item => normalizeFooterLinkItem(item)).filter(Boolean) : [])
           : normalizeSourceItems(column.source, column.items),
       }
     }),
@@ -1125,6 +1325,12 @@ const openPageBuilder = page => {
                     <div class="site-page-label">
                       {{ field.label }}
                     </div>
+                    <p
+                      v-if="getSettingFileRecommendation(field.key)"
+                      class="mb-2 text-caption text-medium-emphasis"
+                    >
+                      {{ getSettingFileRecommendation(field.key) }}
+                    </p>
 
                     <div
                       v-if="getFilePreviewUrl(settingsForm[field.key])"
@@ -1286,36 +1492,33 @@ const openPageBuilder = page => {
                     />
                   </VCol>
                   <VCol cols="12">
+                    <VAlert color="info" variant="tonal" class="mb-4">
+                      Header logo uses the shared logo from General Settings, matching the footer brand behavior.
+                    </VAlert>
+
                     <div class="site-setting-file">
                       <div class="site-page-label">
-                        Header Logo
+                        Shared Site Logo
                       </div>
 
                       <div
-                        v-if="getFilePreviewUrl(layoutForm.header.config.brand.logo)"
+                        v-if="getFilePreviewUrl(settingsForm.logo)"
                         class="site-setting-file__preview"
                       >
                         <img
-                          :src="getFilePreviewUrl(layoutForm.header.config.brand.logo)"
-                          alt="Header logo"
+                          :src="getFilePreviewUrl(settingsForm.logo)"
+                          alt="Shared site logo"
                           class="site-setting-file__image"
                         >
                       </div>
 
                       <VTextField
-                        v-model="layoutForm.header.config.brand.logo"
-                        label="Header Logo Path"
+                        :model-value="settingsForm.logo"
+                        label="Logo Path"
                         variant="outlined"
                         readonly
-                      />
-
-                      <VFileInput
-                        label="Upload Header Logo"
-                        variant="outlined"
-                        prepend-icon="tabler-upload"
-                        accept="image/*"
-                        :loading="uploadingLayoutAssetKey === 'header.logo'"
-                        @update:model-value="value => uploadLayoutAsset(value, 'header', 'logo')"
+                        hint="Update this from General Settings > Logo."
+                        persistent-hint
                       />
                     </div>
                   </VCol>
@@ -1504,6 +1707,9 @@ const openPageBuilder = page => {
                     <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('static_pages')">
                       Static Pages
                     </VBtn>
+                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('manual')">
+                      Custom Links
+                    </VBtn>
                     <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('certification')">
                       Certification
                     </VBtn>
@@ -1525,7 +1731,7 @@ const openPageBuilder = page => {
                     <VCardText class="pa-4">
                       <div class="d-flex align-center justify-space-between gap-3 mb-4">
                         <div class="text-subtitle-2 font-weight-semibold">
-                          Column {{ index + 1 }}
+                          Column {{ column.sort_order || index + 1 }}
                         </div>
                         <div class="d-flex gap-2">
                           <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveFooterColumn(index, -1)" />
@@ -1551,6 +1757,23 @@ const openPageBuilder = page => {
                             variant="outlined"
                           />
                         </VCol>
+                        <VCol cols="12" md="4">
+                          <VTextField
+                            :model-value="column.sort_order || index + 1"
+                            label="Sort Order"
+                            variant="outlined"
+                            readonly
+                          />
+                        </VCol>
+                        <VCol cols="12" md="8">
+                          <VSwitch
+                            v-model="column.start_new_row"
+                            color="primary"
+                            inset
+                            label="Start New Row Before This Column"
+                            hide-details
+                          />
+                        </VCol>
 
                         <template v-if="column.source === 'brand'">
                           <VCol cols="12">
@@ -1570,17 +1793,183 @@ const openPageBuilder = page => {
                         </VCol>
 
                         <VCol
-                          v-else-if="column.source === 'static_pages'"
+                          v-else-if="column.source === 'static_pages' || column.source === 'manual'"
                           cols="12"
                         >
-                          <VSelect
-                            v-model="column.items"
-                            :items="staticPageOptions"
-                            label="Page Slugs"
-                            variant="outlined"
-                            multiple
-                            chips
-                          />
+                          <div class="research-links-editor">
+                            <VAlert color="info" variant="tonal" class="mb-4">
+                              Add footer links with a custom label. Choose a page from the site or enter an external URL.
+                            </VAlert>
+
+                            <VRow>
+                              <VCol cols="12" md="4">
+                                <VTextField
+                                  v-model="footerLinkDraft.label"
+                                  label="Link Label"
+                                  placeholder="About Us"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  hide-details="auto"
+                                />
+                              </VCol>
+                              <VCol cols="12" md="4">
+                                <VSelect
+                                  v-model="footerLinkDraft.mode"
+                                  :items="[
+                                    { title: 'Site Page', value: 'internal' },
+                                    { title: 'External URL', value: 'external' },
+                                  ]"
+                                  label="Destination Type"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  hide-details="auto"
+                                />
+                              </VCol>
+                              <VCol
+                                v-if="footerLinkDraft.mode === 'internal'"
+                                cols="12"
+                                md="4"
+                              >
+                                <VCombobox
+                                  v-model="footerLinkDraft.slug"
+                                  :items="staticPageOptions"
+                                  label="Page Slug or Path"
+                                  placeholder="/contact"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  hide-details="auto"
+                                />
+                              </VCol>
+                              <VCol
+                                v-else
+                                cols="12"
+                                md="4"
+                              >
+                                <VTextField
+                                  v-model="footerLinkDraft.href"
+                                  label="External URL"
+                                  placeholder="https://example.com"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  hide-details="auto"
+                                />
+                              </VCol>
+                              <VCol
+                                v-if="footerLinkDraft.mode === 'external'"
+                                cols="12"
+                              >
+                                <VCheckbox
+                                  v-model="footerLinkDraft.external"
+                                  label="Open in new tab"
+                                  color="primary"
+                                  hide-details
+                                />
+                              </VCol>
+                            </VRow>
+
+                            <div class="d-flex justify-end mt-4">
+                              <VBtn color="primary" @click="addFooterCustomLink(column)">
+                                Add Link
+                              </VBtn>
+                            </div>
+
+                            <div
+                              v-if="column.items?.length"
+                              class="footer-research-list"
+                            >
+                              <div
+                                v-for="(item, itemIndex) in column.items"
+                                :key="`${item.label}-${itemIndex}`"
+                                class="footer-link-card"
+                              >
+                                <div class="d-flex justify-space-between gap-4 mb-4">
+                                  <div class="d-flex align-center gap-3">
+                                    <span class="footer-link-card__tick">
+                                      <VIcon icon="tabler-check" size="15" />
+                                    </span>
+                                    <div>
+                                      <div class="text-subtitle-2 font-weight-bold">
+                                        {{ item.label || 'Untitled link' }}
+                                      </div>
+                                      <div class="footer-link-card__meta">
+                                        {{ getFooterLinkMode(item) === 'external' ? 'External URL' : 'Site Page' }}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div class="d-flex gap-2">
+                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-up" :disabled="itemIndex === 0" @click="moveFooterCustomLink(column, itemIndex, -1)" />
+                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-down" :disabled="itemIndex === column.items.length - 1" @click="moveFooterCustomLink(column, itemIndex, 1)" />
+                                    <VBtn size="x-small" color="error" variant="text" icon="tabler-trash" @click="removeFooterCustomLink(column, itemIndex)" />
+                                  </div>
+                                </div>
+
+                                <VRow>
+                                  <VCol cols="12" md="4">
+                                    <VTextField
+                                      v-model="item.label"
+                                      label="Link Label"
+                                      variant="outlined"
+                                      density="comfortable"
+                                      hide-details="auto"
+                                    />
+                                  </VCol>
+                                  <VCol cols="12" md="4">
+                                    <VSelect
+                                      :model-value="getFooterLinkMode(item)"
+                                      :items="[
+                                        { title: 'Site Page', value: 'internal' },
+                                        { title: 'External URL', value: 'external' },
+                                      ]"
+                                      label="Destination Type"
+                                      variant="outlined"
+                                      density="comfortable"
+                                      hide-details="auto"
+                                      @update:model-value="value => updateFooterCustomLinkMode(item, value)"
+                                    />
+                                  </VCol>
+                                  <VCol
+                                    v-if="getFooterLinkMode(item) === 'internal'"
+                                    cols="12"
+                                    md="4"
+                                  >
+                                    <VCombobox
+                                      v-model="item.slug"
+                                      :items="staticPageOptions"
+                                      label="Page Slug or Path"
+                                      variant="outlined"
+                                      density="comfortable"
+                                      hide-details="auto"
+                                    />
+                                  </VCol>
+                                  <VCol
+                                    v-else
+                                    cols="12"
+                                    md="4"
+                                  >
+                                    <VTextField
+                                      v-model="item.href"
+                                      label="External URL"
+                                      variant="outlined"
+                                      density="comfortable"
+                                      hide-details="auto"
+                                    />
+                                  </VCol>
+                                  <VCol
+                                    v-if="getFooterLinkMode(item) === 'external'"
+                                    cols="12"
+                                  >
+                                    <VCheckbox
+                                      v-model="item.external"
+                                      label="Open in new tab"
+                                      color="primary"
+                                      hide-details
+                                    />
+                                  </VCol>
+                                </VRow>
+                              </div>
+                            </div>
+                          </div>
                         </VCol>
 
                         <VCol
@@ -2179,6 +2568,33 @@ const openPageBuilder = page => {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   border-radius: 16px;
   background: rgba(var(--v-theme-surface), 0.9);
+}
+
+.footer-link-card {
+  padding: 16px 18px;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.04), rgba(var(--v-theme-surface), 0.96));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.footer-link-card__tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgb(var(--v-theme-primary)), rgba(var(--v-theme-primary), 0.7));
+  color: rgb(var(--v-theme-on-primary));
+  box-shadow: 0 10px 22px rgba(var(--v-theme-primary), 0.22);
+  flex-shrink: 0;
+}
+
+.footer-link-card__meta {
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-size: 0.8rem;
+  margin-top: 2px;
 }
 
 .footer-research-meta {

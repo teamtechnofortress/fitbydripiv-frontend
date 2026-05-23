@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'url'
+import { inspect } from 'node:util'
 import VueI18n from '@intlify/vite-plugin-vue-i18n'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
@@ -15,7 +16,18 @@ const devLoggerPlugin = {
   configureServer(server) {
     server.ws.on('custom:debug-log', data => {
       const timestamp = new Date().toISOString()
-      console.log(`【${timestamp}】[DEV LOG] ${data?.message || ''}`, data?.payload ?? '')
+      const payload = data?.payload ?? ''
+      const payloadText = typeof payload === 'string'
+        ? payload
+        : inspect(payload, {
+            depth: null,
+            colors: false,
+            compact: false,
+            maxArrayLength: null,
+            maxStringLength: null,
+          })
+
+      console.log(`【${timestamp}】[DEV LOG] ${data?.message || ''}\n${payloadText}`)
     })
   },
 }

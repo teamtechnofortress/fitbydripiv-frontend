@@ -30,7 +30,6 @@ const navigate = path => {
 <template>
   <section class="py-12 px-4 border-t border-gray-200">
     <div class="max-w-4xl mx-auto text-center">
-      <h2 class="text-2xl font-bold text-gray-900 mb-3">{{ headline }}</h2>
       <p class="text-base text-gray-700 mb-6 max-w-2xl mx-auto">
         {{ description }}
       </p>

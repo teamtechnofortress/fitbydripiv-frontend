@@ -527,7 +527,7 @@ const saveStepOne = () => {
                       />
                       <h6 class="text-h6 mb-2">Drop images here or click to upload</h6>
                       <p class="text-body-2 text-medium-emphasis mb-0">
-                        Accepted: JPG, PNG, WEBP up to 5MB. The first uploaded image becomes the cover by default.
+                        Accepted: JPG, PNG, WEBP up to 5MB. Recommended: 1200 x 1200 px and under 500 KB (light or transparent background). The first uploaded image becomes the cover by default.
                       </p>
                     </div>
 

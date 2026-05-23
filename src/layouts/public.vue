@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
 import { useRouter, useRoute } from 'vue-router'
-import { PUBLIC_LAYOUT_URL, SERVER_DOMAIN } from '@/network/const'
+import { CMS_GET_SITE_SETTINGS, PUBLIC_LAYOUT_URL, SERVER_DOMAIN } from '@/network/const'
+import { devLog } from '@/utils/devLogger'
 import '@/styles/public-site.css'
 
 const router = useRouter()
@@ -10,6 +11,7 @@ const route = useRoute()
 const mobileMenuOpen = ref(false)
 const layoutLoading = ref(false)
 const layoutData = ref(null)
+const siteSettingsRows = ref([])
 
 const fallbackLayout = {
   header: {
@@ -81,7 +83,7 @@ const fallbackLayout = {
       ],
       bottom: {
         copyright: '© 2025-26 FitByShot. All Rights Reserved Worldwide.',
-        credit: 'Designed by GoDesign',
+        credit: '',
       },
     },
   },
@@ -96,9 +98,84 @@ const resolveAssetUrl = value => {
 
 const headerConfig = computed(() => layoutData.value?.header?.data || fallbackLayout.header.data)
 const footerConfig = computed(() => layoutData.value?.footer?.data || fallbackLayout.footer.data)
-const brandConfig = computed(() => headerConfig.value?.brand || fallbackLayout.header.data.brand)
+const footerConfigColumns = computed(() => (
+  Array.isArray(layoutData.value?.footer?.config?.columns)
+    ? layoutData.value.footer.config.columns
+    : []
+))
+const siteSettingsByKey = computed(() => Object.fromEntries(siteSettingsRows.value.map(item => [item.key, item])))
+const siteLogo = computed(() => {
+  const value = siteSettingsByKey.value.logo?.value
+  return typeof value === 'string' ? value.trim() : ''
+})
+const brandConfig = computed(() => {
+  const brand = headerConfig.value?.brand || fallbackLayout.header.data.brand
+
+  return {
+    ...brand,
+    logo: siteLogo.value || brand?.logo || fallbackLayout.header.data.brand.logo,
+  }
+})
 const headerMenu = computed(() => headerConfig.value?.menu || [])
-const footerColumns = computed(() => footerConfig.value?.columns || [])
+const toStartNewRowFlag = (value) => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (!normalized) return false
+    if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
+    if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
+  }
+
+  return !!value
+}
+
+const footerColumns = computed(() => {
+  const renderColumns = Array.isArray(footerConfig.value?.columns) ? footerConfig.value.columns : []
+  const metaColumns = footerConfigColumns.value
+
+  const normalized = renderColumns.map((column, index) => {
+    const metaColumnById = metaColumns.find(item => (
+      String(item?.id || '').trim()
+      && String(item?.id || '').trim() === String(column?.id || '').trim()
+    ))
+    const metaColumnBySort = metaColumns.find(item => Number(item?.sort_order) === Number(column?.sort_order))
+    const metaColumn = metaColumnById || metaColumnBySort || metaColumns[index] || {}
+
+    const parsedSort = Number(column?.sort_order ?? metaColumn?.sort_order)
+
+    return {
+      ...column,
+      id: column?.id || metaColumn?.id,
+      sort_order: Number.isFinite(parsedSort) && parsedSort > 0 ? Math.floor(parsedSort) : index + 1,
+      start_new_row: toStartNewRowFlag(
+        column?.start_new_row ?? metaColumn?.start_new_row,
+      ),
+    }
+  })
+
+  normalized.sort((a, b) => a.sort_order - b.sort_order)
+
+  return normalized
+})
+const footerRows = computed(() => {
+  const rows = []
+
+  footerColumns.value.forEach((column, index) => {
+    if (index === 0 || column.start_new_row || rows.length === 0) {
+      rows.push([column])
+      return
+    }
+
+    rows[rows.length - 1].push(column)
+  })
+
+  return rows
+})
+const getFooterRowStyle = row => ({
+  '--footer-row-cols': Math.max(1, Number(row?.length) || 1),
+})
 const footerBottom = computed(() => footerConfig.value?.bottom || {})
 const centeredBrand = computed(() => headerConfig.value?.layout?.show_brand_centered !== false)
 
@@ -113,10 +190,23 @@ const normalizePath = value => {
 
 const resolveLinkHref = link => {
   if (!link) return ''
+  if (typeof link === 'string') return normalizePath(link)
   if (link.href) return normalizePath(link.href)
   if (link.slug === 'home') return '/'
   if (link.slug) return normalizePath(link.slug)
   return ''
+}
+
+const isAbsoluteLink = href => /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(String(href || '').trim())
+const isAnchorLink = link => isAbsoluteLink(resolveLinkHref(link))
+const getFooterLinkLabel = (link) => {
+  if (typeof link === 'string') {
+    const href = resolveLinkHref(link)
+    if (href === '/') return 'Home'
+    return href.replace(/^\/+/, '').replace(/[-_]/g, ' ') || link
+  }
+
+  return link?.label || link?.title || link?.slug || link?.href || ''
 }
 
 const navigate = (path) => {
@@ -139,6 +229,15 @@ const openLink = link => {
   const href = resolveLinkHref(link)
   if (!href) return
   if (/^(?:mailto:|tel:|sms:)/i.test(href)) {
+    window.location.href = href
+    return
+  }
+  if (isAbsoluteLink(href)) {
+    if (link.external) {
+      window.open(href, '_blank', 'noopener,noreferrer')
+      return
+    }
+
     window.location.href = href
     return
   }
@@ -173,19 +272,38 @@ const getSocialIcon = icon => {
   return iconMap[String(icon || '').toLowerCase()] || 'tabler-link'
 }
 
+const normalizeRows = body => {
+  if (Array.isArray(body?.data)) return body.data
+  if (Array.isArray(body?.data?.data)) return body.data.data
+  return []
+}
+
 const loadLayout = async () => {
   layoutLoading.value = true
   try {
     const response = await axios.get(PUBLIC_LAYOUT_URL)
+    devLog('Global sections fetch response (public)', response?.data)
+    devLog('Global sections payload (public)', response?.data?.data || null)
     layoutData.value = response?.data?.data || null
   } catch {
+    devLog('Global sections fetch error (public)', { endpoint: PUBLIC_LAYOUT_URL })
     layoutData.value = null
   } finally {
     layoutLoading.value = false
   }
 }
 
+const loadSiteSettings = async () => {
+  try {
+    const response = await axios.get(CMS_GET_SITE_SETTINGS)
+    siteSettingsRows.value = normalizeRows(response?.data)
+  } catch {
+    siteSettingsRows.value = []
+  }
+}
+
 onMounted(() => {
+  loadSiteSettings()
   loadLayout()
 })
 </script>
@@ -282,105 +400,122 @@ onMounted(() => {
       <!-- Footer -->
       <footer class="border-t border-gray-200" style="background: linear-gradient(to bottom right, rgba(236,253,245,0.3), rgba(240,253,250,0.2), rgba(236,254,255,0.3));">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
-            <template
-              v-for="(column, index) in footerColumns"
-              :key="`${column.type}-${column.title}-${index}`"
+          <div class="flex flex-col gap-8">
+            <div
+              v-for="(row, rowIndex) in footerRows"
+              :key="`footer-row-${rowIndex}`"
+              class="public-footer-row"
+              :style="getFooterRowStyle(row)"
             >
-              <div
-                v-if="column.type === 'brand' || column.source === 'brand'"
-                class="lg:col-span-1"
+              <template
+                v-for="(column, index) in row"
+                :key="`${column.id || column.type || column.source}-${column.title}-${rowIndex}-${index}`"
               >
                 <div
-                  class="public-layout__brand public-layout__brand--footer mb-3"
-                  :class="{ 'cursor-pointer': column.home_url }"
-                  @click="column.home_url ? navigate(column.home_url) : undefined"
-                >
-                  <span v-if="column.logo" class="public-layout__brand-mark public-layout__brand-mark--footer">
-                    <img
-                      :src="resolveAssetUrl(column.logo)"
-                      :alt="column.title"
-                      class="public-layout__brand-logo public-layout__brand-logo--header"
-                    >
-                  </span>
-                  <h3 v-else class="text-xl font-bold text-gray-900">{{ column.title }}</h3>
-                </div>
-                <p class="text-sm text-gray-600 leading-relaxed">
-                  {{ column.content }}
-                </p>
-              </div>
-
-              <div v-else-if="column.type === 'certification' || column.source === 'certification'">
-                <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
-                <div
-                  v-if="column.items?.[0]?.image || column.items?.[0]?.description"
-                  class="public-footer-certification"
+                  v-if="column.type === 'brand' || column.source === 'brand'"
+                  class="public-footer-column public-footer-column--brand"
                 >
                   <div
-                    v-if="column.items?.[0]?.image"
-                    class="public-footer-certification__media"
+                    class="public-layout__brand public-layout__brand--footer mb-3"
+                    :class="{ 'cursor-pointer': column.home_url }"
+                    @click="column.home_url ? navigate(column.home_url) : undefined"
                   >
-                    <img
-                      :src="resolveAssetUrl(column.items[0].image)"
-                      :alt="column.title"
-                      class="public-footer-certification__image"
-                    >
+                    <span v-if="column.logo" class="public-layout__brand-mark public-layout__brand-mark--footer">
+                      <img
+                        :src="resolveAssetUrl(column.logo)"
+                        :alt="column.title"
+                        class="public-layout__brand-logo public-layout__brand-logo--header"
+                      >
+                    </span>
+                    <h3 v-else class="text-xl font-bold text-gray-900">{{ column.title }}</h3>
                   </div>
-                  <p
-                    v-if="column.items?.[0]?.description"
-                    class="public-footer-certification__description"
-                  >
-                    {{ column.items[0].description }}
+                  <p class="text-sm text-gray-600 leading-relaxed">
+                    {{ column.content }}
                   </p>
                 </div>
-              </div>
 
-              <div v-else-if="column.type === 'social_links' || column.source === 'social_links'">
-                <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
-                <div class="flex space-x-4 mb-4">
-                  <a
-                    v-for="item in column.items || []"
-                    :key="resolveLinkHref(item) || item.label"
-                    :href="resolveLinkHref(item)"
-                    :target="item.external ? '_blank' : undefined"
-                    :rel="item.external ? 'noopener noreferrer' : undefined"
-                    class="text-gray-600 hover:text-emerald-600 transition-colors duration-200"
-                    :aria-label="item.label"
-                    @click.prevent="openLink(item)"
+                <div
+                  v-else-if="column.type === 'certification' || column.source === 'certification'"
+                  class="public-footer-column"
+                >
+                  <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
+                  <div
+                    v-if="column.items?.[0]?.image || column.items?.[0]?.description"
+                    class="public-footer-certification"
                   >
-                    <VIcon :icon="getSocialIcon(item.icon || item.label)" size="20" />
-                  </a>
+                    <div
+                      v-if="column.items?.[0]?.image"
+                      class="public-footer-certification__media"
+                    >
+                      <img
+                        :src="resolveAssetUrl(column.items[0].image)"
+                        :alt="column.title"
+                        class="public-footer-certification__image"
+                      >
+                    </div>
+                    <p
+                      v-if="column.items?.[0]?.description"
+                      class="public-footer-certification__description"
+                    >
+                      {{ column.items[0].description }}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div v-else>
-                <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
-                <ul class="space-y-2">
-                  <li
-                    v-for="item in column.items || []"
-                    :key="resolveLinkHref(item) || item.label"
-                  >
+                <div
+                  v-else-if="column.type === 'social_links' || column.source === 'social_links'"
+                  class="public-footer-column"
+                >
+                  <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
+                  <div class="flex justify-center space-x-4 mb-4">
                     <a
-                      v-if="item.external"
+                      v-for="item in column.items || []"
+                      :key="resolveLinkHref(item) || item.label"
                       :href="resolveLinkHref(item)"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-sm text-gray-600 hover:text-emerald-600 transition-colors duration-200 flex items-center gap-1"
+                      :target="item.external ? '_blank' : undefined"
+                      :rel="item.external ? 'noopener noreferrer' : undefined"
+                      class="text-gray-600 hover:text-emerald-600 transition-colors duration-200"
+                      :aria-label="item.label"
+                      @click.prevent="openLink(item)"
                     >
-                      {{ item.label }}
-                      <span class="text-xs">↗</span>
+                      <VIcon :icon="getSocialIcon(item.icon || item.label)" size="20" />
                     </a>
-                    <button
-                      v-else
-                      class="text-sm text-gray-600 hover:text-gray-900 transition-colors duration-200"
-                      @click="openLink(item)"
+                  </div>
+                </div>
+
+                <div v-else class="public-footer-column">
+                  <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
+                  <ul class="public-footer-links">
+                    <li
+                      v-for="item in column.items || []"
+                      :key="resolveLinkHref(item) || getFooterLinkLabel(item)"
+                      class="public-footer-links__item"
                     >
-                      {{ item.label }}
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            </template>
+                      <!-- <span class="public-footer-links__tick" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span> -->
+                      <a
+                        v-if="isAnchorLink(item)"
+                        :href="resolveLinkHref(item)"
+                        :target="item.external ? '_blank' : undefined"
+                        :rel="item.external ? 'noopener noreferrer' : undefined"
+                        class="public-footer-links__link"
+                      >
+                        <span>{{ getFooterLinkLabel(item) }}</span>
+                        <span class="public-footer-links__arrow">↗</span>
+                      </a>
+                      <button
+                        v-else
+                        class="public-footer-links__link public-footer-links__link--button"
+                        @click="openLink(item)"
+                      >
+                        {{ getFooterLinkLabel(item) }}
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </template>
+            </div>
           </div>
 
           <!-- Bottom bar -->
@@ -476,6 +611,38 @@ onMounted(() => {
   height: 88px;
 }
 
+.public-footer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  justify-items: center;
+  row-gap: 2rem;
+  column-gap: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.public-footer-column {
+  width: 100%;
+  max-width: 320px;
+  min-width: 0;
+  text-align: center;
+}
+
+.public-footer-column--brand {
+  max-width: 360px;
+}
+
+.public-footer-column .public-footer-links {
+  align-items: center;
+}
+
+.public-footer-column .public-footer-links__item {
+  justify-content: center;
+}
+
+.public-footer-column .public-footer-links__link {
+  text-align: center;
+}
+
 .public-footer-certification {
   display: grid;
   gap: 0.75rem;
@@ -515,6 +682,64 @@ onMounted(() => {
   color: #475569;
   font-size: 0.875rem;
   line-height: 1.6;
+}
+
+.public-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.public-footer-links__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.public-footer-links__tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin-top: 0.05rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24);
+  flex-shrink: 0;
+}
+
+.public-footer-links__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  text-decoration: none;
+  text-align: left;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.public-footer-links__link:hover {
+  color: #2563eb;
+  transform: translateX(2px);
+}
+
+.public-footer-links__link--button {
+  cursor: pointer;
+}
+
+.public-footer-links__arrow {
+  font-size: 0.72rem;
+  color: #2563eb;
 }
 
 .public-layout__brand-name {
@@ -558,6 +783,12 @@ onMounted(() => {
   }
 }
 
+@media (min-width: 768px) {
+  .public-footer-row {
+    grid-template-columns: repeat(var(--footer-row-cols, 1), minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 1024px) {
   .public-header__nav {
     padding-left: 2rem;
@@ -566,6 +797,10 @@ onMounted(() => {
 }
 
 @media (max-width: 767px) {
+  .public-footer-column {
+    max-width: 100%;
+  }
+
   .public-layout__brand-mark {
     width: 68px;
     height: 68px;

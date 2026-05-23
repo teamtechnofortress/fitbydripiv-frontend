@@ -1,19 +1,6 @@
 <template>
   <div class="intake-form-stage">
-    <div v-if="submissionComplete || validationError || submitError" class="status-stack">
-      <div v-if="submissionComplete" class="status-banner status-banner-success">
-        <div class="status-banner-icon">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M6 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="status-banner-copy">
-          <strong class="status-banner-title">Intake submitted</strong>
-          <span class="status-banner-text">{{ submissionMessage }}</span>
-        </div>
-      </div>
-
+    <div v-if="validationError || submitError" class="status-stack">
       <div v-if="validationError" class="status-banner status-banner-error">
         <div class="status-banner-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -418,8 +405,6 @@ const props = defineProps({
   progressPercentage: { type: Number, required: true },
   validationError: { type: String, default: null },
   submitError: { type: String, default: null },
-  submissionComplete: { type: Boolean, default: false },
-  submissionMessage: { type: String, default: '' },
   isSubmitting: { type: Boolean, default: false },
   confirmedPatient: { type: Object, default: null },
   isStepUnlocked: {

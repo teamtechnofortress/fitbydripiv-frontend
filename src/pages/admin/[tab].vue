@@ -52,21 +52,21 @@ const getTabTarget = tab => {
 
 // tabs
 const tabs = [
-  {
-    title: 'STAFFING',
-    icon: 'tabler-vip',
-    tab: 'staffing',
-  },
-  {
-    title: 'STAFF SCHEDULE',
-    icon: 'tabler-stack-back',
-    tab: 'schedule',
-  },  
-  {
-    title: 'PAYROLL',
-    icon: 'tabler-map-dollar',
-    tab: 'payroll',
-  },    
+  // {
+  //   title: 'STAFFING',
+  //   icon: 'tabler-vip',
+  //   tab: 'staffing',
+  // },
+  // {
+  //   title: 'STAFF SCHEDULE',
+  //   icon: 'tabler-stack-back',
+  //   tab: 'schedule',
+  // },  
+  // {
+  //   title: 'PAYROLL',
+  //   icon: 'tabler-map-dollar',
+  //   tab: 'payroll',
+  // },    
   {
     title: 'PAYMENTS / SUBSCRIPTIONS',
     icon: 'tabler-credit-card',

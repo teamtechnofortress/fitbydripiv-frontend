@@ -15,9 +15,14 @@ const categories = ref([])
 const currentCategory = ref({})
 const isConfirmDialogVisible = ref(false)
 const deletingCategoryId = ref(null)
-const categoryMediaInput = ref(null)
+const categoryImageInput = ref(null)
+const categoryVideoInput = ref(null)
 const categoryMediaUploading = ref(false)
-const categoryMediaDragActive = ref(false)
+const categoryImageDragActive = ref(false)
+const categoryVideoDragActive = ref(false)
+const isMediaPreviewDialogVisible = ref(false)
+const previewMediaUrl = ref('')
+const previewMediaType = ref('')
 const MAX_SERVER_VIDEO_UPLOAD_BYTES = 10 * 1024 * 1024
 
 const newCategory = () => ({
@@ -112,8 +117,12 @@ const uploadAdminMedia = async file => {
   return response?.data?.data || {}
 }
 
-const openCategoryMediaPicker = () => {
-  categoryMediaInput.value?.click()
+const openCategoryImagePicker = () => {
+  categoryImageInput.value?.click()
+}
+
+const openCategoryVideoPicker = () => {
+  categoryVideoInput.value?.click()
 }
 
 const applyCategoryPrimaryMedia = (mediaUrl, mediaType) => {
@@ -129,13 +138,19 @@ const applyCategoryPrimaryMedia = (mediaUrl, mediaType) => {
   currentCategory.value.landscape_banner = mediaUrl || ''
 }
 
-const handleCategoryMediaFile = async file => {
+const handleCategoryMediaFile = async (file, expectedType = '') => {
   if (!file)
     return
 
-  const mediaType = inferMediaType(file)
+  const actualType = inferMediaType(file)
+  const mediaType = expectedType || actualType
   if (!mediaType) {
     toast.error("Unsupported file type. Upload an image or video.")
+    return
+  }
+
+  if (expectedType && actualType !== expectedType) {
+    toast.error(expectedType === 'video' ? "Please upload a valid video file." : "Please upload a valid image file.")
     return
   }
 
@@ -157,23 +172,54 @@ const handleCategoryMediaFile = async file => {
   }
 }
 
-const onCategoryMediaInputChange = async event => {
+const onCategoryImageInputChange = async event => {
   const file = event?.target?.files?.[0]
-  await handleCategoryMediaFile(file)
+  await handleCategoryMediaFile(file, 'image')
   if (event?.target)
     event.target.value = ''
 }
 
-const onCategoryMediaDrop = async event => {
-  categoryMediaDragActive.value = false
+const onCategoryVideoInputChange = async event => {
+  const file = event?.target?.files?.[0]
+  await handleCategoryMediaFile(file, 'video')
+  if (event?.target)
+    event.target.value = ''
+}
+
+const onCategoryImageDrop = async event => {
+  categoryImageDragActive.value = false
   const file = event?.dataTransfer?.files?.[0]
-  await handleCategoryMediaFile(file)
+  await handleCategoryMediaFile(file, 'image')
+}
+
+const onCategoryVideoDrop = async event => {
+  categoryVideoDragActive.value = false
+  const file = event?.dataTransfer?.files?.[0]
+  await handleCategoryMediaFile(file, 'video')
 }
 
 const clearCategoryPrimaryMedia = () => {
   currentCategory.value.banner_image = ''
   currentCategory.value.landscape_banner = ''
   currentCategory.value.background_video = ''
+}
+
+const openCurrentMediaPreview = () => {
+  const mediaUrl = currentPrimaryMediaUrl()
+  if (!mediaUrl) {
+    toast.error("No media available to preview.")
+    return
+  }
+
+  previewMediaUrl.value = mediaUrl
+  previewMediaType.value = currentPrimaryMediaType() || 'image'
+  isMediaPreviewDialogVisible.value = true
+}
+
+const closeCurrentMediaPreview = () => {
+  isMediaPreviewDialogVisible.value = false
+  previewMediaUrl.value = ''
+  previewMediaType.value = ''
 }
 
 const saveCategory = () => {
@@ -330,7 +376,7 @@ onMounted(() => {
                           <div>
                             <div class="text-subtitle-1 font-weight-bold mb-1">Primary Category Media</div>
                             <p class="text-body-2 text-medium-emphasis mb-0">
-                              Drop an image or video here. Images populate the banner fields. Videos populate the background video field and clear image fields.
+                              Upload image and video separately. Image upload populates banner fields. Video upload populates background video and clears image fields.
                             </p>
                           </div>
                           <VChip
@@ -343,35 +389,86 @@ onMounted(() => {
                           </VChip>
                         </div>
 
-                        <input
-                          ref="categoryMediaInput"
-                          type="file"
-                          accept="image/*,video/mp4,video/webm,video/quicktime,video/mov"
-                          class="d-none"
-                          @change="onCategoryMediaInputChange"
-                        >
+                        <div class="category-media-uploader__areas">
+                          <div class="category-media-uploader__area">
+                            <div class="text-subtitle-2 font-weight-semibold mb-2">Image Banner Upload</div>
+                            <div class="text-body-2 text-medium-emphasis mb-3">
+                              Recommended banner size: 1440 x 360 px (4:1 ratio)
+                            </div>
 
-                        <div
-                          class="category-media-uploader__dropzone"
-                          :class="{ 'category-media-uploader__dropzone--active': categoryMediaDragActive }"
-                          @click="openCategoryMediaPicker"
-                          @dragenter.prevent="categoryMediaDragActive = true"
-                          @dragover.prevent="categoryMediaDragActive = true"
-                          @dragleave.prevent="categoryMediaDragActive = false"
-                          @drop.prevent="onCategoryMediaDrop"
-                        >
-                          <VIcon
-                            :icon="categoryMediaUploading ? 'tabler-loader-2' : 'tabler-cloud-upload'"
-                            :class="{ 'spin-icon': categoryMediaUploading }"
-                            size="34"
-                            color="primary"
-                            class="mb-3"
-                          />
-                          <div class="text-subtitle-1 font-weight-semibold mb-1">
-                            Drop image or video here or click to upload
+                            <input
+                              ref="categoryImageInput"
+                              type="file"
+                              accept="image/*"
+                              class="d-none"
+                              @change="onCategoryImageInputChange"
+                            >
+
+                            <div
+                              class="category-media-uploader__dropzone"
+                              :class="{ 'category-media-uploader__dropzone--active': categoryImageDragActive }"
+                              @click="openCategoryImagePicker"
+                              @dragenter.prevent="categoryImageDragActive = true"
+                              @dragover.prevent="categoryImageDragActive = true"
+                              @dragleave.prevent="categoryImageDragActive = false"
+                              @drop.prevent="onCategoryImageDrop"
+                            >
+                              <VIcon
+                                :icon="categoryMediaUploading ? 'tabler-loader-2' : 'tabler-photo-up'"
+                                :class="{ 'spin-icon': categoryMediaUploading }"
+                                size="34"
+                                color="primary"
+                                class="mb-3"
+                              />
+                              <div class="text-subtitle-1 font-weight-semibold mb-1">
+                                Drop image here or click to upload
+                              </div>
+                              <div class="text-body-2 text-medium-emphasis text-center">
+                                Accepted: JPG, PNG, WEBP, GIF, SVG.
+                              </div>
+                            </div>
                           </div>
-                          <div class="text-body-2 text-medium-emphasis text-center">
-                            Accepted: images and videos. Uploading a new file replaces the current primary category media.
+
+                          <div class="category-media-uploader__area">
+                            <div class="text-subtitle-2 font-weight-semibold mb-2">Video Banner Upload</div>
+                            <div class="text-body-2 text-medium-emphasis mb-1">
+                              Recommended banner size: 1440 x 360 px (4:1 ratio)
+                            </div>
+                            <div class="text-body-2 text-medium-emphasis mb-3">
+                              Max upload size: 10 MB
+                            </div>
+
+                            <input
+                              ref="categoryVideoInput"
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime,video/mov"
+                              class="d-none"
+                              @change="onCategoryVideoInputChange"
+                            >
+
+                            <div
+                              class="category-media-uploader__dropzone"
+                              :class="{ 'category-media-uploader__dropzone--active': categoryVideoDragActive }"
+                              @click="openCategoryVideoPicker"
+                              @dragenter.prevent="categoryVideoDragActive = true"
+                              @dragover.prevent="categoryVideoDragActive = true"
+                              @dragleave.prevent="categoryVideoDragActive = false"
+                              @drop.prevent="onCategoryVideoDrop"
+                            >
+                              <VIcon
+                                :icon="categoryMediaUploading ? 'tabler-loader-2' : 'tabler-video-plus'"
+                                :class="{ 'spin-icon': categoryMediaUploading }"
+                                size="34"
+                                color="primary"
+                                class="mb-3"
+                              />
+                              <div class="text-subtitle-1 font-weight-semibold mb-1">
+                                Drop video here or click to upload
+                              </div>
+                              <div class="text-body-2 text-medium-emphasis text-center">
+                                Accepted: MP4, WEBM, MOV.
+                              </div>
+                            </div>
                           </div>
                         </div>
 
@@ -389,8 +486,8 @@ onMounted(() => {
                             <VBtn
                               color="primary"
                               variant="text"
-                              prepend-icon="tabler-external-link"
-                              @click.stop="window.open(currentPrimaryMediaUrl(), '_blank', 'noopener,noreferrer')"
+                              prepend-icon="tabler-eye"
+                              @click.stop="openCurrentMediaPreview"
                             >
                               Open
                             </VBtn>
@@ -459,6 +556,49 @@ onMounted(() => {
               confirmation-msg="Are you sure you want to delete this category?"
               @confirm="doDelete"
             />
+
+            <VDialog
+              v-model="isMediaPreviewDialogVisible"
+              max-width="980"
+            >
+              <VCard>
+                <VCardTitle class="d-flex align-center justify-space-between">
+                  <span>Current Media Preview</span>
+                  <VBtn
+                    icon
+                    variant="text"
+                    color="default"
+                    @click="closeCurrentMediaPreview"
+                  >
+                    <VIcon icon="tabler-x" size="20" />
+                  </VBtn>
+                </VCardTitle>
+                <VCardText>
+                  <video
+                    v-if="previewMediaType === 'video'"
+                    :src="previewMediaUrl"
+                    class="category-media-preview__video"
+                    controls
+                    playsinline
+                  />
+                  <img
+                    v-else
+                    :src="previewMediaUrl"
+                    alt="Category media preview"
+                    class="category-media-preview__image"
+                  >
+                </VCardText>
+                <VCardActions class="justify-end">
+                  <VBtn
+                    color="primary"
+                    variant="text"
+                    @click="closeCurrentMediaPreview"
+                  >
+                    Close
+                  </VBtn>
+                </VCardActions>
+              </VCard>
+            </VDialog>
           </VCardText>
         </VCard>
       </VCol>
@@ -498,6 +638,19 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
+.category-media-uploader__areas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.category-media-uploader__area {
+  padding: 14px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  border-radius: 16px;
+  background: rgba(var(--v-theme-surface), 0.86);
+}
+
 .category-media-uploader__preview {
   display: flex;
   align-items: center;
@@ -507,6 +660,22 @@ onMounted(() => {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   border-radius: 16px;
   background: rgba(var(--v-theme-surface), 0.92);
+}
+
+.category-media-preview__video,
+.category-media-preview__image {
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.category-media-preview__video {
+  background: #000;
+}
+
+.category-media-preview__image {
+  background: rgba(var(--v-theme-on-surface), 0.03);
 }
 
 .spin-icon {
@@ -520,6 +689,10 @@ onMounted(() => {
 }
 
 @media (max-width: 767px) {
+  .category-media-uploader__areas {
+    grid-template-columns: 1fr;
+  }
+
   .category-media-uploader__preview {
     flex-direction: column;
     align-items: flex-start;

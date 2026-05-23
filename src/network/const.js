@@ -146,6 +146,8 @@ export const SAVE_REWARD_REPORT = SERVER_URL + "/save/reward-report"
 export const ALL_REWARD_REPORT = SERVER_URL + "/get/all-reward-report"
 export const DELETE_REWARD_REPORT = SERVER_URL + "/delete/reward-report"
 export const CHECKOUT_DRAFT_URL = SERVER_URL + "/checkout/draft"
+export const CHECKOUT_APPLY_COUPON_URL = SERVER_URL + "/checkout/apply-coupon"
+export const CHECKOUT_CREATE_URL = SERVER_URL + "/checkout"
 export const SAVE_STAFF_REPORT = SERVER_URL + "/save/staff-report"
 export const ALL_STAFF_REPORT = SERVER_URL + "/get/all-staff-report"
 export const DELETE_STAFF_REPORT = SERVER_URL + "/delete/staff-report"
@@ -220,6 +222,7 @@ export const getAdminProductPublishUrl = productId => `${SERVER_URL}/admin/produ
 export const getAdminProductUnpublishUrl = productId => `${SERVER_URL}/admin/products/${productId}/unpublish`
 export const getAdminProductToggleFeaturedUrl = productId => `${SERVER_URL}/admin/products/${productId}/toggle-featured`
 export const getAdminProductPreviewUrl = productId => `${SERVER_URL}/admin/products/${productId}/preview`
+export const ADMIN_PRODUCTS_SEARCH_SELECTION_URL = `${SERVER_URL}/admin/products/search-selection`
 export const ADMIN_PRODUCTS_STEP1_URL = SERVER_URL + "/admin/products/step-1"
 export const ADMIN_PRODUCTS_STEP2_URL = SERVER_URL + "/admin/products/step-2"
 export const ADMIN_PRODUCTS_STEP3_URL = SERVER_URL + "/admin/products/step-3"
@@ -233,7 +236,11 @@ export const getAdminProductStepUrl = (productId, step) => `${SERVER_URL}/admin/
 export const getOrderBySessionUrl = sessionId => `${SERVER_URL}/orders/by-session/${sessionId}`
 export const ADMIN_ORDERS_URL = `${SERVER_URL}/admin/orders`
 export const ADMIN_SUBSCRIPTIONS_URL = `${SERVER_URL}/admin/subscriptions`
+export const ADMIN_COUPONS_URL = `${SERVER_URL}/admin/coupons`
 export const getAdminOrderDetailUrl = orderId => `${SERVER_URL}/admin/orders/${orderId}`
 export const getAdminSubscriptionDetailUrl = subscriptionId => `${SERVER_URL}/admin/subscriptions/${subscriptionId}`
+export const getAdminCouponDetailUrl = couponId => `${SERVER_URL}/admin/coupons/${couponId}`
+export const getAdminCouponDeleteUrl = couponId => `${SERVER_URL}/admin/coupons/${couponId}`
+export const getAdminCouponToggleActiveUrl = couponId => `${SERVER_URL}/admin/coupons/${couponId}/toggle-active`
 export const getAdminWebhookDetailUrl = webhookId => `${SERVER_URL}/admin/webhooks/${webhookId}`
 export const cancelSubscriptionUrl = subscriptionId => `${SERVER_URL}/subscriptions/${subscriptionId}/cancel`
