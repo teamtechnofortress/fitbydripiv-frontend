@@ -32,9 +32,17 @@ const onConfirmation = () => {
     @update:model-value="updateModelValue"
   >
     <VCard class="px-10 pt-6">      
-      <template v-for="(content, key) in props.messageContent" :key="key">
-        <h5 class="text-primary text-uppercase">{{ key }}</h5>
-        <VTextarea class="w-100 font-weight-medium border border-warning mb-4" :value="content"></VTextarea>
+      <template
+        v-for="(content, key) in props.messageContent"
+        :key="key"
+      >
+        <h5 class="text-primary text-uppercase">
+          {{ key }}
+        </h5>
+        <VTextarea
+          class="w-100 font-weight-medium border border-warning mb-4"
+          :value="content"
+        />
       </template>
 
       <VCardActions class="align-center justify-center gap-2">

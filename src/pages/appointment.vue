@@ -1,35 +1,36 @@
 <script setup>
-import '@fullcalendar/core/vdom';
+import '@fullcalendar/core/vdom'
 
 //use local import
-import { getRequest } from "@/network";
-import * as Const from "@/network/const";
-import CalendarPatientEventHandler from '@/views/apps/calendar/CalendarPatientEventHandler.vue';
-import { blankEvent, useCalendarPatient, } from '@/views/apps/calendar/useCalendarPatient';
-import { useCalendarPatientStore } from '@/views/apps/calendar/useCalendarPatientStore';
-import { useResponsiveLeftSidebar } from '@core/composable/useResponsiveSidebar';
-import { formatDate } from '@core/utils/formatters';
-import FullCalendar from '@fullcalendar/vue3';
-import { onMounted, watch } from "vue";
+import { getRequest } from "@/network"
+import * as Const from "@/network/const"
+import CalendarPatientEventHandler from '@/views/apps/calendar/CalendarPatientEventHandler.vue'
+import { blankEvent, useCalendarPatient } from '@/views/apps/calendar/useCalendarPatient'
+import { useCalendarPatientStore } from '@/views/apps/calendar/useCalendarPatientStore'
+import { useResponsiveLeftSidebar } from '@core/composable/useResponsiveSidebar'
+import { formatDate } from '@core/utils/formatters'
+import FullCalendar from '@fullcalendar/vue3'
+import { onMounted, watch } from "vue"
 
 const store = useCalendarPatientStore()
 
 // 👉 Event
-const event = ref(structuredClone(blankEvent));
-const isEventHandlerSidebarActive = ref(false);
-const appointmentList = ref([]);
+const event = ref(structuredClone(blankEvent))
+const isEventHandlerSidebarActive = ref(false)
+const appointmentList = ref([])
 
 const currentPage = ref(1)
 const pageSize = ref(5)
 const visible = ref(false)
 
 const totalPages = computed(() =>
-  Math.ceil(appointmentList.value.length / pageSize.value)
+  Math.ceil(appointmentList.value.length / pageSize.value),
 )
 
 const paginatedAppointments = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
+  
   return appointmentList.value?.slice(start, end)
 })
 
@@ -55,7 +56,7 @@ async function loadData(){
       })
     })
 
-    appointmentList.value = appointmentRes.data.data.appointments;
+    appointmentList.value = appointmentRes.data.data.appointments
 
     const response = await new Promise((resolve, reject) => {
       getRequest(Const.GET_ALL_PATIENT, {}, {}, res => {
@@ -82,7 +83,7 @@ onMounted(()=>{
     store.isAdmin = false
   }
 
-  loadData();
+  loadData()
 })
 
 const { isLeftSidebarOpen } = useResponsiveLeftSidebar()
@@ -103,7 +104,7 @@ const checkAll = computed({
 <template>
   <div>
     <VCard v-if="visible">      
-      <VLayout style="z-index: 0;" >        
+      <VLayout style="z-index: 0;">        
         <VNavigationDrawer
           v-model="isLeftSidebarOpen"
           width="292"
@@ -154,63 +155,78 @@ const checkAll = computed({
         </VCol>
         <VCol cols="12">
           <VTable class="text-no-wrap border rounded mb-4">
-          <thead>
-            <tr>
-              <th scope="col">
-                <h2 class="text-primary">Patient Name</h2>
-              </th>
-              <th scope="col">
-                <h2 class="text-primary">Appointment Date</h2>
-              </th>              
-              <th scope="col">
-                <h2 class="text-primary">Goal</h2>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="appointment in paginatedAppointments" :key="appointment.id">
-              <td>{{ appointment.name }}</td>
-              <td>{{ formatDate(appointment.start) }}</td>
-              <td>{{ appointment.goal }}</td>
-            </tr>            
-          </tbody>
-        </VTable>
-        <!-- Pagination Controls -->
-        <v-row class="mt-4" justify="end" align="center">
-          <v-col class="d-flex justify-end align-center" cols="auto">
-
-            <v-btn
-              variant="outlined"
-              size="small"
-              :disabled="currentPage === 1"
-              @click="prevPage"
-              class="me-2"
+            <thead>
+              <tr>
+                <th scope="col">
+                  <h2 class="text-primary">
+                    Patient Name
+                  </h2>
+                </th>
+                <th scope="col">
+                  <h2 class="text-primary">
+                    Appointment Date
+                  </h2>
+                </th>              
+                <th scope="col">
+                  <h2 class="text-primary">
+                    Goal
+                  </h2>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="appointment in paginatedAppointments"
+                :key="appointment.id"
+              >
+                <td>{{ appointment.name }}</td>
+                <td>{{ formatDate(appointment.start) }}</td>
+                <td>{{ appointment.goal }}</td>
+              </tr>            
+            </tbody>
+          </VTable>
+          <!-- Pagination Controls -->
+          <VRow
+            class="mt-4"
+            justify="end"
+            align="center"
+          >
+            <VCol
+              class="d-flex justify-end align-center"
+              cols="auto"
             >
-              Previous
-            </v-btn>
-            <span class="me-3">Page {{ currentPage }} of {{ totalPages }}</span>
+              <VBtn
+                variant="outlined"
+                size="small"
+                :disabled="currentPage === 1"
+                class="me-2"
+                @click="prevPage"
+              >
+                Previous
+              </VBtn>
+              <span class="me-3">Page {{ currentPage }} of {{ totalPages }}</span>
 
-            <v-btn
-              variant="outlined"
-              size="small"
-              :disabled="currentPage === totalPages"
-              @click="nextPage"
-            >
-              Next
-            </v-btn>
-          </v-col>
-        </v-row>
-      </VCol>
-    </VRow>
-  </VCard>
-  <CalendarPatientEventHandler
-    v-model:isDrawerOpen="isEventHandlerSidebarActive"
-    :event="event"
-    @add-event="addEvent"
-    @update-event="updateEvent"
-    @remove-event="removeEvent"
-  />
-</div>
+              <VBtn
+                variant="outlined"
+                size="small"
+                :disabled="currentPage === totalPages"
+                @click="nextPage"
+              >
+                Next
+              </VBtn>
+            </VCol>
+          </VRow>
+        </VCol>
+      </VRow>
+    </VCard>
+    <CalendarPatientEventHandler
+      v-model:isDrawerOpen="isEventHandlerSidebarActive"
+      :event="event"
+      @add-event="addEvent"
+      @update-event="updateEvent"
+      @remove-event="removeEvent"
+    />
+  </div>
 </template>
 
 <style lang="scss">

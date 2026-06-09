@@ -1,14 +1,15 @@
-import { breakpointsVuetify } from '@vueuse/core';
-import { VIcon } from 'vuetify/components';
+import { breakpointsVuetify } from '@vueuse/core'
+import { VIcon } from 'vuetify/components'
 
 // ❗ Logo SVG must be imported with ?raw suffix
-import { defineThemeConfig } from '@core';
-import { RouteTransitions, Skins } from '@core/enums';
+import { defineThemeConfig } from '@core'
+import { RouteTransitions, Skins } from '@core/enums'
+
 // import logo from '@images/logo.svg?raw'
 // import logo from '@images/logo.png'
-import { AppContentLayoutNav, ContentWidth, FooterType, NavbarType } from '@layouts/enums';
+import { AppContentLayoutNav, ContentWidth, FooterType, NavbarType } from '@layouts/enums'
 
-const { width: windowWidth } = useWindowSize();
+const { width: windowWidth } = useWindowSize()
 
 export const { themeConfig, layoutConfig } = defineThemeConfig({
   app: {

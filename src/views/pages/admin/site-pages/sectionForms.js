@@ -163,6 +163,7 @@ export const cloneEditableSection = (section, sortOrder = 1) => {
 
 export const buildSectionPayload = section => {
   const normalizedType = section.type === 'pen_instruction_library' ? 'pdf_library' : section.type
+
   const payload = {
     id: section.id || undefined,
     page_id: section.page_id || undefined,
@@ -177,9 +178,11 @@ export const buildSectionPayload = section => {
   if (section.type === 'pdf_library' || section.type === 'pen_instruction_library') {
     const sourceContent = section.content || {}
     const sourceSettings = sourceContent.settings || {}
+
     const sourceDocuments = Array.isArray(sourceContent.documents)
       ? sourceContent.documents
       : (Array.isArray(section.documents) ? section.documents : [])
+
     const sourceDocument = sourceContent.document || sourceDocuments[0] || {}
 
     const normalizedDocument = {

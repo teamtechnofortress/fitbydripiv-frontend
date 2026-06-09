@@ -43,6 +43,7 @@ const isOpen = computed({
 const getAuthHeaders = () => {
   const token = getApiToken()
   if (!token) throw new Error('Authentication token missing. Please login again.')
+  
   return {
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
@@ -53,6 +54,7 @@ const buildErrorMessage = errorObject => {
   const responseData = errorObject?.response?.data
   if (typeof responseData === 'string') return responseData
   if (responseData?.message) return responseData.message
+  
   return errorObject?.message || 'Unable to load product preview.'
 }
 
@@ -61,11 +63,13 @@ const pageTitle = computed(() => 'Product Preview')
 const previewMode = computed(() => true)
 
 const apiImages = computed(() => Array.isArray(previewProduct.value?.images) ? previewProduct.value.images : [])
+
 const coverImageUrl = computed(() => {
   const apiCover = previewProduct.value?.cover_image?.image_url || previewProduct.value?.cover_image?.url
   if (apiCover) return apiCover
   const apiFallback = apiImages.value.find(image => image.image_type === 'cover' && (image.image_url || image.url))
   if (apiFallback) return apiFallback.image_url || apiFallback.url || ''
+  
   return apiImages.value.find(image => image.image_url || image.url)?.image_url || apiImages.value.find(image => image.image_url || image.url)?.url || ''
 })
 
@@ -76,35 +80,45 @@ const howItWorks = computed(() => previewProduct.value?.how_it_works || '')
 const treatmentDuration = computed(() => previewProduct.value?.treatment_duration || '')
 const usageInstructions = computed(() => previewProduct.value?.usage_instructions || '')
 const clinicalResearchDescription = computed(() => previewProduct.value?.clinical_research_description || '')
+
 const productCategory = computed(() => {
   const raw = previewProduct.value?.category || ''
+  
   return categoryTitleMap[raw] || raw || 'Category pending'
 })
+
 const publishLabel = computed(() => (previewProduct.value?.is_published ? 'Published' : 'Draft Preview'))
 const effectiveCompletionStatus = computed(() => previewProduct.value?.completion_status || 'not_started')
+
 const effectiveCompletionPercentage = computed(() => {
   const value = Number(previewProduct.value?.completion_percentage ?? 0)
+  
   return Number.isFinite(value) ? value : 0
 })
+
 const effectiveCompletionStep = computed(() => Number(previewProduct.value?.completion_step ?? 1))
 
 const benefitItems = computed(() => {
   const apiBenefits = Array.isArray(previewProduct.value?.benefits) ? previewProduct.value.benefits : []
+  
   return apiBenefits.map(item => item?.benefit_text || item?.text || '').filter(Boolean)
 })
 
 const faqItems = computed(() => {
   const apiFaqs = Array.isArray(previewProduct.value?.faqs) ? previewProduct.value.faqs : []
+  
   return apiFaqs.filter(item => item?.question || item?.answer)
 })
 
 const ingredientItems = computed(() => {
   const apiIngredients = Array.isArray(previewProduct.value?.ingredients) ? previewProduct.value.ingredients : []
+  
   return apiIngredients.filter(item => item?.name)
 })
 
 const researchItems = computed(() => {
   const apiResearch = Array.isArray(previewProduct.value?.research_links) ? previewProduct.value.research_links : []
+  
   return apiResearch.filter(item => item?.title || item?.article_url)
 })
 
@@ -155,6 +169,7 @@ const scrollToSection = async sectionId => {
 const loadPreview = async () => {
   if (!props.productId) {
     previewProductPayload.value = null
+    
     return
   }
   loading.value = true
@@ -163,6 +178,7 @@ const loadPreview = async () => {
     const response = await axios.get(getAdminProductPreviewUrl(props.productId), {
       headers: getAuthHeaders(),
     })
+
     previewProductPayload.value = response?.data?.data || null
   } catch (loadError) {
     previewProductPayload.value = null
@@ -191,19 +207,31 @@ watch(
     width="1400"
   >
     <div class="preview-shell">
-
       <!-- ─── Sidebar ─────────────────────────────── -->
       <aside class="preview-sidebar">
         <div class="preview-sidebar__top">
           <div>
-            <p class="preview-sidebar__overline">Preview Product</p>
-            <h5 class="preview-sidebar__name">{{ productName }}</h5>
+            <p class="preview-sidebar__overline">
+              Preview Product
+            </p>
+            <h5 class="preview-sidebar__name">
+              {{ productName }}
+            </h5>
             <p class="preview-sidebar__hint">
               Preview the saved draft in a release-style product view. Incomplete sections show placeholders.
             </p>
           </div>
-          <VBtn icon variant="text" color="default" size="small" @click="isOpen = false">
-            <VIcon icon="tabler-x" size="20" />
+          <VBtn
+            icon
+            variant="text"
+            color="default"
+            size="small"
+            @click="isOpen = false"
+          >
+            <VIcon
+              icon="tabler-x"
+              size="20"
+            />
           </VBtn>
         </div>
 
@@ -233,7 +261,10 @@ watch(
             @click="scrollToSection(section.id)"
           >
             <span class="preview-nav-btn__title">{{ section.title }}</span>
-            <span class="preview-nav-btn__chip" :class="section.complete ? 'preview-nav-btn__chip--ready' : 'preview-nav-btn__chip--pending'">
+            <span
+              class="preview-nav-btn__chip"
+              :class="section.complete ? 'preview-nav-btn__chip--ready' : 'preview-nav-btn__chip--pending'"
+            >
               {{ section.complete ? 'Ready' : 'Pending' }}
             </span>
           </button>
@@ -242,39 +273,72 @@ watch(
 
       <!-- ─── Preview Body ──────────────────────────── -->
       <div class="preview-body">
-
         <!-- Loading -->
-        <div v-if="loading" class="preview-body__loading">
-          <VProgressCircular indeterminate color="primary" size="40" width="3" />
-          <p class="preview-body__loading-text">Loading saved product preview…</p>
+        <div
+          v-if="loading"
+          class="preview-body__loading"
+        >
+          <VProgressCircular
+            indeterminate
+            color="primary"
+            size="40"
+            width="3"
+          />
+          <p class="preview-body__loading-text">
+            Loading saved product preview…
+          </p>
         </div>
 
-        <div v-else class="preview-content">
-
+        <div
+          v-else
+          class="preview-content"
+        >
           <!-- Topbar banner -->
           <div class="preview-topbar">
             <div>
-              <p class="preview-topbar__overline">{{ pageTitle }}</p>
-              <h6 class="preview-topbar__title">Admin Preview Mode</h6>
+              <p class="preview-topbar__overline">
+                {{ pageTitle }}
+              </p>
+              <h6 class="preview-topbar__title">
+                Admin Preview Mode
+              </h6>
               <p class="preview-topbar__hint">
                 {{ error || 'Generated from the admin preview endpoint — safe for unpublished drafts.' }}
               </p>
             </div>
-              <div class="preview-topbar__chips">
-              <span v-if="previewMode" class="preview-chip preview-chip--success">Preview Mode</span>
+            <div class="preview-topbar__chips">
+              <span
+                v-if="previewMode"
+                class="preview-chip preview-chip--success"
+              >Preview Mode</span>
               <span class="preview-chip preview-chip--secondary">{{ publishLabel }}</span>
               <span class="preview-chip preview-chip--primary">{{ effectiveCompletionPercentage }}% Complete</span>
             </div>
           </div>
 
           <!-- ── Overview / Hero ──────────────────── -->
-          <section id="admin-product-preview-overview" class="preview-section preview-section--hero">
+          <section
+            id="admin-product-preview-overview"
+            class="preview-section preview-section--hero"
+          >
             <div class="preview-hero">
               <!-- Image -->
               <div class="preview-hero__media">
-                <img v-if="coverImageUrl" :src="coverImageUrl" :alt="productName" class="preview-hero__img" />
-                <div v-else class="preview-empty-media">
-                  <VIcon icon="tabler-photo" size="32" color="secondary" />
+                <img
+                  v-if="coverImageUrl"
+                  :src="coverImageUrl"
+                  :alt="productName"
+                  class="preview-hero__img"
+                >
+                <div
+                  v-else
+                  class="preview-empty-media"
+                >
+                  <VIcon
+                    icon="tabler-photo"
+                    size="32"
+                    color="secondary"
+                  />
                   <span>Cover image not completed yet.</span>
                 </div>
               </div>
@@ -282,163 +346,411 @@ watch(
               <!-- Info -->
               <div class="preview-hero__content">
                 <span class="preview-badge">{{ productCategory }}</span>
-                <h1 class="preview-hero__title">{{ productName }}</h1>
-                <p v-if="productDescription" class="preview-hero__desc">{{ productDescription }}</p>
-                <div v-else class="preview-empty-note preview-empty-note--sm">Product description not completed yet.</div>
+                <h1 class="preview-hero__title">
+                  {{ productName }}
+                </h1>
+                <p
+                  v-if="productDescription"
+                  class="preview-hero__desc"
+                >
+                  {{ productDescription }}
+                </p>
+                <div
+                  v-else
+                  class="preview-empty-note preview-empty-note--sm"
+                >
+                  Product description not completed yet.
+                </div>
 
                 <div class="preview-hero__actions">
-                  <button class="preview-btn-primary" disabled>Start my journey</button>
-                  <button class="preview-btn-ghost" disabled>FAQs</button>
+                  <button
+                    class="preview-btn-primary"
+                    disabled
+                  >
+                    Start my journey
+                  </button>
+                  <button
+                    class="preview-btn-ghost"
+                    disabled
+                  >
+                    FAQs
+                  </button>
                 </div>
 
                 <!-- Benefits inline (mirrors public page) -->
                 <div class="preview-benefits">
-                  <h2 class="preview-benefits__title">Key Benefits</h2>
-                  <ul v-if="benefitItems.length" class="preview-benefits__list">
-                    <li v-for="benefit in benefitItems" :key="benefit" class="preview-benefits__item">
+                  <h2 class="preview-benefits__title">
+                    Key Benefits
+                  </h2>
+                  <ul
+                    v-if="benefitItems.length"
+                    class="preview-benefits__list"
+                  >
+                    <li
+                      v-for="benefit in benefitItems"
+                      :key="benefit"
+                      class="preview-benefits__item"
+                    >
                       <span class="preview-benefits__check">✓</span>
                       <span>{{ benefit }}</span>
                     </li>
                   </ul>
-                  <div v-else class="preview-empty-note">Benefits not completed yet.</div>
+                  <div
+                    v-else
+                    class="preview-empty-note"
+                  >
+                    Benefits not completed yet.
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
           <!-- ── Treatment Details ─────────────────── -->
-          <section id="admin-product-preview-details" class="preview-section">
+          <section
+            id="admin-product-preview-details"
+            class="preview-section"
+          >
             <div class="preview-block">
               <div class="preview-block__header">
                 <div class="preview-block__icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" /></svg>
                 </div>
-                <h2 class="preview-block__title">Treatment Details</h2>
+                <h2 class="preview-block__title">
+                  Treatment Details
+                </h2>
               </div>
 
               <div class="preview-detail-grid">
                 <div class="preview-detail-card">
-                  <h3 class="preview-detail-card__heading">About This Treatment</h3>
-                  <p v-if="aboutTreatment" class="preview-detail-card__body">{{ aboutTreatment }}</p>
-                  <div v-else class="preview-empty-note">Not completed yet.</div>
+                  <h3 class="preview-detail-card__heading">
+                    About This Treatment
+                  </h3>
+                  <p
+                    v-if="aboutTreatment"
+                    class="preview-detail-card__body"
+                  >
+                    {{ aboutTreatment }}
+                  </p>
+                  <div
+                    v-else
+                    class="preview-empty-note"
+                  >
+                    Not completed yet.
+                  </div>
                 </div>
                 <div class="preview-detail-card">
-                  <h3 class="preview-detail-card__heading">How It Works</h3>
-                  <p v-if="howItWorks" class="preview-detail-card__body">{{ howItWorks }}</p>
-                  <div v-else class="preview-empty-note">Not completed yet.</div>
+                  <h3 class="preview-detail-card__heading">
+                    How It Works
+                  </h3>
+                  <p
+                    v-if="howItWorks"
+                    class="preview-detail-card__body"
+                  >
+                    {{ howItWorks }}
+                  </p>
+                  <div
+                    v-else
+                    class="preview-empty-note"
+                  >
+                    Not completed yet.
+                  </div>
                 </div>
                 <div class="preview-detail-card">
-                  <h3 class="preview-detail-card__heading">Treatment Duration</h3>
-                  <p v-if="treatmentDuration" class="preview-detail-card__body">{{ treatmentDuration }}</p>
-                  <div v-else class="preview-empty-note">Not completed yet.</div>
+                  <h3 class="preview-detail-card__heading">
+                    Treatment Duration
+                  </h3>
+                  <p
+                    v-if="treatmentDuration"
+                    class="preview-detail-card__body"
+                  >
+                    {{ treatmentDuration }}
+                  </p>
+                  <div
+                    v-else
+                    class="preview-empty-note"
+                  >
+                    Not completed yet.
+                  </div>
                 </div>
                 <div class="preview-detail-card">
-                  <h3 class="preview-detail-card__heading">Usage Instructions</h3>
-                  <p v-if="usageInstructions" class="preview-detail-card__body">{{ usageInstructions }}</p>
-                  <div v-else class="preview-empty-note">Not completed yet.</div>
+                  <h3 class="preview-detail-card__heading">
+                    Usage Instructions
+                  </h3>
+                  <p
+                    v-if="usageInstructions"
+                    class="preview-detail-card__body"
+                  >
+                    {{ usageInstructions }}
+                  </p>
+                  <div
+                    v-else
+                    class="preview-empty-note"
+                  >
+                    Not completed yet.
+                  </div>
                 </div>
               </div>
 
               <div class="preview-ingredients">
-                <h3 class="preview-ingredients__title">Key Ingredients</h3>
-                <div v-if="ingredientItems.length" class="preview-ingredients__list">
-                  <div v-for="ingredient in ingredientItems" :key="ingredient.local_id || ingredient.name" class="preview-ingredient-item">
+                <h3 class="preview-ingredients__title">
+                  Key Ingredients
+                </h3>
+                <div
+                  v-if="ingredientItems.length"
+                  class="preview-ingredients__list"
+                >
+                  <div
+                    v-for="ingredient in ingredientItems"
+                    :key="ingredient.local_id || ingredient.name"
+                    class="preview-ingredient-item"
+                  >
                     <strong>{{ ingredient.name }}</strong>
                     <span>{{ ingredient.description || 'No description provided.' }}</span>
                   </div>
                 </div>
-                <div v-else class="preview-empty-note">Ingredients not completed yet.</div>
+                <div
+                  v-else
+                  class="preview-empty-note"
+                >
+                  Ingredients not completed yet.
+                </div>
               </div>
             </div>
           </section>
 
           <!-- ── Research ──────────────────────────── -->
-          <section id="admin-product-preview-research" class="preview-section">
+          <section
+            id="admin-product-preview-research"
+            class="preview-section"
+          >
             <div class="preview-block">
               <div class="preview-block__header">
                 <div class="preview-block__icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16.5h10"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" /><path d="M8.5 2h7" /><path d="M7 16.5h10" /></svg>
                 </div>
-                <h2 class="preview-block__title">Clinical Research &amp; Scientific Evidence</h2>
+                <h2 class="preview-block__title">
+                  Clinical Research &amp; Scientific Evidence
+                </h2>
               </div>
 
-              <p v-if="clinicalResearchDescription" class="preview-block__body">
+              <p
+                v-if="clinicalResearchDescription"
+                class="preview-block__body"
+              >
                 {{ clinicalResearchDescription }}
               </p>
-              <div v-else class="preview-empty-note preview-empty-note--mb">Main research description not completed yet.</div>
+              <div
+                v-else
+                class="preview-empty-note preview-empty-note--mb"
+              >
+                Main research description not completed yet.
+              </div>
 
-              <div v-if="researchItems.length" class="preview-research-list">
-                <article v-for="research in researchItems" :key="research.local_id || research.title" class="preview-research-card">
+              <div
+                v-if="researchItems.length"
+                class="preview-research-list"
+              >
+                <article
+                  v-for="research in researchItems"
+                  :key="research.local_id || research.title"
+                  class="preview-research-card"
+                >
                   <div class="preview-research-card__icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
                   </div>
                   <div class="preview-research-card__body">
-                    <h4 class="preview-research-card__title">{{ research.title }}</h4>
-                    <a v-if="research.article_url" :href="research.article_url" target="_blank" rel="noopener noreferrer" class="preview-research-card__link">
+                    <h4 class="preview-research-card__title">
+                      {{ research.title }}
+                    </h4>
+                    <a
+                      v-if="research.article_url"
+                      :href="research.article_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="preview-research-card__link"
+                    >
                       {{ research.article_url }}
                     </a>
-                    <p v-if="research.description" class="preview-research-card__desc">{{ research.description }}</p>
+                    <p
+                      v-if="research.description"
+                      class="preview-research-card__desc"
+                    >
+                      {{ research.description }}
+                    </p>
                   </div>
                 </article>
               </div>
-              <div v-else class="preview-empty-note">Research links not completed yet.</div>
+              <div
+                v-else
+                class="preview-empty-note"
+              >
+                Research links not completed yet.
+              </div>
 
-              <div v-if="researchItems.length" class="preview-disclaimer">
+              <div
+                v-if="researchItems.length"
+                class="preview-disclaimer"
+              >
                 <strong>Important:</strong> Research citations are provided for informational purposes. Always consult a qualified healthcare provider before starting any new treatment.
               </div>
             </div>
           </section>
 
           <!-- ── Pricing ───────────────────────────── -->
-          <section id="admin-product-preview-pricing" class="preview-section">
+          <section
+            id="admin-product-preview-pricing"
+            class="preview-section"
+          >
             <div class="preview-block">
               <div class="preview-block__header">
                 <div class="preview-block__icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ><line
+                    x1="12"
+                    y1="1"
+                    x2="12"
+                    y2="23"
+                  /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                 </div>
-                <h2 class="preview-block__title">Personalized Pricing</h2>
+                <h2 class="preview-block__title">
+                  Personalized Pricing
+                </h2>
               </div>
 
               <div class="preview-pricing-grid">
-                <div v-for="group in pricingGroups" :key="group.key" class="preview-pricing-card">
+                <div
+                  v-for="group in pricingGroups"
+                  :key="group.key"
+                  class="preview-pricing-card"
+                >
                   <div class="preview-pricing-card__header">
-                    <h3 class="preview-pricing-card__title">{{ group.title }}</h3>
-                    <span class="preview-chip" :class="group.data?.is_active ? 'preview-chip--success' : 'preview-chip--muted'">
+                    <h3 class="preview-pricing-card__title">
+                      {{ group.title }}
+                    </h3>
+                    <span
+                      class="preview-chip"
+                      :class="group.data?.is_active ? 'preview-chip--success' : 'preview-chip--muted'"
+                    >
                       {{ group.data?.is_active ? 'Enabled' : 'Disabled' }}
                     </span>
                   </div>
-                  <p v-if="group.data?.description" class="preview-pricing-card__desc">{{ group.data.description }}</p>
-                  <div v-else class="preview-empty-note preview-empty-note--mb">Section description not completed yet.</div>
-                  <div v-if="group.data?.is_active && (group.data?.options || []).length" class="preview-pricing-options">
-                    <div v-for="option in group.data.options" :key="option.local_id || option.label" class="preview-pricing-option">
+                  <p
+                    v-if="group.data?.description"
+                    class="preview-pricing-card__desc"
+                  >
+                    {{ group.data.description }}
+                  </p>
+                  <div
+                    v-else
+                    class="preview-empty-note preview-empty-note--mb"
+                  >
+                    Section description not completed yet.
+                  </div>
+                  <div
+                    v-if="group.data?.is_active && (group.data?.options || []).length"
+                    class="preview-pricing-options"
+                  >
+                    <div
+                      v-for="option in group.data.options"
+                      :key="option.local_id || option.label"
+                      class="preview-pricing-option"
+                    >
                       <div class="preview-pricing-option__row">
                         <strong>{{ option.label }}</strong>
-                        <span v-if="option.is_default" class="preview-chip preview-chip--success preview-chip--xs">Default</span>
+                        <span
+                          v-if="option.is_default"
+                          class="preview-chip preview-chip--success preview-chip--xs"
+                        >Default</span>
                       </div>
                       <span class="preview-pricing-option__price">${{ option.final_price || option.price }}{{ option.billing_interval ? ` · ${option.billing_interval}` : '' }}</span>
                     </div>
                   </div>
-                  <div v-else-if="group.data?.is_active" class="preview-empty-note">Pricing options not completed yet.</div>
+                  <div
+                    v-else-if="group.data?.is_active"
+                    class="preview-empty-note"
+                  >
+                    Pricing options not completed yet.
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
           <!-- ── Process ───────────────────────────── -->
-          <section id="admin-product-preview-process" class="preview-section">
+          <section
+            id="admin-product-preview-process"
+            class="preview-section"
+          >
             <div class="preview-block">
               <div class="preview-block__header">
                 <div class="preview-block__icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
                 </div>
-                <h2 class="preview-block__title">The Process</h2>
+                <h2 class="preview-block__title">
+                  The Process
+                </h2>
               </div>
               <ol class="preview-process">
-                <li v-for="step in processSteps" :key="step.number" class="preview-process__step">
-                  <div class="preview-process__num">{{ step.number }}</div>
+                <li
+                  v-for="step in processSteps"
+                  :key="step.number"
+                  class="preview-process__step"
+                >
+                  <div class="preview-process__num">
+                    {{ step.number }}
+                  </div>
                   <div class="preview-process__content">
-                    <h3 class="preview-process__title">{{ step.title }}</h3>
-                    <p class="preview-process__desc">{{ step.description }}</p>
+                    <h3 class="preview-process__title">
+                      {{ step.title }}
+                    </h3>
+                    <p class="preview-process__desc">
+                      {{ step.description }}
+                    </p>
                   </div>
                 </li>
               </ol>
@@ -446,24 +758,62 @@ watch(
           </section>
 
           <!-- ── FAQs ──────────────────────────────── -->
-          <section id="admin-product-preview-faqs" class="preview-section">
+          <section
+            id="admin-product-preview-faqs"
+            class="preview-section"
+          >
             <div class="preview-block">
               <div class="preview-block__header">
                 <div class="preview-block__icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ><circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                  /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line
+                    x1="12"
+                    y1="17"
+                    x2="12.01"
+                    y2="17"
+                  /></svg>
                 </div>
-                <h2 class="preview-block__title">FAQs</h2>
+                <h2 class="preview-block__title">
+                  FAQs
+                </h2>
               </div>
-              <div v-if="faqItems.length" class="preview-faq-list">
-                <article v-for="faq in faqItems" :key="faq.local_id || faq.question" class="preview-faq-item">
-                  <h3 class="preview-faq-item__q">{{ faq.question }}</h3>
-                  <p class="preview-faq-item__a">{{ faq.answer }}</p>
+              <div
+                v-if="faqItems.length"
+                class="preview-faq-list"
+              >
+                <article
+                  v-for="faq in faqItems"
+                  :key="faq.local_id || faq.question"
+                  class="preview-faq-item"
+                >
+                  <h3 class="preview-faq-item__q">
+                    {{ faq.question }}
+                  </h3>
+                  <p class="preview-faq-item__a">
+                    {{ faq.answer }}
+                  </p>
                 </article>
               </div>
-              <div v-else class="preview-empty-note">FAQs not completed yet.</div>
+              <div
+                v-else
+                class="preview-empty-note"
+              >
+                FAQs not completed yet.
+              </div>
             </div>
           </section>
-
         </div>
       </div>
     </div>

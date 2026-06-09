@@ -81,8 +81,7 @@ const headerValues = computed(() => {
         tag="ul"
         :options="{ wheelPropagation: false }"
       >
-        <CustomizerSection :divider="false">         
-
+        <CustomizerSection :divider="false">
           <VCardItem class="mt-3 border text-center py-2">
             <VCardTitle class="text-sm">
               SECURITY

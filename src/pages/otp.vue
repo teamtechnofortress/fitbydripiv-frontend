@@ -52,6 +52,7 @@ const verify = async () => {
     devLog('Auth two-factor verification complete', { email: twoFactorEmail.value })
   } catch (err) {
     devLog('Auth two-factor verification error', { message: err?.message })
+
     // handled by store watcher/toast
   }
 }

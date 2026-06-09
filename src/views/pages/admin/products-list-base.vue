@@ -68,6 +68,7 @@ const pendingDeleteProduct = ref(null)
 const publishActionId = ref('')
 const featuredActionId = ref('')
 const products = ref([])
+
 const meta = ref({
   current_page: 1,
   last_page: 1,
@@ -76,6 +77,7 @@ const meta = ref({
   from: 0,
   to: 0,
 })
+
 const filteredProducts = computed(() => {
   if (!props.completedOnly)
     return products.value
@@ -86,12 +88,14 @@ const filteredProducts = computed(() => {
 const getAuthHeaders = () => {
   const token = getApiToken()
   if (!token) throw new Error('Authentication token missing. Please login again.')
+  
   return { Authorization: `Bearer ${token}` }
 }
 
 const normalizeRows = body => {
   if (Array.isArray(body?.data)) return body.data
   if (Array.isArray(body?.data?.data)) return body.data.data
+  
   return []
 }
 
@@ -129,6 +133,7 @@ const fetchProducts = async () => {
     })
 
     const body = response?.data || {}
+
     products.value = normalizeRows(body)
     meta.value = {
       ...meta.value,
@@ -257,6 +262,7 @@ const toggleFeatured = async item => {
 
     const payload = response?.data?.data || {}
     const updatedProduct = payload.product || {}
+
     const nextFeatured = typeof payload.is_featured === 'boolean'
       ? payload.is_featured
       : !!updatedProduct.is_featured
@@ -283,8 +289,10 @@ const toggleFeatured = async item => {
 
 const currentPage = computed(() => Number(meta.value.current_page || 1))
 const totalPages = computed(() => Number(meta.value.last_page || 1))
+
 const getDraftStepLabel = item => {
   const step = Number(item?.completion_step || 1)
+  
   return `Step ${Math.max(1, Math.min(5, step))} of 5`
 }
 
@@ -304,12 +312,19 @@ onMounted(() => {
 
 <template>
   <section>
-    <VCard elevation="0" class="products-shell">
+    <VCard
+      elevation="0"
+      class="products-shell"
+    >
       <VCardText>
         <div class="d-flex flex-column flex-lg-row justify-space-between align-start align-lg-center gap-3 mb-4">
           <div>
-            <div class="text-overline text-primary mb-1">Product Library</div>
-            <h4 class="text-h4 mb-0">{{ isDraftMode ? 'Draft Products' : 'Products' }}</h4>
+            <div class="text-overline text-primary mb-1">
+              Product Library
+            </div>
+            <h4 class="text-h4 mb-0">
+              {{ isDraftMode ? 'Draft Products' : 'Products' }}
+            </h4>
           </div>
 
           <div class="d-flex align-center gap-2 flex-wrap">
@@ -339,7 +354,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="!isDraftMode" class="filters-grid mb-4">
+        <div
+          v-if="!isDraftMode"
+          class="filters-grid mb-4"
+        >
           <VTextField
             v-model="filters.search"
             placeholder="Search products"
@@ -391,32 +409,62 @@ onMounted(() => {
             hide-details="auto"
           />
 
-          <VBtn color="primary" size="default" class="filters-grid__action" @click="filters.page = 1; fetchProducts()">
+          <VBtn
+            color="primary"
+            size="default"
+            class="filters-grid__action"
+            @click="filters.page = 1; fetchProducts()"
+          >
             Apply Filters
           </VBtn>
         </div>
 
-        <div v-if="loading" class="products-loading">
-          <VProgressCircular indeterminate color="primary" size="42" width="3" />
-          <div class="text-body-2 text-medium-emphasis mt-3">Loading products...</div>
+        <div
+          v-if="loading"
+          class="products-loading"
+        >
+          <VProgressCircular
+            indeterminate
+            color="primary"
+            size="42"
+            width="3"
+          />
+          <div class="text-body-2 text-medium-emphasis mt-3">
+            Loading products...
+          </div>
         </div>
 
-        <div v-else-if="!filteredProducts.length" class="products-empty">
-          <VIcon :icon="isDraftMode ? 'tabler-file-pencil' : 'tabler-package'" size="34" color="secondary" class="mb-3" />
-          <h6 class="text-h6 mb-2">{{ isDraftMode ? 'No draft products found' : (completedOnly ? 'No completed products found' : 'No products found') }}</h6>
+        <div
+          v-else-if="!filteredProducts.length"
+          class="products-empty"
+        >
+          <VIcon
+            :icon="isDraftMode ? 'tabler-file-pencil' : 'tabler-package'"
+            size="34"
+            color="secondary"
+            class="mb-3"
+          />
+          <h6 class="text-h6 mb-2">
+            {{ isDraftMode ? 'No draft products found' : (completedOnly ? 'No completed products found' : 'No products found') }}
+          </h6>
           <p class="text-body-2 text-medium-emphasis mb-0">
             {{ isDraftMode ? 'Draft products will appear here once a product is started but not completed.' : (completedOnly ? 'Completed products will appear here once the full add-product flow is finished.' : 'Adjust your filters or create a new product.') }}
           </p>
         </div>
 
-        <div v-else-if="!isDraftMode" class="products-table-wrap">
+        <div
+          v-else-if="!isDraftMode"
+          class="products-table-wrap"
+        >
           <VTable class="products-table">
             <thead>
               <tr>
                 <th>#</th>
                 <th>Product</th>
                 <th>Visibility</th>
-                <th class="text-end">Action</th>
+                <th class="text-end">
+                  Action
+                </th>
               </tr>
             </thead>
 
@@ -432,26 +480,50 @@ onMounted(() => {
                 <td>
                   <div class="product-main-cell">
                     <div class="product-main-cell__image">
-                      <img v-if="getCoverImage(item)" :src="getCoverImage(item)" :alt="item.name || 'Product image'">
-                      <div v-else class="product-main-cell__placeholder">
-                        <VIcon icon="tabler-photo" size="18" />
+                      <img
+                        v-if="getCoverImage(item)"
+                        :src="getCoverImage(item)"
+                        :alt="item.name || 'Product image'"
+                      >
+                      <div
+                        v-else
+                        class="product-main-cell__placeholder"
+                      >
+                        <VIcon
+                          icon="tabler-photo"
+                          size="18"
+                        />
                       </div>
                     </div>
 
                     <div class="product-main-cell__content">
-                      <div class="text-body-1 font-weight-bold">{{ item.name || 'Untitled Product' }}</div>
-                      <div class="text-body-2 text-medium-emphasis">{{ getCategoryLabel(item) }}</div>
-                      <div class="text-caption text-medium-emphasis">{{ item.id }}</div>
+                      <div class="text-body-1 font-weight-bold">
+                        {{ item.name || 'Untitled Product' }}
+                      </div>
+                      <div class="text-body-2 text-medium-emphasis">
+                        {{ getCategoryLabel(item) }}
+                      </div>
+                      <div class="text-caption text-medium-emphasis">
+                        {{ item.id }}
+                      </div>
                     </div>
                   </div>
                 </td>
 
                 <td>
                   <div class="d-flex align-center gap-2 flex-wrap">
-                    <VChip size="small" :color="item.is_published ? 'success' : 'secondary'" variant="tonal">
+                    <VChip
+                      size="small"
+                      :color="item.is_published ? 'success' : 'secondary'"
+                      variant="tonal"
+                    >
                       {{ item.is_published ? 'Published' : 'Unpublished' }}
                     </VChip>
-                    <VChip size="small" :color="item.is_featured ? 'warning' : 'secondary'" variant="outlined">
+                    <VChip
+                      size="small"
+                      :color="item.is_featured ? 'warning' : 'secondary'"
+                      variant="outlined"
+                    >
                       {{ item.is_featured ? 'Featured' : 'Standard' }}
                     </VChip>
                   </div>
@@ -520,7 +592,11 @@ onMounted(() => {
                 Previous
               </VBtn>
 
-              <VChip size="small" color="primary" variant="tonal">
+              <VChip
+                size="small"
+                color="primary"
+                variant="tonal"
+              >
                 Page {{ currentPage }} / {{ totalPages }}
               </VChip>
 
@@ -536,7 +612,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-else class="drafts-grid">
+        <div
+          v-else
+          class="drafts-grid"
+        >
           <VCard
             v-for="item in filteredProducts"
             :key="item.id"
@@ -547,29 +626,57 @@ onMounted(() => {
               <div class="draft-card__header">
                 <div class="product-main-cell">
                   <div class="product-main-cell__image">
-                    <img v-if="getCoverImage(item)" :src="getCoverImage(item)" :alt="item.name || 'Product image'">
-                    <div v-else class="product-main-cell__placeholder">
-                      <VIcon icon="tabler-photo" size="18" />
+                    <img
+                      v-if="getCoverImage(item)"
+                      :src="getCoverImage(item)"
+                      :alt="item.name || 'Product image'"
+                    >
+                    <div
+                      v-else
+                      class="product-main-cell__placeholder"
+                    >
+                      <VIcon
+                        icon="tabler-photo"
+                        size="18"
+                      />
                     </div>
                   </div>
 
                   <div class="product-main-cell__content">
-                    <div class="text-body-1 font-weight-bold">{{ item.name || 'Untitled Draft' }}</div>
-                    <div class="text-body-2 text-medium-emphasis">{{ getCategoryLabel(item) }}</div>
-                    <div class="text-caption text-medium-emphasis">{{ item.id }}</div>
+                    <div class="text-body-1 font-weight-bold">
+                      {{ item.name || 'Untitled Draft' }}
+                    </div>
+                    <div class="text-body-2 text-medium-emphasis">
+                      {{ getCategoryLabel(item) }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      {{ item.id }}
+                    </div>
                   </div>
                 </div>
 
-                <VChip size="small" color="warning" variant="tonal">
+                <VChip
+                  size="small"
+                  color="warning"
+                  variant="tonal"
+                >
                   Draft
                 </VChip>
               </div>
 
               <div class="draft-card__status mt-5">
-                <VChip size="small" color="primary" variant="outlined">
+                <VChip
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                >
                   {{ getDraftStepLabel(item) }}
                 </VChip>
-                <VChip size="small" color="secondary" variant="outlined">
+                <VChip
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                >
                   Incomplete
                 </VChip>
               </div>
@@ -608,10 +715,15 @@ onMounted(() => {
       </VCardText>
     </VCard>
 
-    <VDialog v-model="deleteDialog" max-width="460">
+    <VDialog
+      v-model="deleteDialog"
+      max-width="460"
+    >
       <VCard>
         <VCardText class="pa-6">
-          <div class="text-h6 mb-2">Delete Product?</div>
+          <div class="text-h6 mb-2">
+            Delete Product?
+          </div>
           <p class="text-body-2 text-medium-emphasis mb-0">
             Do you really want to delete
             <span class="font-weight-bold">{{ pendingDeleteProduct?.name || 'this product' }}</span>?
@@ -620,10 +732,18 @@ onMounted(() => {
         </VCardText>
 
         <VCardActions class="px-6 pb-6 pt-0 justify-end">
-          <VBtn variant="text" :disabled="deleting" @click="closeDeleteDialog">
+          <VBtn
+            variant="text"
+            :disabled="deleting"
+            @click="closeDeleteDialog"
+          >
             Cancel
           </VBtn>
-          <VBtn color="error" :loading="deleting" @click="deleteProduct">
+          <VBtn
+            color="error"
+            :loading="deleting"
+            @click="deleteProduct"
+          >
             Delete Product
           </VBtn>
         </VCardActions>

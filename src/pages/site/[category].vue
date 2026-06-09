@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import DynamicContentPage from './new/components/DynamicContentPage.vue'
 
 const route = useRoute()
+
 const slug = computed(() => {
   const pathSlug = String(route.path || '')
     .replace(/^\/+|\/+$/g, '')

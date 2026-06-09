@@ -1,22 +1,59 @@
 <template>
   <div class="patient-search-stage">
     <div class="stage-card">
-      <button class="back-search-btn" @click="$emit('back')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
+      <button
+        class="back-search-btn"
+        @click="$emit('back')"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 18l-6-6 6-6"
+          />
         </svg>
         Back
       </button>
 
       <div class="stage-header">
-        <h2 class="stage-title">Find Your Record</h2>
-        <p class="stage-desc">Enter the email address associated with your account to retrieve your existing patient information.</p>
+        <h2 class="stage-title">
+          Find Your Record
+        </h2>
+        <p class="stage-desc">
+          Enter the email address associated with your account to retrieve your existing patient information.
+        </p>
       </div>
 
-      <div v-if="validationError" class="error-banner">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <div
+        v-if="validationError"
+        class="error-banner"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
+          <path
+            d="M12 8v4m0 4h.01"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
         </svg>
         <span>{{ validationError }}</span>
       </div>
@@ -41,7 +78,10 @@
               :disabled="!searchEmail.trim() || isSearching"
               @click="$emit('search')"
             >
-              <span v-if="isSearching" class="spinner-mini"></span>
+              <span
+                v-if="isSearching"
+                class="spinner-mini"
+              />
               {{ isSearching ? 'Searching...' : 'Search' }}
             </button>
           </div>
@@ -61,7 +101,10 @@
               class="lookup-loading-card"
               role="status"
             >
-              <div class="loading-pulse" aria-hidden="true">
+              <div
+                class="loading-pulse"
+                aria-hidden="true"
+              >
                 <span />
               </div>
               <div class="loading-copy">
@@ -69,8 +112,12 @@
                   <span class="spinner-ring" />
                   Secure lookup in progress
                 </div>
-                <p class="loading-title">{{ lookupStatus.message || 'Searching for your record...' }}</p>
-                <p class="loading-text">Checking our patient records and preparing any saved intake details for review.</p>
+                <p class="loading-title">
+                  {{ lookupStatus.message || 'Searching for your record...' }}
+                </p>
+                <p class="loading-text">
+                  Checking our patient records and preparing any saved intake details for review.
+                </p>
               </div>
             </div>
 
@@ -85,9 +132,17 @@
           </Transition>
         </div>
 
-        <div v-if="lookupStatus.status === 'not-found'" class="not-found-section">
-          <p class="not-found-text">We couldn't find a record with this email. Would you like to register as a new patient?</p>
-          <button class="nav-btn primary" @click="$emit('startNew')">
+        <div
+          v-if="lookupStatus.status === 'not-found'"
+          class="not-found-section"
+        >
+          <p class="not-found-text">
+            We couldn't find a record with this email. Would you like to register as a new patient?
+          </p>
+          <button
+            class="nav-btn primary"
+            @click="$emit('startNew')"
+          >
             Register as New Patient
           </button>
         </div>

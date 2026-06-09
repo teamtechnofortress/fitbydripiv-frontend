@@ -1,87 +1,88 @@
 <script setup>
-import { useThemeConfig } from "@/@core/composable/useThemeConfig";
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import { getHumanDate } from '@/router/utils';
-import { useRoute } from "vue-router";
-import VueSelect from "vue-select";
-const { theme } = useThemeConfig();
-const route = useRoute();
-const patient = ref([]);
-const options = ref([]);
+import { useThemeConfig } from "@/@core/composable/useThemeConfig"
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import { getHumanDate } from '@/router/utils'
+import { useRoute } from "vue-router"
+import VueSelect from "vue-select"
+
+const { theme } = useThemeConfig()
+const route = useRoute()
+const patient = ref([])
+const options = ref([])
 const intakeRowPerPage = ref(5)
 const encounterRowPerPage = ref(5)
 const intakeCurrentPage = ref(1)
 const currentPage = ref(1)
 const intakeTotalPage = ref(1)
 const totalPage = ref(1)
-const totalIntakeCount = ref(0);
+const totalIntakeCount = ref(0)
 const ptCurrentPage = ref(1)
 const ptTotalPage = ref(1)
-const totalEncounterCount = ref(0);
-const intakeHistoryList = ref([]);
-const encounterHistoryList = ref([]);
-const patientList = ref([]);
-const intakeSelectedRows = ref([]);
-const selectedRows = ref([]);
+const totalEncounterCount = ref(0)
+const intakeHistoryList = ref([])
+const encounterHistoryList = ref([])
+const patientList = ref([])
+const intakeSelectedRows = ref([])
+const selectedRows = ref([])
 
 
 // 👉 Fetch Staff Schedule
 watchEffect(() => {  
-  totalIntakeCount.value = intakeHistoryList.value.length;
-  totalEncounterCount.value = encounterHistoryList.value?.length ?? 0;
+  totalIntakeCount.value = intakeHistoryList.value.length
+  totalEncounterCount.value = encounterHistoryList.value?.length ?? 0
 })
 
 // 👉 Fetch Staff Schedule
 watchEffect(() => {
-  if (currentPage.value > totalPage.value) currentPage.value = totalPage.value;
+  if (currentPage.value > totalPage.value) currentPage.value = totalPage.value
 
-  if (ptCurrentPage.value > ptTotalPage.value) ptCurrentPage.value = ptTotalPage.value;
+  if (ptCurrentPage.value > ptTotalPage.value) ptCurrentPage.value = ptTotalPage.value
 })
 
-const getPatientDataById = (value) => {
-  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, {id: value}, 
-    (response) => {
+const getPatientDataById = value => {
+  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, { id: value }, 
+    response => {
       if(response.data.success){        
-        patient.value = response.data.message;
-        intakeHistoryList.value = patient.value.intake;
-        encounterHistoryList.value = patient.value.encounter;
+        patient.value = response.data.message
+        intakeHistoryList.value = patient.value.intake
+        encounterHistoryList.value = patient.value.encounter
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
 //########################################################################################
-const getPatientDataByName = (value) => {
-  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_NAME, {}, {fname: value}, 
-    (response) => {
+const getPatientDataByName = value => {
+  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_NAME, {}, { fname: value }, 
+    response => {
       if(response.data.success){
-        options.value = response.data.message.map( item => item.first_name );
-        patientList.value = response.data.message;
+        options.value = response.data.message.map( item => item.first_name )
+        patientList.value = response.data.message
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
-const tagSelected = (value) => {  
-  patient.value = patientList.value.find( user => user.first_name == value);  
-  intakeHistoryList.value = patient.value.intake;
-  encounterHistoryList.value = patient.value.encounter;
+const tagSelected = value => {  
+  patient.value = patientList.value.find( user => user.first_name == value)  
+  intakeHistoryList.value = patient.value.intake
+  encounterHistoryList.value = patient.value.encounter
 }
 
 function onSearch(searchTxt){
   if(searchTxt.length >= 3){
-    getPatientDataByName(searchTxt);
+    getPatientDataByName(searchTxt)
   }
 }
 
-const doGetPatientById = (dom) =>{
+const doGetPatientById = dom =>{
   if(dom.target.value != null){
-    getPatientDataById(dom.target.value);
+    getPatientDataById(dom.target.value)
   }
 }
 
@@ -93,61 +94,78 @@ onMounted(() => {
 
 //############################################
 watchEffect(() => {
-  intakeTotalPage.value = Math.ceil((intakeHistoryList.value?.length || 0) / intakeRowPerPage.value) || 1;
-  totalPage.value = Math.ceil((encounterHistoryList.value?.length || 0) / encounterRowPerPage.value) || 1;
+  intakeTotalPage.value = Math.ceil((intakeHistoryList.value?.length || 0) / intakeRowPerPage.value) || 1
+  totalPage.value = Math.ceil((encounterHistoryList.value?.length || 0) / encounterRowPerPage.value) || 1
 
   // Prevent out-of-bounds page index
-  if (intakeCurrentPage.value > intakeTotalPage.value) intakeCurrentPage.value = intakeTotalPage.value;
-  if (currentPage.value > totalPage.value) currentPage.value = totalPage.value;
-});
+  if (intakeCurrentPage.value > intakeTotalPage.value) intakeCurrentPage.value = intakeTotalPage.value
+  if (currentPage.value > totalPage.value) currentPage.value = totalPage.value
+})
 
 const paginatedIntakeHistoryList = computed(() => {
-  const start = (intakeCurrentPage.value - 1) * intakeRowPerPage.value;
-  const end = start + intakeRowPerPage.value;
-  return intakeHistoryList.value.slice(start, end);
-});
+  const start = (intakeCurrentPage.value - 1) * intakeRowPerPage.value
+  const end = start + intakeRowPerPage.value
+  
+  return intakeHistoryList.value.slice(start, end)
+})
 
 const paginatedEncounterList = computed(() => {
-  const start = (currentPage.value - 1) * encounterRowPerPage.value;
-  const end = start + encounterRowPerPage.value;
-  return encounterHistoryList.value.slice(start, end);
-});
+  const start = (currentPage.value - 1) * encounterRowPerPage.value
+  const end = start + encounterRowPerPage.value
+  
+  return encounterHistoryList.value.slice(start, end)
+})
 
 const intakePaginationData = computed(() => {
-  const total = totalIntakeCount.value;
-  if (!total) return 'No entries';
+  const total = totalIntakeCount.value
+  if (!total) return 'No entries'
 
-  const start = (intakeCurrentPage.value - 1) * intakeRowPerPage.value + 1;
-  const end = Math.min(start + intakeRowPerPage.value - 1, total);
-  return `Showing ${start} to ${end} of ${total} entries`;
-});
+  const start = (intakeCurrentPage.value - 1) * intakeRowPerPage.value + 1
+  const end = Math.min(start + intakeRowPerPage.value - 1, total)
+  
+  return `Showing ${start} to ${end} of ${total} entries`
+})
 
 const encounterPaginationData = computed(() => {
-  const total = totalEncounterCount.value;
-  if (!total) return 'No entries';
+  const total = totalEncounterCount.value
+  if (!total) return 'No entries'
 
-  const start = (currentPage.value - 1) * encounterRowPerPage.value + 1;
-  const end = Math.min(start + encounterRowPerPage.value - 1, total);
-  return `Showing ${start} to ${end} of ${total} entries`;
-});
+  const start = (currentPage.value - 1) * encounterRowPerPage.value + 1
+  const end = Math.min(start + encounterRowPerPage.value - 1, total)
+  
+  return `Showing ${start} to ${end} of ${total} entries`
+})
 </script>
 
 <template>
-  <VCard v-if="intakeHistoryList" class="mt-4">
+  <VCard
+    v-if="intakeHistoryList"
+    class="mt-4"
+  >
     <VRow class="my-4">
-      <VCol class="d-flex align-center" cols="4" sm="6" md="4">
+      <VCol
+        class="d-flex align-center"
+        cols="4"
+        sm="6"
+        md="4"
+      >
         <label class="mx-4 pt-4">First Name:</label>
-        <vue-select
-          :class="{'vue-select-custom': theme=='dark'}"
+        <VueSelect
           v-model="patient['first_name']"
+          :class="{'vue-select-custom': theme=='dark'}"
           :options="options"                                            
+          style="min-width: 15rem;"
           @option:selected="tagSelected"
           @option:deselected="tagSelected"
           @search="onSearch"
-          style="min-width: 15rem;">
-        </vue-select> 
+        /> 
       </VCol>
-      <VCol class="d-flex align-center" cols="4" sm="6" md="4">
+      <VCol
+        class="d-flex align-center"
+        cols="4"
+        sm="6"
+        md="4"
+      >
         <VTextField
           class="ms-4"      
           label="Patient Record Number"
@@ -163,11 +181,36 @@ const encounterPaginationData = computed(() => {
     <VTable class="text-no-wrap">
       <thead>
         <tr>
-          <th scope="col" class="font-weight-semibold">TYPE</th>
-          <th scope="col" class="font-weight-semibold">STATUS</th>
-          <th scope="col" class="font-weight-semibold">GOAL</th>
-          <th scope="col" class="font-weight-semibold">DATE TIME</th>
-          <th scope="col" class="font-weight-semibold">APPROVAL</th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            TYPE
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            STATUS
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            GOAL
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            DATE TIME
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            APPROVAL
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -204,7 +247,12 @@ const encounterPaginationData = computed(() => {
 
       <tfoot v-show="!intakeHistoryList.length">
         <tr>
-          <td colspan="8" class="text-center text-body-1">No data available</td>
+          <td
+            colspan="8"
+            class="text-center text-body-1"
+          >
+            No data available
+          </td>
         </tr>
       </tfoot>
     </VTable>
@@ -244,7 +292,10 @@ const encounterPaginationData = computed(() => {
 
 
   <!-- >> -->
-  <VCard v-if="encounterHistoryList" class="mt-4">    
+  <VCard
+    v-if="encounterHistoryList"
+    class="mt-4"
+  >    
     <VCardItem class="project-header d-flex flex-wrap justify-space-between py-4 gap-4">
       <VCardTitle>TREATMENT RECORD REVIEW</VCardTitle>      
     </VCardItem>
@@ -255,11 +306,36 @@ const encounterPaginationData = computed(() => {
     <VTable class="text-no-wrap">
       <thead>
         <tr>
-          <th scope="col" class="font-weight-semibold">NAME</th>
-          <th scope="col" class="font-weight-semibold">TYPE</th>
-          <th scope="col" class="font-weight-semibold">DOSAGE</th>
-          <th scope="col" class="font-weight-semibold">DATE</th>
-          <th scope="col" class="font-weight-semibold">INGREDIENTS</th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            NAME
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            TYPE
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            DOSAGE
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            DATE
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            INGREDIENTS
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -296,7 +372,12 @@ const encounterPaginationData = computed(() => {
 
       <tfoot v-show="!encounterHistoryList.length">
         <tr>
-          <td colspan="8" class="text-center text-body-1">No data available</td>
+          <td
+            colspan="8"
+            class="text-center text-body-1"
+          >
+            No data available
+          </td>
         </tr>
       </tfoot>      
     </VTable>

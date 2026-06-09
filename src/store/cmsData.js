@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 
 const isLocalDevHost = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+
 const API_BASE = isLocalDevHost
   ? "http://localhost:8001/api/v1/cms"
   : "/api/v1/cms"
@@ -86,6 +87,7 @@ export const useCmsDataStore = defineStore('cmsData', {
           axios.get(`${API_BASE}/categories/${slug}`),
           axios.get(`${API_BASE}/categories/${slug}/products`),
         ])
+
         if (catRes.data?.success) this.currentCategory = catRes.data.data
         if (prodRes.data?.success) this.currentCategoryProducts = prodRes.data.data
       } catch (e) {
@@ -123,9 +125,11 @@ export const useCmsDataStore = defineStore('cmsData', {
       try {
         const { data } = await axios.get(`${API_BASE}/products/${slug}/pricing`)
         if (data?.success) return data.data
+        
         return null
       } catch (e) {
         this.error = e.message
+        
         return null
       }
     },
@@ -160,9 +164,11 @@ export const useCmsDataStore = defineStore('cmsData', {
       try {
         const { data } = await axios.get(`${API_BASE}/faqs/category/${category}`)
         if (data?.success) return data.data
+        
         return []
       } catch (e) {
         this.error = e.message
+        
         return []
       }
     },
@@ -180,9 +186,11 @@ export const useCmsDataStore = defineStore('cmsData', {
     async submitContact(formData) {
       try {
         const { data } = await axios.post(`${API_BASE}/contact`, formData)
+        
         return data?.success || false
       } catch (e) {
         this.error = e.message
+        
         return false
       }
     },

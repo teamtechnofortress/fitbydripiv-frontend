@@ -52,6 +52,7 @@ const loadCategories = () => {
     isLoading.value = false
     if (response.data?.success) {
       categories.value = response.data.data || []
+      
       return
     }
     toast.error(`Failed to load categories: ${response.data?.err_msg || "Unknown error"}`)
@@ -74,6 +75,7 @@ const buildErrorMessage = error => {
     const firstKey = Object.keys(responseData.errors)[0]
     if (firstKey) {
       const entry = responseData.errors[firstKey]
+      
       return Array.isArray(entry) ? entry[0] : entry
     }
   }
@@ -107,6 +109,7 @@ const currentPrimaryMediaUrl = () => (
 
 const uploadAdminMedia = async file => {
   const formData = new FormData()
+
   formData.append('file', file)
   formData.append('type', 'product')
 
@@ -130,6 +133,7 @@ const applyCategoryPrimaryMedia = (mediaUrl, mediaType) => {
     currentCategory.value.background_video = mediaUrl || ''
     currentCategory.value.banner_image = ''
     currentCategory.value.landscape_banner = ''
+    
     return
   }
 
@@ -146,16 +150,19 @@ const handleCategoryMediaFile = async (file, expectedType = '') => {
   const mediaType = expectedType || actualType
   if (!mediaType) {
     toast.error("Unsupported file type. Upload an image or video.")
+    
     return
   }
 
   if (expectedType && actualType !== expectedType) {
     toast.error(expectedType === 'video' ? "Please upload a valid video file." : "Please upload a valid image file.")
+    
     return
   }
 
   if (mediaType === 'video' && file.size > MAX_SERVER_VIDEO_UPLOAD_BYTES) {
     toast.error("Video is larger than the current server upload limit of 10MB.")
+    
     return
   }
 
@@ -163,6 +170,7 @@ const handleCategoryMediaFile = async (file, expectedType = '') => {
   try {
     const media = await uploadAdminMedia(file)
     const resolvedType = media.media_type === 'video' ? 'video' : media.media_type === 'image' ? 'image' : mediaType
+
     applyCategoryPrimaryMedia(media.url || '', resolvedType)
     toast.success("Category media uploaded successfully.")
   } catch (error) {
@@ -174,6 +182,7 @@ const handleCategoryMediaFile = async (file, expectedType = '') => {
 
 const onCategoryImageInputChange = async event => {
   const file = event?.target?.files?.[0]
+
   await handleCategoryMediaFile(file, 'image')
   if (event?.target)
     event.target.value = ''
@@ -181,6 +190,7 @@ const onCategoryImageInputChange = async event => {
 
 const onCategoryVideoInputChange = async event => {
   const file = event?.target?.files?.[0]
+
   await handleCategoryMediaFile(file, 'video')
   if (event?.target)
     event.target.value = ''
@@ -188,13 +198,17 @@ const onCategoryVideoInputChange = async event => {
 
 const onCategoryImageDrop = async event => {
   categoryImageDragActive.value = false
+
   const file = event?.dataTransfer?.files?.[0]
+
   await handleCategoryMediaFile(file, 'image')
 }
 
 const onCategoryVideoDrop = async event => {
   categoryVideoDragActive.value = false
+
   const file = event?.dataTransfer?.files?.[0]
+
   await handleCategoryMediaFile(file, 'video')
 }
 
@@ -208,6 +222,7 @@ const openCurrentMediaPreview = () => {
   const mediaUrl = currentPrimaryMediaUrl()
   if (!mediaUrl) {
     toast.error("No media available to preview.")
+    
     return
   }
 
@@ -226,6 +241,7 @@ const saveCategory = () => {
   refVForm.value?.validate().then(({ valid: isValid }) => {
     if (!isValid) {
       toast.error("Please fill required fields.")
+      
       return
     }
 
@@ -252,6 +268,7 @@ const saveCategory = () => {
         toast.success(currentCategory.value.id ? "Category updated" : "Category created")
         loadCategories()
         resetForm()
+        
         return
       }
       toast.error(`Failed to save category: ${response.data?.err_msg || "Unknown error"}`)
@@ -278,6 +295,7 @@ const doDelete = async value => {
     loadCategories()
   } catch (error) {
     const message = error?.response?.data?.message || error?.message || "Delete failed"
+
     toast.error(`Failed to delete category: ${message}`)
   } finally {
     deletingCategoryId.value = null
@@ -297,13 +315,26 @@ onMounted(() => {
         <VCard>
           <VCardText>
             <VRow>
-              <VCol cols="12" md="6">
+              <VCol
+                cols="12"
+                md="6"
+              >
                 <div class="d-flex align-center justify-space-between mb-3">
                   <h4>CMS CATEGORIES</h4>
-                  <VBtn color="primary" size="small" @click="resetForm">+ New</VBtn>
+                  <VBtn
+                    color="primary"
+                    size="small"
+                    @click="resetForm"
+                  >
+                    + New
+                  </VBtn>
                 </div>
 
-                <VProgressLinear v-if="isLoading" indeterminate class="mb-3" />
+                <VProgressLinear
+                  v-if="isLoading"
+                  indeterminate
+                  class="mb-3"
+                />
 
                 <VTable class="border rounded">
                   <thead>
@@ -311,7 +342,9 @@ onMounted(() => {
                       <th>Name</th>
                       <th>Slug</th>
                       <th>Order</th>
-                      <th class="text-right">Action</th>
+                      <th class="text-right">
+                        Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -332,20 +365,37 @@ onMounted(() => {
                           size="x-small"
                           @click.stop="askDelete(item.id)"
                         >
-                          <VIcon icon="tabler-trash" :size="20" color="error" />
+                          <VIcon
+                            icon="tabler-trash"
+                            :size="20"
+                            color="error"
+                          />
                         </VBtn>
                       </td>
                     </tr>
                     <tr v-if="!categories.length && !isLoading">
-                      <td colspan="4" class="text-center py-6">No categories found.</td>
+                      <td
+                        colspan="4"
+                        class="text-center py-6"
+                      >
+                        No categories found.
+                      </td>
                     </tr>
                   </tbody>
                 </VTable>
               </VCol>
 
-              <VCol cols="12" md="6">
-                <h4 class="mb-3">{{ currentCategory.id ? "EDIT CATEGORY" : "ADD CATEGORY" }}</h4>
-                <VForm ref="refVForm" @submit.prevent="saveCategory">
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <h4 class="mb-3">
+                  {{ currentCategory.id ? "EDIT CATEGORY" : "ADD CATEGORY" }}
+                </h4>
+                <VForm
+                  ref="refVForm"
+                  @submit.prevent="saveCategory"
+                >
                   <VRow>
                     <VCol cols="12">
                       <VTextField
@@ -374,7 +424,9 @@ onMounted(() => {
                       <div class="category-media-uploader">
                         <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3">
                           <div>
-                            <div class="text-subtitle-1 font-weight-bold mb-1">Primary Category Media</div>
+                            <div class="text-subtitle-1 font-weight-bold mb-1">
+                              Primary Category Media
+                            </div>
                             <p class="text-body-2 text-medium-emphasis mb-0">
                               Upload image and video separately. Image upload populates banner fields. Video upload populates background video and clears image fields.
                             </p>
@@ -391,7 +443,9 @@ onMounted(() => {
 
                         <div class="category-media-uploader__areas">
                           <div class="category-media-uploader__area">
-                            <div class="text-subtitle-2 font-weight-semibold mb-2">Image Banner Upload</div>
+                            <div class="text-subtitle-2 font-weight-semibold mb-2">
+                              Image Banner Upload
+                            </div>
                             <div class="text-body-2 text-medium-emphasis mb-3">
                               Recommended banner size: 1440 x 360 px (4:1 ratio)
                             </div>
@@ -430,7 +484,9 @@ onMounted(() => {
                           </div>
 
                           <div class="category-media-uploader__area">
-                            <div class="text-subtitle-2 font-weight-semibold mb-2">Video Banner Upload</div>
+                            <div class="text-subtitle-2 font-weight-semibold mb-2">
+                              Video Banner Upload
+                            </div>
                             <div class="text-body-2 text-medium-emphasis mb-1">
                               Recommended banner size: 1440 x 360 px (4:1 ratio)
                             </div>
@@ -477,7 +533,9 @@ onMounted(() => {
                           class="category-media-uploader__preview"
                         >
                           <div>
-                            <div class="text-subtitle-2 font-weight-semibold mb-1">Current Media</div>
+                            <div class="text-subtitle-2 font-weight-semibold mb-1">
+                              Current Media
+                            </div>
                             <div class="text-body-2 text-medium-emphasis text-break">
                               {{ currentPrimaryMediaUrl() }}
                             </div>
@@ -540,9 +598,22 @@ onMounted(() => {
                       />
                     </VCol>
 
-                    <VCol cols="12" class="d-flex justify-end gap-2">
-                      <VBtn color="secondary" variant="tonal" @click="resetForm">Cancel</VBtn>
-                      <VBtn color="primary" type="submit" :loading="isSaving">
+                    <VCol
+                      cols="12"
+                      class="d-flex justify-end gap-2"
+                    >
+                      <VBtn
+                        color="secondary"
+                        variant="tonal"
+                        @click="resetForm"
+                      >
+                        Cancel
+                      </VBtn>
+                      <VBtn
+                        color="primary"
+                        type="submit"
+                        :loading="isSaving"
+                      >
                         {{ currentCategory.id ? "Update" : "Save" }}
                       </VBtn>
                     </VCol>
@@ -570,7 +641,10 @@ onMounted(() => {
                     color="default"
                     @click="closeCurrentMediaPreview"
                   >
-                    <VIcon icon="tabler-x" size="20" />
+                    <VIcon
+                      icon="tabler-x"
+                      size="20"
+                    />
                   </VBtn>
                 </VCardTitle>
                 <VCardText>

@@ -37,9 +37,9 @@ const patient = ref(null)
 const patientList = ref([])
 const validationError = ref('')
 const { theme } = useThemeConfig()
-const therapyTypes = ref(['IV Therapy', 'Injectables', 'Weight Loss', 'Other']);
-const staffDataStore = useStaffDataStore();
-const { inventoryList } = storeToRefs(staffDataStore);
+const therapyTypes = ref(['IV Therapy', 'Injectables', 'Weight Loss', 'Other'])
+const staffDataStore = useStaffDataStore()
+const { inventoryList } = storeToRefs(staffDataStore)
 const treatmentDuration = ref(0)
 
 // 👉 Event
@@ -48,6 +48,7 @@ const event = ref(JSON.parse(JSON.stringify(props.event)))
 const resetEvent = () => {
   validationError.value = ''
   event.value = JSON.parse(JSON.stringify(props.event))
+
   //tagSelected(event.value.title)
   
   nextTick(() => {
@@ -56,24 +57,24 @@ const resetEvent = () => {
 }
 
 onMounted(()=>{
-  staffDataStore.getAllInventory();
-});
+  staffDataStore.getAllInventory()
+})
 
 watch(() => props.isDrawerOpen, resetEvent)
 
 watch (() => event.value.extendedProps.treatment, 
-  (treatment) => {
-    event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1);    
-  } 
+  treatment => {
+    event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1)    
+  }, 
 )
 
 watch(
   () => event.value.start,
-  (newStart) => {
+  newStart => {
     if(newStart){
-      event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1);
+      event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1)
     }
-  }
+  },
 )
 
 const removeEvent = () => {
@@ -129,13 +130,11 @@ const onCancel = () => {
 }
 
 const startDateTimePickerConfig = computed(() => {
-  const config = {
+  return {
     enableTime: true,
     dateFormat: 'Y-m-d h:i K',
     time_24hr: false,
   }
-  
-  return config
 })
 
 const endDateTimePickerConfig = computed(() => {
@@ -180,18 +179,18 @@ function onSearch(searchTxt){
   }
 }
 
-const getPatientDataById = (value) => {
-  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, {id: value}, 
-    (response) => {
+const getPatientDataById = value => {
+  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, { id: value }, 
+    response => {
       if(response.data.success){
         if(response.data.message.intake?.[0]?.goal_iv) event.value.extendedProps.goal = 'IV'
         if(response.data.message.intake?.[0]?.goal_injection) event.value.extendedProps.goal = 'INJECTABLES'
         if(response.data.message.intake?.[0]?.goal_other) event.value.extendedProps.goal = 'OTHER'
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
 function validate() {
@@ -208,7 +207,7 @@ function validate() {
 }
 
 function onGoalChange(newGoal) {
-  event.value.extendedProps.treatment = null; // or '' if that's your default
+  event.value.extendedProps.treatment = null // or '' if that's your default
 }
 </script>
 
@@ -304,7 +303,7 @@ function onGoalChange(newGoal) {
                 cols="12"
               >         
                 <label class="me-4">Patient Name</label>              
-                <vue-select   
+                <VueSelect   
                   v-model="event.title"
                   :class="{'vue-select-custom': theme=='dark', 'is-invalid': validationError }"                       
                   :options="options"                                            
@@ -323,21 +322,20 @@ function onGoalChange(newGoal) {
                 cols="12"
               >
                 <VSelect
-                    :items="therapyTypes"     
-                    v-model="event.extendedProps.goal"
-                    label="Goal"                      
-                    :rules="[requiredValidator]"
-                    required
-                    @update:modelValue="onGoalChange"
-                >
-                </VSelect>
+                  v-model="event.extendedProps.goal"     
+                  :items="therapyTypes"
+                  label="Goal"                      
+                  :rules="[requiredValidator]"
+                  required
+                  @update:modelValue="onGoalChange"
+                />
               </VCol>
               <VCol
                 cols="12"
               >
                 <VSelect
-                  :items="inventoryList.filter(item => item.type == event.extendedProps.goal).map(item => item.name)"
                   v-model="event.extendedProps.treatment"
+                  :items="inventoryList.filter(item => item.type == event.extendedProps.goal).map(item => item.name)"
                   label="Treatment"
                   :rules="[requiredValidator]"
                 />
@@ -365,13 +363,15 @@ function onGoalChange(newGoal) {
               </VCol>
 
               <!-- 👉 Description -->
-              <!-- <VCol cols="12">
+              <!--
+                <VCol cols="12">
                 <VTextarea
-                  v-model="event.extendedProps.description"
-                  :rules="[requiredValidator]"
-                  label="Description"
+                v-model="event.extendedProps.description"
+                :rules="[requiredValidator]"
+                label="Description"
                 />
-              </VCol> -->
+                </VCol> 
+              -->
 
               <!-- 👉 Form buttons -->
               <VCol

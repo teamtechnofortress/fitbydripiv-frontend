@@ -28,16 +28,19 @@ const sendResetLink = async () => {
   requestSent.value = false
   try {
     devLog('Forgot password request start', { email: email.value })
+
     const { data } = await axios.post(
       FORGOT_PASSWORD_URL,
       { email: email.value },
       { headers: { Accept: 'application/json' } },
     )
+
     successMessage.value = data?.message || 'Password reset link sent.'
     requestSent.value = true
     devLog('Forgot password request success', data)
   } catch (error) {
     const message = error?.response?.data?.message || 'Unable to send password reset link.'
+
     errorMessage.value = message
     toast.error(message)
     devLog('Forgot password request failed', { message, response: error?.response })
@@ -49,9 +52,18 @@ const sendResetLink = async () => {
 
 <template>
   <div class="forgot-password-page">
-    <VCard class="forgot-card" elevation="4">
+    <VCard
+      class="forgot-card"
+      elevation="4"
+    >
       <VCardText class="text-center">
-        <VIcon size="48" color="primary" class="mb-3">tabler-lock</VIcon>
+        <VIcon
+          size="48"
+          color="primary"
+          class="mb-3"
+        >
+          tabler-lock
+        </VIcon>
         <h2 class="text-h4 font-weight-semibold mb-2">
           Reset your password
         </h2>
@@ -61,7 +73,10 @@ const sendResetLink = async () => {
       </VCardText>
 
       <VCardText>
-        <VForm ref="formRef" @submit.prevent="onSubmit">
+        <VForm
+          ref="formRef"
+          @submit.prevent="onSubmit"
+        >
           <VTextField
             v-model="email"
             label="Email address"
@@ -70,20 +85,33 @@ const sendResetLink = async () => {
             :disabled="loading"
           />
 
-          <VBtn block type="submit" class="mt-4" :loading="loading" :disabled="loading">
+          <VBtn
+            block
+            type="submit"
+            class="mt-4"
+            :loading="loading"
+            :disabled="loading"
+          >
             <template #default>
               {{ loading ? 'Sending reset link...' : 'Send reset link' }}
             </template>
           </VBtn>
         </VForm>
 
-        <RouterLink class="text-primary d-block text-center mt-4" :to="{ name: 'login' }">
+        <RouterLink
+          class="text-primary d-block text-center mt-4"
+          :to="{ name: 'login' }"
+        >
           Back to login
         </RouterLink>
       </VCardText>
 
       <VCardText v-if="requestSent">
-        <VAlert type="success" variant="tonal" class="mb-3">
+        <VAlert
+          type="success"
+          variant="tonal"
+          class="mb-3"
+        >
           <h4 class="text-h6 mb-2">
             Password reset link sent
           </h4>
@@ -98,7 +126,10 @@ const sendResetLink = async () => {
       </VCardText>
 
       <VCardText v-else-if="errorMessage">
-        <VAlert type="error" variant="tonal">
+        <VAlert
+          type="error"
+          variant="tonal"
+        >
           {{ errorMessage }}
         </VAlert>
       </VCardText>

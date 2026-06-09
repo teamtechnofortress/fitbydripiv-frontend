@@ -1,16 +1,16 @@
 <script setup>
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import axios from '@axios';
-import { onMounted } from 'vue';
-import { useToast } from 'vue-toastification';
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import axios from '@axios'
+import { onMounted } from 'vue'
+import { useToast } from 'vue-toastification'
 
 const toast = useToast()
 
-const form = ref({});
+const form = ref({})
 
-const refInputEl = ref();
-const isConfirmDialogVisible = ref(false);
+const refInputEl = ref()
+const isConfirmDialogVisible = ref(false)
 
 
 const changeLogo = async event => {
@@ -30,9 +30,10 @@ const changeLogo = async event => {
     const formData = new FormData()
 
     formData.append('file', file)
+
     const response = await axios.post(Const.LOGO_UPLOAD_URL, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    });  
+    })  
 
 
     // Optionally update avatar with the final uploaded path
@@ -46,83 +47,92 @@ const changeLogo = async event => {
   }
 }
 
-const doConfirm = (value) => {
-    if (!value) {
-        isConfirmDialogVisible.value = false;
-        return;
-    }
-    isConfirmDialogVisible.value = false;
-    refInputEl.value.click();  
+const doConfirm = value => {
+  if (!value) {
+    isConfirmDialogVisible.value = false
+    
+    return
+  }
+  isConfirmDialogVisible.value = false
+  refInputEl.value.click()  
 }
 
 const getLogo = () => {
-    Network.getRequestNoAuth(Const.GET_LOGO_URL, {}, {}, (response) => {
-      if(response.data.success){          
-        form.value.logoImg = `${response.data.data.logo}?${new Date().getTime()}`;
-      }else{
-        console.log(`Error: ${response.data.err_msg}`);
-        toast.error(response.data.err_msg || "Failed to load schedule.");
-      }
-    });
+  Network.getRequestNoAuth(Const.GET_LOGO_URL, {}, {}, response => {
+    if(response.data.success){          
+      form.value.logoImg = `${response.data.data.logo}?${new Date().getTime()}`
+    }else{
+      console.log(`Error: ${response.data.err_msg}`)
+      toast.error(response.data.err_msg || "Failed to load schedule.")
+    }
+  })
 }
 
 onMounted(async () => {
-    getLogo();
-});
+  getLogo()
+})
 </script>
 
 <template>
   <section>
     <VRow>
-        <VCol cols="12">
-            <VCard>
-                <VCardTitle class="text-h6 mt-4 mb-4 text-center">
-                    LOGO SETTING
-                </VCardTitle>
+      <VCol cols="12">
+        <VCard>
+          <VCardTitle class="text-h6 mt-4 mb-4 text-center">
+            LOGO SETTING
+          </VCardTitle>
                 
-                <VCardText>    
-                    <!-- logo upload -->
-                    <VRow class="my-4 mx-2">
-                        <VCol cols="3"></VCol>
-                        <VCol cols="2">
-                            <VAvatar
-                            rounded
-                            size="100"
-                            class="me-2"
-                            :image="form.logoImg"
-                            />
-                        </VCol>
-                        <VCol cols="6">
-                            <div class="d-flex flex-column justify-center gap-4">
-                                <div class="d-flex flex-wrap gap-2">
-                                    <VBtn color="primary" @click="isConfirmDialogVisible=true;">
-                                        <VIcon icon="tabler-cloud-upload" class="me-4"/>
-                                        <span class="d-none d-sm-block">Upload New Logo</span>
-                                    </VBtn>
-            
-                                    <input
-                                        ref="refInputEl"
-                                        type="file"
-                                        name="file"
-                                        accept=".jpeg,.png,.jpg,.GIF"
-                                        hidden
-                                        @input="changeLogo"
-                                    />                                    
-                                </div>        
-                                <p class="text-body-1 mb-0">Allowed PNG. Max size of 1MB</p>
-                            </div>
-                        </VCol>
-                    </VRow>
-                </VCardText>
-
-                <!-- 👉 Confirm Dialog -->
-                <ConfirmDialog
-                    v-model:isDialogVisible="isConfirmDialogVisible"
-                    confirmation-msg="Are you sure to upload new logo ?"
-                    @confirm="doConfirm"
+          <VCardText>    
+            <!-- logo upload -->
+            <VRow class="my-4 mx-2">
+              <VCol cols="3" />
+              <VCol cols="2">
+                <VAvatar
+                  rounded
+                  size="100"
+                  class="me-2"
+                  :image="form.logoImg"
                 />
-            </VCard>
-        </VCol>
+              </VCol>
+              <VCol cols="6">
+                <div class="d-flex flex-column justify-center gap-4">
+                  <div class="d-flex flex-wrap gap-2">
+                    <VBtn
+                      color="primary"
+                      @click="isConfirmDialogVisible=true;"
+                    >
+                      <VIcon
+                        icon="tabler-cloud-upload"
+                        class="me-4"
+                      />
+                      <span class="d-none d-sm-block">Upload New Logo</span>
+                    </VBtn>
+            
+                    <input
+                      ref="refInputEl"
+                      type="file"
+                      name="file"
+                      accept=".jpeg,.png,.jpg,.GIF"
+                      hidden
+                      @input="changeLogo"
+                    >                                    
+                  </div>        
+                  <p class="text-body-1 mb-0">
+                    Allowed PNG. Max size of 1MB
+                  </p>
+                </div>
+              </VCol>
+            </VRow>
+          </VCardText>
+
+          <!-- 👉 Confirm Dialog -->
+          <ConfirmDialog
+            v-model:isDialogVisible="isConfirmDialogVisible"
+            confirmation-msg="Are you sure to upload new logo ?"
+            @confirm="doConfirm"
+          />
+        </VCard>
+      </VCol>
     </VRow>
   </section>
 </template>

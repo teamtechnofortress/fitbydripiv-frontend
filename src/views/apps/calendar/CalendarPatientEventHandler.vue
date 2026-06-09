@@ -8,8 +8,8 @@ import VueSelect from "vue-select"
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 import { VForm } from 'vuetify/components'
 import { useCalendarPatientStore } from './useCalendarPatientStore'
-import { watch } from "vue"
-import { computed } from "vue"
+import { watch , computed } from "vue"
+
 
 const props = defineProps({
   isDrawerOpen: {
@@ -37,10 +37,11 @@ const phoneOptions = ref([])
 const patient = ref(null)
 const patientList = ref([])
 const validationError = ref('')
-const therapyTypes = ref(['IV Therapy', 'Injectables', 'Weight Loss', 'Other']);
-const appointmentTypes = ref(['Online', 'Walk-In', 'Phone In']);
-const staffDataStore = useStaffDataStore();
-const { inventoryList } = storeToRefs(staffDataStore);
+const therapyTypes = ref(['IV Therapy', 'Injectables', 'Weight Loss', 'Other'])
+const appointmentTypes = ref(['Online', 'Walk-In', 'Phone In'])
+const staffDataStore = useStaffDataStore()
+const { inventoryList } = storeToRefs(staffDataStore)
+
 // 👉 Event
 const event = ref(JSON.parse(JSON.stringify(props.event)))
 
@@ -62,21 +63,21 @@ const removeEvent = () => {
 }
 
 watch (() => event.value.extendedProps.therapy, 
-  (therapy) => {    
+  therapy => {    
     if(therapy){      
-      event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1);     
-      event.value.extendedProps.inventory_id = inventoryList.value.find( inv => inv.name == therapy )?.id;
+      event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1)     
+      event.value.extendedProps.inventory_id = inventoryList.value.find( inv => inv.name == therapy )?.id
     }
-  } 
+  }, 
 )
 
 watch(
   () => event.value.start,
-  (newStart) => {
+  newStart => {
     if(newStart){
-      event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1);
+      event.value.end = event.value.end ?? new Date(new Date(event.value.start).getTime() + 60 * 1000 * 1)
     }
-  }
+  },
 )
 
 const handleSubmit = () => {
@@ -100,7 +101,7 @@ const handleSubmit = () => {
             event.value.start = new Date(event.value.start).toISOString()
             event.value.end = new Date(event.value.end).toISOString()
           }
-          event.value.extendedProps.patient_id = patient.value.id;          
+          event.value.extendedProps.patient_id = patient.value.id          
           emit('addEvent', event.value)
         }
 
@@ -123,16 +124,14 @@ const onCancel = () => {
 }
 
 const startDateTimePickerConfig = computed(() => {
-  const config = {
+  // if (event.value.end)
+  //   config.maxDate = event.value.end
+  // config.minDate = event.value.start
+  return {
     enableTime: true,
     dateFormat: 'Y-m-d h:i K',
     time_24hr: false,
   }
-
-  // if (event.value.end)
-  //   config.maxDate = event.value.end
-  // config.minDate = event.value.start
-  return config
 })
 
 const endDateTimePickerConfig = computed(() => {
@@ -153,9 +152,9 @@ const dialogModelValueUpdate = val => {
 }
 
 const tagSelected = value => {    
-  patient.value = patientList.value.find( user => `${user.first_name} ${user.middle_name || ''} ${user.last_name}` == value);   
-  if(patient?.value?.id) getPatientDataById(patient.value.id);
-  validationError.value = '';
+  patient.value = patientList.value.find( user => `${user.first_name} ${user.middle_name || ''} ${user.last_name}` == value)   
+  if(patient?.value?.id) getPatientDataById(patient.value.id)
+  validationError.value = ''
 }
 
 const phoneTagSelected = value => {  
@@ -193,18 +192,18 @@ const getPatientsByPhone = value => {
   )
 }
 
-const getPatientDataById = (value) => {
-  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, {id: value}, 
-    (response) => {
+const getPatientDataById = value => {
+  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, { id: value }, 
+    response => {
       if(response.data.success){
         if(response.data.message.intake?.[0]?.goal_iv) event.value.extendedProps.goal = 'IV'
         if(response.data.message.intake?.[0]?.goal_injection) event.value.extendedProps.goal = 'INJECTABLES'
         if(response.data.message.intake?.[0]?.goal_other) event.value.extendedProps.goal = 'OTHER'
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
 function onSearch(searchTxt){
@@ -237,11 +236,11 @@ function validate() {
 }
 
 onMounted(()=>{
-  staffDataStore.getAllInventory();
-});
+  staffDataStore.getAllInventory()
+})
 
 function onGoalChange(newGoal) {
-  event.value.extendedProps.therapy = null; // or '' if that's your default
+  event.value.extendedProps.therapy = null // or '' if that's your default
 }
 function onAppointedTypeChange() {
   // event.value.extendedProps.appointed_type = appointmentTypes.value[0];
@@ -249,22 +248,22 @@ function onAppointedTypeChange() {
 
 const getPatientPhoneNumber = computed({
   get() {    
-    const patientId = event.value.extendedProps?.patient_id || patient.value?.id;
-    if (!patientId) return '';
+    const patientId = event.value.extendedProps?.patient_id || patient.value?.id
+    if (!patientId) return ''
 
-    const patientData = store.patientList.find(pt => pt.id === patientId);
-    return patientData ? patientData.phone : '';
+    const patientData = store.patientList.find(pt => pt.id === patientId)
+    
+    return patientData ? patientData.phone : ''
   },
   set(newPhone) {    
-    const patientData = store.patientList.find(pt => pt.phone === newPhone);
+    const patientData = store.patientList.find(pt => pt.phone === newPhone)
     if (patientData) {
-      patient.value = patientData;
-      event.value.title = `${patientData.first_name} ${patientData.middle_name || ''} ${patientData.last_name}`;
-      event.value.extendedProps.patient_id = patientData.id;
+      patient.value = patientData
+      event.value.title = `${patientData.first_name} ${patientData.middle_name || ''} ${patientData.last_name}`
+      event.value.extendedProps.patient_id = patientData.id
     }
   },
-});
-
+})
 </script>
 
 <template>
@@ -328,7 +327,7 @@ const getPatientPhoneNumber = computed({
                 cols="12"
               >         
                 <label class="me-4">Patient Name</label>                    
-                <vue-select  
+                <VueSelect  
                   v-model="event.title"
                   :class="{'vue-select-custom': theme=='dark', 'is-invalid': validationError }"                       
                   :options="options"                                            
@@ -349,7 +348,7 @@ const getPatientPhoneNumber = computed({
                 cols="12"
               >         
                 <label class="me-4">Patient Phone</label>                    
-                <vue-select
+                <VueSelect
                   v-model="getPatientPhoneNumber"
                   :class="{'vue-select-custom': theme=='dark', 'is-invalid': validationError }"                       
                   :options="phoneOptions"                                            
@@ -360,14 +359,17 @@ const getPatientPhoneNumber = computed({
                 />
               </VCol>
 
-              <span v-if="validationError" class="text-error text-sm mx-4">{{ validationError }}</span>
+              <span
+                v-if="validationError"
+                class="text-error text-sm mx-4"
+              >{{ validationError }}</span>
               
               <!-- 👉 Goal -->
               <VCol cols="12">
                 <VSelect
-                  :items="therapyTypes"  
+                  v-model="event.extendedProps.goal"  
+                  :items="therapyTypes"
                   :rules="[requiredValidator]"
-                  v-model="event.extendedProps.goal"
                   label="Goal"
                   required
                   @update:modelValue="onGoalChange"
@@ -376,27 +378,29 @@ const getPatientPhoneNumber = computed({
 
               <VCol cols="12">                
                 <VSelect
-                    :items="inventoryList.filter(item => item.type == event.extendedProps.goal).map(item => item.name)"
-                    v-model="event.extendedProps.therapy"
-                    label="Therapy"                      
-                    :rules="[requiredValidator]"
-                    required
+                  v-model="event.extendedProps.therapy"
+                  :items="inventoryList.filter(item => item.type == event.extendedProps.goal).map(item => item.name)"
+                  label="Therapy"                      
+                  :rules="[requiredValidator]"
+                  required
                 >
-                  <!-- <template #selection="{ item }">
+                  <!--
+                    <template #selection="{ item }">
                     <div
-                      v-show="event.extendedProps.staff_id"
-                      class="align-center"
-                      :class="event.extendedProps.staff_id ? 'd-flex' : ''"
+                    v-show="event.extendedProps.staff_id"
+                    class="align-center"
+                    :class="event.extendedProps.staff_id ? 'd-flex' : ''"
                     >
-                      <VBadge
-                        :color="store.availableColors[item.raw.id % 7]"
-                        inline
-                        dot
-                        class="pa-1"
-                      />
-                      <span>{{ item.raw.fullName }}</span>
+                    <VBadge
+                    :color="store.availableColors[item.raw.id % 7]"
+                    inline
+                    dot
+                    class="pa-1"
+                    />
+                    <span>{{ item.raw.fullName }}</span>
                     </div>
-                  </template> -->
+                    </template> 
+                  -->
                 </VSelect>
               </VCol>    
 
@@ -414,23 +418,23 @@ const getPatientPhoneNumber = computed({
               <!-- 👉 End date -->              
               <VCol cols="12">                
                 <AppDateTimePicker
-                :key="JSON.stringify(endDateTimePickerConfig)"
-                v-model="event.end"
-                :rules="[requiredValidator]"
-                label="Appointment Finish"
-                :config="endDateTimePickerConfig"
+                  :key="JSON.stringify(endDateTimePickerConfig)"
+                  v-model="event.end"
+                  :rules="[requiredValidator]"
+                  label="Appointment Finish"
+                  :config="endDateTimePickerConfig"
                 />
               </VCol>
 
               <!-- 👉 Appointment type -->
               <VCol cols="12">                
                 <VSelect
-                  :items="appointmentTypes"  
+                  v-model="event.extendedProps.appointed_type"  
+                  :items="appointmentTypes"
                   :rules="[requiredValidator]"
-                  v-model="event.extendedProps.appointed_type"
                   label="Appoint Type"
-                  @update:modelValue="onAppointedTypeChange"
                   required
+                  @update:modelValue="onAppointedTypeChange"
                 />
               </VCol>
              

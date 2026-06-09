@@ -1,10 +1,10 @@
-import { canNavigate } from '@/@layouts/plugins/casl';
-import EmailVerification from '@/views/EmailVerification.vue';
-import NProgress from 'nprogress';
-import { setupLayouts } from 'virtual:generated-layouts';
-import { createRouter, createWebHistory } from 'vue-router';
-import routes from '~pages';
-import { isUserLoggedIn } from './utils';
+import { canNavigate } from '@/@layouts/plugins/casl'
+import EmailVerification from '@/views/EmailVerification.vue'
+import NProgress from 'nprogress'
+import { setupLayouts } from 'virtual:generated-layouts'
+import { createRouter, createWebHistory } from 'vue-router'
+import routes from '~pages'
+import { isUserLoggedIn } from './utils'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,18 +29,19 @@ const router = createRouter({
 
 router.beforeEach((to, from) => {
   if(to.path){
-    NProgress.start();
-    NProgress.set(0.1);
+    NProgress.start()
+    NProgress.set(0.1)
   }
 
   const isPublicRoute = to.meta?.public
     || to.path === '/otp'
     || (to.name && String(to.name).startsWith('site'))
+
   if (isPublicRoute) {
-    return;
+    return
   }
 
-  const isLoggedIn = isUserLoggedIn();  
+  const isLoggedIn = isUserLoggedIn()  
   if (canNavigate(to)) {
     if (to.meta.redirectIfLoggedIn && isLoggedIn)
       return { name: 'lobby' }
@@ -55,10 +56,10 @@ router.beforeEach((to, from) => {
     }
   }
 
-});
+})
 
 router.afterEach(() => {  
-  NProgress.done();
-});
+  NProgress.done()
+})
 
 export default router

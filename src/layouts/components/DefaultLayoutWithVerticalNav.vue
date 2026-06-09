@@ -43,21 +43,21 @@ const updateTime = () => {
 }
 
 const cleanNavs = () => {
-  const UserData = JSON.parse(localStorage.getItem('userData') || '{}');
+  const UserData = JSON.parse(localStorage.getItem('userData') || '{}')
   if(UserData?.role != 'admin'){    
-    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing];
+    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing]
   }else{
-    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing, ...admin];
+    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing, ...admin]
   }  
 }
 
 onMounted(() => {
   updateTime()
-  intervalId = setInterval(updateTime, 1000);
+  intervalId = setInterval(updateTime, 1000)
 
   setTimeout(() => {
-    cleanNavs();
-  }, 500);
+    cleanNavs()
+  }, 500)
 })
 
 onUnmounted(() => {

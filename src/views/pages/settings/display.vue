@@ -124,13 +124,15 @@ function closeDialog() {
       <!-- !SECTION -->
 
       <VCardActions class="justify-end">
-        <!--<VBtn
+        <!--
+          <VBtn
           variant="flat"
           color="primary"
           @click="saveSettings"
-        >
+          >
           Save
-        </VBtn>-->
+          </VBtn>
+        -->
         <VBtn
           variant="text"
           @click="closeDialog"

@@ -1,6 +1,7 @@
 import axios from "axios"
 import { postRequestNoAuth } from "@/network"
 import {
+
   // FORGOT_PASSWORD_URL,
   LOGIN_URL,
   REGISTER_URL,
@@ -25,6 +26,7 @@ const extractPayload = response => {
     }
     if (raw.data !== undefined) return raw.data
   }
+  
   return raw?.data !== undefined ? raw.data : raw
 }
 
@@ -37,6 +39,7 @@ const buildErrorMessage = (error, fallback) => {
     const firstKey = Object.keys(responseData.errors)[0]
     if (firstKey) {
       const entry = responseData.errors[firstKey]
+      
       return Array.isArray(entry) ? entry[0] : entry
     }
   }
@@ -45,6 +48,7 @@ const buildErrorMessage = (error, fallback) => {
     if (nested) return Array.isArray(nested) ? nested[0] : nested
   }
   if (error?.message) return error.message
+  
   return fallback
 }
 
@@ -77,7 +81,9 @@ export const useAuthDataStore = defineStore('authData', {
           email: data.email,
           password: data.password,
         })
+
         const payload = extractPayload(response)
+
         devLog('Auth login success payload', {
           email: data?.email,
           requiresTwoFactor: payload?.requires_2fa ?? payload?.requiresTwoFactor ?? payload?.requires2fa ?? false,
@@ -88,14 +94,18 @@ export const useAuthDataStore = defineStore('authData', {
           this.twoFactorRequired = true
           this.twoFactorEmail = payload.email || data.email
           devLog('Auth login requires two-factor', { email: this.twoFactorEmail })
+          
           return { requiresTwoFactor: true, email: this.twoFactorEmail }
         }
 
         this.persistAuthSession(payload)
+        
         return { requiresTwoFactor: false, user: payload.user }
       } catch (error) {
         devLog('Auth login failed', { message: error?.message })
+
         const message = buildErrorMessage(error, "Unable to login")
+
         this.setAuthError("Login Failed", message)
         this.clearPersistedSession()
         throw new Error(message)
@@ -111,19 +121,25 @@ export const useAuthDataStore = defineStore('authData', {
           throw new Error("Two-factor verification requires a pending email.")
         }
         devLog('Auth verifying two-factor', { email: this.twoFactorEmail })
+
         const response = await axios.post(VERIFY_2FA_URL, {
           email: this.twoFactorEmail,
           code,
         })
+
         const payload = extractPayload(response)
+
         devLog('Auth two-factor verified', { email: this.twoFactorEmail })
         this.persistAuthSession(payload)
         this.twoFactorRequired = false
         this.twoFactorEmail = ""
+        
         return payload
       } catch (error) {
         devLog('Auth two-factor verification failed', { message: error?.message })
+
         const message = buildErrorMessage(error, "Invalid verification code")
+
         this.setAuthError("Two Factor Verification Failed", message)
         throw new Error(message)
       } finally {
@@ -138,19 +154,25 @@ export const useAuthDataStore = defineStore('authData', {
           throw new Error("Authentication token missing. Please login again.")
         }
         devLog('Auth enable two-factor request', { tokenExists: !!token })
+
         const response = await axios.post(ENABLE_2FA_URL, null, {
           headers: { Authorization: `Bearer ${token}` },
         })
+
         const payload = extractPayload(response)
+
         const setup = {
           secret: payload.secret,
           qr: payload.qr,
           recoveryCodes: payload.recovery_codes ?? payload.recoveryCodes ?? [],
         }
+
         this.twoFactorSetup = setup
+        
         return setup
       } catch (error) {
         const message = buildErrorMessage(error, "Unable to enable two-factor authentication")
+
         this.setAuthError("Enable 2FA Failed", message)
         throw new Error(message)
       }
@@ -163,14 +185,19 @@ export const useAuthDataStore = defineStore('authData', {
           throw new Error("Authentication token missing. Please login again.")
         }
         devLog('Auth confirm two-factor request', { tokenExists: !!token })
+
         const response = await axios.post(CONFIRM_2FA_URL, { code }, {
           headers: { Authorization: `Bearer ${token}` },
         })
+
         const payload = extractPayload(response)
+
         this.twoFactorSetup = null
+        
         return payload
       } catch (error) {
         const message = buildErrorMessage(error, "Unable to confirm two-factor authentication")
+
         this.setAuthError("Confirm 2FA Failed", message)
         throw new Error(message)
       }
@@ -181,13 +208,15 @@ export const useAuthDataStore = defineStore('authData', {
         const token = getStoredToken()
         if (!token) throw new Error("Authentication token missing. Please login again.")
         devLog('Auth disable two-factor request', { tokenExists: !!token })
+
         const response = await axios.post(DISABLE_2FA_URL, {}, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        const payload = extractPayload(response)
-        return payload
+
+        return extractPayload(response)
       } catch (error) {
         const message = buildErrorMessage(error, "Unable to disable two-factor authentication")
+
         this.setAuthError("Disable 2FA Failed", message)
         throw new Error(message)
       }
@@ -198,10 +227,13 @@ export const useAuthDataStore = defineStore('authData', {
         const token = getStoredToken()
         if (!token) throw new Error("Authentication token missing. Please login again.")
         devLog('Auth regenerate two-factor request', { tokenExists: !!token })
+
         const response = await axios.post(REGENERATE_2FA_URL, {}, {
           headers: { Authorization: `Bearer ${token}` },
         })
+
         const payload = extractPayload(response)
+        
         return {
           secret: payload.secret,
           qr: payload.qr,
@@ -209,6 +241,7 @@ export const useAuthDataStore = defineStore('authData', {
         }
       } catch (error) {
         const message = buildErrorMessage(error, "Unable to regenerate two-factor secret")
+
         this.setAuthError("Regenerate 2FA Failed", message)
         throw new Error(message)
       }
@@ -223,11 +256,15 @@ export const useAuthDataStore = defineStore('authData', {
           email: data.email,
           password: data.password,
         })
+
         const payload = extractPayload(response)
+
         this.persistAuthSession(payload)
+        
         return payload
       } catch (error) {
         const message = buildErrorMessage(error, "Unable to register")
+
         this.setAuthError("Register Failed", message)
         this.clearPersistedSession()
         throw new Error(message)
@@ -240,19 +277,25 @@ export const useAuthDataStore = defineStore('authData', {
       this.loading = true
       try {
         devLog('Auth simple register attempt', { email: data?.email })
+
         const response = await axios.post(SIMPLE_REGISTER_URL, {
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
           password: data.password,
         })
+
         const payload = extractPayload(response)
+
         devLog('Auth simple register success', { userId: payload?.user?.id })
         this.persistAuthSession(payload)
+        
         return payload
       } catch (error) {
         devLog('Auth simple register failed', { message: error?.message })
+
         const message = buildErrorMessage(error, "Unable to register")
+
         this.setAuthError("Simple Register Failed", message)
         this.clearPersistedSession()
         throw new Error(message)

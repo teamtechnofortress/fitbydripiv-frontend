@@ -24,11 +24,13 @@ const goSupport = () => {
 
 const pricingLabel = computed(() => {
   if (!order.value) return ''
+  
   return order.value.pricing_option?.label || order.value.pricing_type || 'Selected'
 })
 
 const amountPaid = computed(() => {
   const price = order.value?.pricing_option?.final_price ?? order.value?.pricing_option?.price ?? null
+  
   return price != null ? Number(price) : null
 })
 
@@ -36,6 +38,7 @@ const formattedAmount = computed(() => {
   const amount = amountPaid.value
   const currency = order.value?.currency || 'USD'
   if (amount == null || Number.isNaN(amount)) return null
+  
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
 })
 
@@ -43,8 +46,10 @@ const cadence = computed(() => {
   if (!order.value) return ''
   if (order.value.purchase_type === 'subscription') {
     const months = order.value.frequency_months || 1
+    
     return months === 1 ? 'Every month' : `Every ${months} months`
   }
+  
   return 'One-time purchase'
 })
 
@@ -53,6 +58,7 @@ const sessionRef = computed(() => order.value?.order_uuid || sessionId)
 const fetchOrder = async () => {
   if (!sessionId) {
     error.value = 'Missing checkout reference.'
+    
     return
   }
   loading.value = true
@@ -62,6 +68,7 @@ const fetchOrder = async () => {
       getOrderBySessionUrl(sessionId),
       { headers: { Accept: 'application/json' } },
     )
+
     order.value = data?.data || data
   } catch (err) {
     if (err?.response?.status === 404) {
@@ -90,23 +97,67 @@ onMounted(fetchOrder)
 
       <template v-else-if="error">
         <div class="icon error">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+            <line
+              x1="12"
+              y1="8"
+              x2="12"
+              y2="12"
+            />
+            <line
+              x1="12"
+              y1="16"
+              x2="12.01"
+              y2="16"
+            />
           </svg>
         </div>
         <h1>Order not found</h1>
         <p>{{ error }}</p>
         <div class="actions">
-          <button class="secondary" @click="goHome">Go to Home</button>
-          <button class="primary" @click="goSupport">Contact Support</button>
+          <button
+            class="secondary"
+            @click="goHome"
+          >
+            Go to Home
+          </button>
+          <button
+            class="primary"
+            @click="goSupport"
+          >
+            Contact Support
+          </button>
         </div>
       </template>
 
       <template v-else-if="order">
         <div class="icon success">
-          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="36"
+            height="36"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M20 6L9 17l-5-5" />
           </svg>
         </div>
@@ -128,13 +179,19 @@ onMounted(fetchOrder)
             <span class="label">Amount charged</span>
             <span class="value">{{ formattedAmount || '—' }}</span>
           </div>
-          <div class="row muted" v-if="sessionRef">
+          <div
+            v-if="sessionRef"
+            class="row muted"
+          >
             <span class="label">Reference ID</span>
             <span class="value monospace">{{ sessionRef }}</span>
           </div>
         </div>
 
-        <button class="primary" @click="goHome">
+        <button
+          class="primary"
+          @click="goHome"
+        >
           Go to Home
         </button>
       </template>

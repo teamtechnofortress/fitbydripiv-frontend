@@ -1,11 +1,33 @@
 <template>
   <div class="intake-form-stage">
-    <div v-if="validationError || submitError" class="status-stack">
-      <div v-if="validationError" class="status-banner status-banner-error">
+    <div
+      v-if="validationError || submitError"
+      class="status-stack"
+    >
+      <div
+        v-if="validationError"
+        class="status-banner status-banner-error"
+      >
         <div class="status-banner-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8v4m0 4h.01"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
         </div>
         <div class="status-banner-copy">
@@ -14,11 +36,31 @@
         </div>
       </div>
 
-      <div v-if="submitError" class="status-banner status-banner-error status-banner-submit">
+      <div
+        v-if="submitError"
+        class="status-banner status-banner-error status-banner-submit"
+      >
         <div class="status-banner-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M15 9l-6 6m0-6l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M15 9l-6 6m0-6l6 6"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
         <div class="status-banner-copy">
@@ -28,12 +70,32 @@
       </div>
     </div>
 
-    <div v-if="confirmedPatient" class="patient-info-card">
+    <div
+      v-if="confirmedPatient"
+      class="patient-info-card"
+    >
       <div class="patient-card-header">
-        <div class="patient-badge">Existing Patient</div>
-        <button class="edit-patient-btn" @click="$emit('resetPatient')" title="Edit patient selection">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        <div class="patient-badge">
+          Existing Patient
+        </div>
+        <button
+          class="edit-patient-btn"
+          title="Edit patient selection"
+          @click="$emit('resetPatient')"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -46,11 +108,17 @@
           <span class="detail-label">Email</span>
           <span class="detail-value">{{ confirmedPatient.email }}</span>
         </div>
-        <div v-if="confirmedPatient.phone" class="patient-detail">
+        <div
+          v-if="confirmedPatient.phone"
+          class="patient-detail"
+        >
           <span class="detail-label">Phone</span>
           <span class="detail-value">{{ confirmedPatient.phone }}</span>
         </div>
-        <div v-if="confirmedPatient.dateOfBirth" class="patient-detail">
+        <div
+          v-if="confirmedPatient.dateOfBirth"
+          class="patient-detail"
+        >
           <span class="detail-label">DOB</span>
           <span class="detail-value">{{ confirmedPatient.dateOfBirth }}</span>
         </div>
@@ -70,37 +138,88 @@
           }"
         >
           <span class="step-num">
-            <svg v-if="step.id < currentStep" width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg
+              v-if="step.id < currentStep"
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+            >
+              <path
+                d="M2 6l3 3 5-5"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
-            <svg v-else-if="!isStepUnlocked(step.id)" width="11" height="11" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+            <svg
+              v-else-if="!isStepUnlocked(step.id)"
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <rect
+                x="3"
+                y="11"
+                width="18"
+                height="11"
+                rx="2"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M7 11V7a5 5 0 0 1 10 0v4"
+                stroke="currentColor"
+                stroke-width="2"
+              />
             </svg>
             <span v-else>{{ step.id }}</span>
           </span>
           {{ step.title }}
-          <span v-if="!isStepUnlocked(step.id) && step.id !== currentStep" class="lock-label">Complete previous step first</span>
+          <span
+            v-if="!isStepUnlocked(step.id) && step.id !== currentStep"
+            class="lock-label"
+          >Complete previous step first</span>
         </div>
       </div>
       <div class="progress-track">
-        <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
+        <div
+          class="progress-fill"
+          :style="{ width: progressPercentage + '%' }"
+        />
       </div>
     </nav>
 
-    <div v-if="currentStep === 1" class="form-section">
+    <div
+      v-if="currentStep === 1"
+      class="form-section"
+    >
       <div class="section-header">
-        <h2 class="section-title">Telehealth Remote Intake</h2>
-        <p class="section-desc">Medical screening · Current medications · Conditions &amp; risk history</p>
+        <h2 class="section-title">
+          Telehealth Remote Intake
+        </h2>
+        <p class="section-desc">
+          Medical screening · Current medications · Conditions &amp; risk history
+        </p>
       </div>
 
       <div class="block-group">
-        <h3 class="block-label">Medical Screening</h3>
+        <h3 class="block-label">
+          Medical Screening
+        </h3>
         <div class="yn-grid">
-          <div v-for="question in screeningQuestions" :key="question.key" class="yn-card">
+          <div
+            v-for="question in screeningQuestions"
+            :key="question.key"
+            class="yn-card"
+          >
             <div class="yn-card-body">
               <span class="yn-tag">{{ question.title }}</span>
-              <p class="yn-question">{{ question.prompt }}</p>
+              <p class="yn-question">
+                {{ question.prompt }}
+              </p>
             </div>
             <div class="yn-buttons">
               <label
@@ -109,7 +228,13 @@
                 class="yn-btn"
                 :class="{ selected: form.page1.medicalScreening[question.key] === option.value }"
               >
-                <input class="sr-only" type="radio" :name="`screening-${question.key}`" :value="option.value" v-model="form.page1.medicalScreening[question.key]">
+                <input
+                  v-model="form.page1.medicalScreening[question.key]"
+                  class="sr-only"
+                  type="radio"
+                  :name="`screening-${question.key}`"
+                  :value="option.value"
+                >
                 {{ option.label }}
               </label>
             </div>
@@ -118,20 +243,28 @@
       </div>
 
       <div class="block-group">
-        <h3 class="block-label">Current Medications <span class="required-star">*</span></h3>
-        <p class="block-hint">Please list all medications (prescription or non-prescription) you are currently taking. Type "None" if you are not taking any.</p>
+        <h3 class="block-label">
+          Current Medications <span class="required-star">*</span>
+        </h3>
+        <p class="block-hint">
+          Please list all medications (prescription or non-prescription) you are currently taking. Type "None" if you are not taking any.
+        </p>
         <textarea
           v-model="form.page1.medications"
           rows="4"
           class="form-textarea"
-          placeholder='List medications here… or type "None"'
-        ></textarea>
+          placeholder="List medications here… or type &quot;None&quot;"
+        />
       </div>
 
       <div class="two-col-grid">
         <div class="block-group">
-          <h3 class="block-label">Current Conditions <span class="required-star">*</span></h3>
-          <p class="block-hint">Select all that apply — choose <strong>None</strong> if none apply.</p>
+          <h3 class="block-label">
+            Current Conditions <span class="required-star">*</span>
+          </h3>
+          <p class="block-hint">
+            Select all that apply — choose <strong>None</strong> if none apply.
+          </p>
           <div class="check-list">
             <label
               v-for="option in currentConditionsOptions"
@@ -139,10 +272,28 @@
               class="check-item"
               :class="{ selected: form.page1.currentConditions.includes(option.value), 'none-option': option.value === 'none' }"
             >
-              <input class="sr-only" type="checkbox" :value="option.value" :checked="form.page1.currentConditions.includes(option.value)" @change="toggleCurrentCondition(option.value)">
+              <input
+                class="sr-only"
+                type="checkbox"
+                :value="option.value"
+                :checked="form.page1.currentConditions.includes(option.value)"
+                @change="toggleCurrentCondition(option.value)"
+              >
               <span class="check-box">
-                <svg v-if="form.page1.currentConditions.includes(option.value)" width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg
+                  v-if="form.page1.currentConditions.includes(option.value)"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  fill="none"
+                >
+                  <path
+                    d="M2 5l2.5 2.5L8 3"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </span>
               {{ option.label }}
@@ -150,8 +301,12 @@
           </div>
         </div>
         <div class="block-group">
-          <h3 class="block-label">Additional Conditions <span class="required-star">*</span></h3>
-          <p class="block-hint">Select all that apply — choose <strong>None</strong> if none apply.</p>
+          <h3 class="block-label">
+            Additional Conditions <span class="required-star">*</span>
+          </h3>
+          <p class="block-hint">
+            Select all that apply — choose <strong>None</strong> if none apply.
+          </p>
           <div class="check-list">
             <label
               v-for="option in additionalConditionsOptions"
@@ -159,10 +314,28 @@
               class="check-item"
               :class="{ selected: form.page1.additionalConditions.includes(option.value), 'none-option': option.value === 'none' }"
             >
-              <input class="sr-only" type="checkbox" :value="option.value" :checked="form.page1.additionalConditions.includes(option.value)" @change="toggleAdditionalCondition(option.value)">
+              <input
+                class="sr-only"
+                type="checkbox"
+                :value="option.value"
+                :checked="form.page1.additionalConditions.includes(option.value)"
+                @change="toggleAdditionalCondition(option.value)"
+              >
               <span class="check-box">
-                <svg v-if="form.page1.additionalConditions.includes(option.value)" width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg
+                  v-if="form.page1.additionalConditions.includes(option.value)"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  fill="none"
+                >
+                  <path
+                    d="M2 5l2.5 2.5L8 3"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </span>
               {{ option.label }}
@@ -172,14 +345,29 @@
       </div>
 
       <div class="block-group">
-        <h3 class="block-label">Risk &amp; History</h3>
+        <h3 class="block-label">
+          Risk &amp; History
+        </h3>
         <div class="yn-grid">
-          <div v-for="question in riskQuestions" :key="question.key" class="yn-card">
+          <div
+            v-for="question in riskQuestions"
+            :key="question.key"
+            class="yn-card"
+          >
             <div class="yn-card-body">
               <span class="yn-tag">{{ question.title }}</span>
-              <p class="yn-question">{{ question.prompt }}</p>
-              <div v-if="question.helperList" class="yn-helpers">
-                <span v-for="example in question.helperList" :key="example" class="yn-helper-tag">{{ example }}</span>
+              <p class="yn-question">
+                {{ question.prompt }}
+              </p>
+              <div
+                v-if="question.helperList"
+                class="yn-helpers"
+              >
+                <span
+                  v-for="example in question.helperList"
+                  :key="example"
+                  class="yn-helper-tag"
+                >{{ example }}</span>
               </div>
             </div>
             <div class="yn-buttons">
@@ -189,7 +377,13 @@
                 class="yn-btn"
                 :class="{ selected: form.page1.medicalScreening[question.key] === option.value }"
               >
-                <input class="sr-only" type="radio" :name="`risk-${question.key}`" :value="option.value" v-model="form.page1.medicalScreening[question.key]">
+                <input
+                  v-model="form.page1.medicalScreening[question.key]"
+                  class="sr-only"
+                  type="radio"
+                  :name="`risk-${question.key}`"
+                  :value="option.value"
+                >
                 {{ option.label }}
               </label>
             </div>
@@ -198,15 +392,26 @@
       </div>
     </div>
 
-    <div v-else-if="currentStep === 2" class="form-section">
+    <div
+      v-else-if="currentStep === 2"
+      class="form-section"
+    >
       <div class="section-header">
-        <h2 class="section-title">Virtual Telehealth Remote Intake</h2>
-        <p class="section-desc">Please check all the goals that apply to you.</p>
+        <h2 class="section-title">
+          Virtual Telehealth Remote Intake
+        </h2>
+        <p class="section-desc">
+          Please check all the goals that apply to you.
+        </p>
       </div>
 
       <div class="block-group">
-        <h3 class="block-label">Treatment Goals <span class="required-star">*</span></h3>
-        <p class="block-hint">Select all that apply — choose <strong>None</strong> if none apply.</p>
+        <h3 class="block-label">
+          Treatment Goals <span class="required-star">*</span>
+        </h3>
+        <p class="block-hint">
+          Select all that apply — choose <strong>None</strong> if none apply.
+        </p>
         <div class="goals-grid">
           <label
             v-for="item in goalsItems"
@@ -214,28 +419,59 @@
             class="goal-item"
             :class="{ selected: form.page2.goals.includes(item.value), 'none-option': item.value === 'none' }"
           >
-            <input class="sr-only" type="checkbox" :value="item.value" :checked="form.page2.goals.includes(item.value)" @change="toggleGoal(item.value)">
+            <input
+              class="sr-only"
+              type="checkbox"
+              :value="item.value"
+              :checked="form.page2.goals.includes(item.value)"
+              @change="toggleGoal(item.value)"
+            >
             <span class="goal-check">
-              <svg v-if="form.page2.goals.includes(item.value)" width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg
+                v-if="form.page2.goals.includes(item.value)"
+                width="10"
+                height="10"
+                viewBox="0 0 10 10"
+                fill="none"
+              >
+                <path
+                  d="M2 5l2.5 2.5L8 3"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
             </span>
             {{ item.label }}
           </label>
         </div>
-        <p class="goals-note">Note: Some goals appear more than once — select each instance that applies.</p>
+        <p class="goals-note">
+          Note: Some goals appear more than once — select each instance that applies.
+        </p>
       </div>
     </div>
 
-    <div v-else class="form-section">
+    <div
+      v-else
+      class="form-section"
+    >
       <div class="section-header">
-        <h2 class="section-title">Telehealth Patient Info</h2>
-        <p class="section-desc">Medical history and personal details</p>
+        <h2 class="section-title">
+          Telehealth Patient Info
+        </h2>
+        <p class="section-desc">
+          Medical history and personal details
+        </p>
       </div>
 
       <div class="block-group">
-        <h3 class="block-label">Medical History <span class="required-star">*</span></h3>
-        <p class="block-hint">Do you currently have or have you ever had any of the following? Choose <strong>None</strong> if none apply.</p>
+        <h3 class="block-label">
+          Medical History <span class="required-star">*</span>
+        </h3>
+        <p class="block-hint">
+          Do you currently have or have you ever had any of the following? Choose <strong>None</strong> if none apply.
+        </p>
         <div class="history-grid">
           <label
             v-for="item in medicalHistoryItems"
@@ -243,10 +479,28 @@
             class="check-item"
             :class="{ selected: form.page3.medicalHistory.includes(item.value), 'none-option': item.value === 'none' }"
           >
-            <input class="sr-only" type="checkbox" :value="item.value" :checked="form.page3.medicalHistory.includes(item.value)" @change="toggleMedicalHistory(item.value)">
+            <input
+              class="sr-only"
+              type="checkbox"
+              :value="item.value"
+              :checked="form.page3.medicalHistory.includes(item.value)"
+              @change="toggleMedicalHistory(item.value)"
+            >
             <span class="check-box">
-              <svg v-if="form.page3.medicalHistory.includes(item.value)" width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg
+                v-if="form.page3.medicalHistory.includes(item.value)"
+                width="10"
+                height="10"
+                viewBox="0 0 10 10"
+                fill="none"
+              >
+                <path
+                  d="M2 5l2.5 2.5L8 3"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
             </span>
             {{ item.label }}
@@ -254,105 +508,223 @@
         </div>
       </div>
 
-      <div class="divider"></div>
+      <div class="divider" />
 
       <div class="block-group">
-        <h3 class="block-label">Personal Information</h3>
+        <h3 class="block-label">
+          Personal Information
+        </h3>
         <div class="field-row three-col">
           <div class="field-group">
             <label class="field-label">First Name <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.firstName" type="text" class="form-input" placeholder="Jane">
+            <input
+              v-model="form.page3.person.firstName"
+              type="text"
+              class="form-input"
+              placeholder="Jane"
+            >
           </div>
           <div class="field-group">
             <label class="field-label">Middle Name</label>
-            <input v-model="form.page3.person.middleName" type="text" class="form-input" placeholder="A.">
+            <input
+              v-model="form.page3.person.middleName"
+              type="text"
+              class="form-input"
+              placeholder="A."
+            >
           </div>
           <div class="field-group">
             <label class="field-label">Last Name <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.lastName" type="text" class="form-input" placeholder="Doe">
+            <input
+              v-model="form.page3.person.lastName"
+              type="text"
+              class="form-input"
+              placeholder="Doe"
+            >
           </div>
         </div>
         <div class="field-row two-col">
           <div class="field-group">
             <label class="field-label">Address <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.address" type="text" class="form-input" placeholder="123 Wellness Ave">
+            <input
+              v-model="form.page3.person.address"
+              type="text"
+              class="form-input"
+              placeholder="123 Wellness Ave"
+            >
           </div>
           <div class="field-group">
             <label class="field-label">City <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.city" type="text" class="form-input" placeholder="Austin">
+            <input
+              v-model="form.page3.person.city"
+              type="text"
+              class="form-input"
+              placeholder="Austin"
+            >
           </div>
         </div>
         <div class="field-row three-col">
           <div class="field-group">
             <label class="field-label">Phone Number</label>
-            <input v-model="form.page3.person.phone" type="tel" class="form-input" placeholder="(555) 123-4567">
+            <input
+              v-model="form.page3.person.phone"
+              type="tel"
+              class="form-input"
+              placeholder="(555) 123-4567"
+            >
           </div>
           <div class="field-group">
             <label class="field-label">State <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.state" type="text" class="form-input" placeholder="TX">
+            <input
+              v-model="form.page3.person.state"
+              type="text"
+              class="form-input"
+              placeholder="TX"
+            >
           </div>
           <div class="field-group">
             <label class="field-label">Zip Code <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.zip" type="text" class="form-input" placeholder="73301">
+            <input
+              v-model="form.page3.person.zip"
+              type="text"
+              class="form-input"
+              placeholder="73301"
+            >
           </div>
           <div class="field-group">
             <label class="field-label">Email <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.email" type="email" class="form-input" placeholder="you@example.com">
+            <input
+              v-model="form.page3.person.email"
+              type="email"
+              class="form-input"
+              placeholder="you@example.com"
+            >
           </div>
         </div>
         <div class="field-row four-col">
           <div class="field-group">
             <label class="field-label">Date of Birth <span class="required-star">*</span></label>
-            <input v-model="form.page3.person.dateOfBirth" type="date" class="form-input">
+            <input
+              v-model="form.page3.person.dateOfBirth"
+              type="date"
+              class="form-input"
+            >
           </div>
           <div class="field-group">
             <label class="field-label">Age</label>
-            <input v-model="form.page3.person.age" type="text" readonly class="form-input readonly-input" placeholder="Auto">
+            <input
+              v-model="form.page3.person.age"
+              type="text"
+              readonly
+              class="form-input readonly-input"
+              placeholder="Auto"
+            >
           </div>
           <div class="field-group">
             <label class="field-label">Gender <span class="required-star">*</span></label>
-            <select v-model="form.page3.person.gender" class="form-select">
-              <option value="" disabled>Select</option>
-              <option v-for="option in genders" :key="option.value" :value="option.value">{{ option.label }}</option>
+            <select
+              v-model="form.page3.person.gender"
+              class="form-select"
+            >
+              <option
+                value=""
+                disabled
+              >
+                Select
+              </option>
+              <option
+                v-for="option in genders"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
             </select>
           </div>
           <div class="field-group">
             <label class="field-label">Ethnicity <span class="required-star">*</span></label>
-            <select v-model="form.page3.person.ethnicity" class="form-select">
-              <option value="" disabled>Select</option>
-              <option v-for="option in ethnicityOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            <select
+              v-model="form.page3.person.ethnicity"
+              class="form-select"
+            >
+              <option
+                value=""
+                disabled
+              >
+                Select
+              </option>
+              <option
+                v-for="option in ethnicityOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
             </select>
           </div>
         </div>
       </div>
 
       <div class="block-group">
-        <h3 class="block-label">Health Information</h3>
+        <h3 class="block-label">
+          Health Information
+        </h3>
         <div class="field-row two-col">
           <div class="field-group">
             <label class="field-label">Current Conditions</label>
-            <textarea v-model="form.page3.health.currentConditions" rows="3" class="form-textarea" placeholder="Include diagnoses or symptoms…"></textarea>
+            <textarea
+              v-model="form.page3.health.currentConditions"
+              rows="3"
+              class="form-textarea"
+              placeholder="Include diagnoses or symptoms…"
+            />
           </div>
           <div class="field-group">
             <label class="field-label">Allergies</label>
-            <textarea v-model="form.page3.health.allergies" rows="3" class="form-textarea" placeholder="Medication, food, or environmental…"></textarea>
+            <textarea
+              v-model="form.page3.health.allergies"
+              rows="3"
+              class="form-textarea"
+              placeholder="Medication, food, or environmental…"
+            />
           </div>
         </div>
         <div class="field-group">
           <label class="field-label">Allergy Reactions</label>
-          <textarea v-model="form.page3.health.allergyReactions" rows="3" class="form-textarea" placeholder="Describe severity or symptoms…"></textarea>
+          <textarea
+            v-model="form.page3.health.allergyReactions"
+            rows="3"
+            class="form-textarea"
+            placeholder="Describe severity or symptoms…"
+          />
         </div>
       </div>
     </div>
 
     <div class="nav-bar">
-      <button v-if="!isFirstStep" type="button" class="nav-btn secondary" @click="$emit('prev')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
+      <button
+        v-if="!isFirstStep"
+        type="button"
+        class="nav-btn secondary"
+        @click="$emit('prev')"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 18l-6-6 6-6"
+          />
         </svg>
         Previous Step
       </button>
-      <span v-else></span>
+      <span v-else />
 
       <span class="step-counter">Step {{ currentStep }} of {{ steps.length }}</span>
 
@@ -363,8 +735,19 @@
         @click="$emit('next')"
       >
         Continue to {{ nextStepTitle }}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M9 18l6-6-6-6"
+          />
         </svg>
       </button>
 
@@ -375,7 +758,10 @@
         :disabled="isSubmitting"
         @click="$emit('submit')"
       >
-        <span v-if="isSubmitting" class="spinner"></span>
+        <span
+          v-if="isSubmitting"
+          class="spinner"
+        />
         {{ isSubmitting ? 'Submitting…' : 'Submit Intake' }}
       </button>
     </div>
@@ -419,11 +805,13 @@ const toggleSelection = (list, value, exclusiveValue = null) => {
   const existingIndex = list.indexOf(value)
   if (existingIndex !== -1) {
     list.splice(existingIndex, 1)
+    
     return
   }
   if (exclusiveValue && value === exclusiveValue) {
     list.splice(0, list.length)
     list.push(value)
+    
     return
   }
   if (exclusiveValue) {
@@ -433,19 +821,19 @@ const toggleSelection = (list, value, exclusiveValue = null) => {
   list.push(value)
 }
 
-const toggleCurrentCondition = (value) => {
+const toggleCurrentCondition = value => {
   toggleSelection(props.form.page1.currentConditions, value, 'none')
 }
 
-const toggleAdditionalCondition = (value) => {
+const toggleAdditionalCondition = value => {
   toggleSelection(props.form.page1.additionalConditions, value, 'none')
 }
 
-const toggleGoal = (value) => {
+const toggleGoal = value => {
   toggleSelection(props.form.page2.goals, value, 'none')
 }
 
-const toggleMedicalHistory = (value) => {
+const toggleMedicalHistory = value => {
   toggleSelection(props.form.page3.medicalHistory, value, 'none')
 }
 </script>

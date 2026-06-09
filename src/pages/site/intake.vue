@@ -39,9 +39,11 @@ const steps = [
 
 const currentStep = ref(1)
 const completedSteps = ref([1])
+
 const orderUuid = computed(() => {
   const fromQuery = route.query?.order_uuid
   const fromParams = route.params?.order_uuid
+  
   return String(fromQuery || fromParams || '')
 })
 
@@ -110,11 +112,13 @@ const form = reactive({
 
 // ─── UTILITY FUNCTIONS ────────────────────────────────
 
-const normalizeArrayValues = (values) => {
+const normalizeArrayValues = values => {
   if (!Array.isArray(values)) return []
+  
   return values
     .map(item => {
       if (typeof item === 'string') return item.replace(/_/g, '-').trim()
+      
       return item
     })
     .filter(item => item !== null && item !== undefined && item !== '')
@@ -128,12 +132,14 @@ const calculateAge = dateString => {
   let age = today.getFullYear() - birthDate.getFullYear()
   const monthDiff = today.getMonth() - birthDate.getMonth()
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age -= 1
+  
   return age >= 0 ? String(age) : ''
 }
 
-const applyIntakePrefill = (data) => {
+const applyIntakePrefill = data => {
   if (!data) return
   const screening = data.medicalScreening || {}
+
   Object.assign(form.page1.medicalScreening, {
     diabetes: screening.diabetes ?? '',
     bloodThinners: screening.bloodThinners ?? '',
@@ -148,7 +154,9 @@ const applyIntakePrefill = (data) => {
   form.page1.additionalConditions = normalizeArrayValues(data.additionalConditions)
   form.page2.goals = normalizeArrayValues(data.goals)
   form.page3.medicalHistory = normalizeArrayValues(data.medicalHistory)
+
   const derivedAge = data.age != null ? String(data.age) : (data.dateOfBirth ? calculateAge(data.dateOfBirth) : '')
+
   Object.assign(form.page3.person, {
     firstName: data.firstName ?? '',
     middleName: data.middleName ?? '',
@@ -177,7 +185,7 @@ watch(() => form.page3.person.dateOfBirth, value => {
 
 // ─── EXISTING PATIENT LOOKUP ──────────────────────────
 
-const lookupExistingPatient = async (email) => {
+const lookupExistingPatient = async email => {
   existingLookup.status = 'loading'
   existingLookup.message = 'Searching for your record...'
   try {
@@ -192,6 +200,7 @@ const lookupExistingPatient = async (email) => {
     if (error?.response?.status === 404) {
       existingLookup.status = 'not-found'
       existingLookup.message = error?.response?.data?.message || 'Patient not found. Please register as a new patient.'
+      
       return
     }
     existingLookup.status = 'error'
@@ -203,10 +212,12 @@ const handleExistingEmailSearch = () => {
   const trimmed = searchEmail.value?.trim() || ''
   if (!trimmed) {
     resetExistingLookupFeedback()
+    
     return
   }
   if (!isValidEmail(trimmed)) {
     validationError.value = 'Please enter a valid email address.'
+    
     return
   }
   validationError.value = null
@@ -275,11 +286,13 @@ const validateStep1 = () => {
   if (!form.page1.medications.trim()) return 'Please list your current medications (or type "None").'
   if (form.page1.currentConditions.length === 0) return 'Please select at least one option under Current Conditions (choose "None" if none apply).'
   if (form.page1.additionalConditions.length === 0) return 'Please select at least one option under Additional Conditions (choose "None" if none apply).'
+  
   return null
 }
 
 const validateStep2 = () => {
   if (form.page2.goals.length === 0) return 'Please select at least one treatment goal (choose "None" if none apply).'
+  
   return null
 }
 
@@ -296,15 +309,17 @@ const validateStep3 = () => {
   if (!p.gender) return 'Gender is required.'
   if (!p.ethnicity) return 'Ethnicity is required.'
   if (form.page3.medicalHistory.length === 0) return 'Please select at least one Medical History option (choose "None" if none apply).'
+  
   return null
 }
 
 // ─── FORM NAVIGATION ──────────────────────────────────
 
-const isStepUnlocked = (stepId) => completedSteps.value.includes(stepId)
+const isStepUnlocked = stepId => completedSteps.value.includes(stepId)
 
 const progressPercentage = computed(() => {
   if (steps.length <= 1) return 100
+  
   return ((currentStep.value - 1) / (steps.length - 1)) * 100
 })
 
@@ -313,6 +328,7 @@ const isLastStep = computed(() => currentStep.value === steps.length)
 
 const nextStepTitle = computed(() => {
   const index = steps.findIndex(step => step.id === currentStep.value)
+  
   return steps[index + 1]?.title ?? ''
 })
 
@@ -327,6 +343,7 @@ const goToNext = () => {
   if (error) {
     validationError.value = error
     scrollToTop()
+    
     return
   }
 
@@ -352,6 +369,7 @@ const formatText = value => value?.trim() ?? ''
 const buildPayload = () => {
   const person = form.page3.person
   const screening = form.page1.medicalScreening
+  
   return {
     firstName: formatText(person.firstName),
     middleName: formatText(person.middleName),
@@ -386,7 +404,7 @@ const buildPayload = () => {
   }
 }
 
-const extractErrorMessage = (error) => {
+const extractErrorMessage = error => {
   const responseData = error?.response?.data
   if (typeof responseData === 'string' && responseData.trim()) return responseData
   if (responseData?.errors) {
@@ -401,14 +419,18 @@ const extractErrorMessage = (error) => {
   if (typeof responseData?.error === 'string' && responseData.error.trim()) return responseData.error
   if (typeof responseData?.message === 'string') return responseData.message
   if (typeof error?.message === 'string' && error.message.trim()) return error.message
+  
   return 'Unable to submit intake. Please review your answers and try again.'
 }
 
 const handleSubmit = async () => {
   if (isSubmitting.value) return
   validationError.value = null
+
   const error = validateStep3()
-  if (error) { validationError.value = error; scrollToTop(); return }
+  if (error) { validationError.value = error; scrollToTop() 
+
+    return }
 
   isSubmitting.value = true
   submissionComplete.value = false
@@ -420,14 +442,17 @@ const handleSubmit = async () => {
     if (!intakeUrl) {
       submitError.value = 'Your checkout session has expired. Please start again from the pricing page.'
       scrollToTop()
+      
       return
     }
+
     const { data } = await axios.post(intakeUrl, payload, {
       headers: {
         'Idempotency-Key': idempotencyKey,
         Accept: 'application/json',
       },
     })
+
     submissionResult.value = data?.data || null
     submissionMessage.value = data?.message || 'Patient intake submitted successfully.'
     submissionComplete.value = true
@@ -485,6 +510,7 @@ const resetForm = () => {
 }
 
 const goBack = () => router.back()
+
 const redirectToHome = () => {
   submitError.value = null
   router.push('/')
@@ -499,24 +525,43 @@ onMounted(() => scrollToTop(false))
 
 <template>
   <div class="intake-root">
-    <div class="bg-orb bg-orb-1"></div>
-    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-1" />
+    <div class="bg-orb bg-orb-2" />
 
     <div class="intake-container">
-      <button class="back-btn" @click="goBack">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
+      <button
+        class="back-btn"
+        @click="goBack"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 18l-6-6 6-6"
+          />
         </svg>
         Back
       </button>
 
       <header class="intake-header">
         <div class="brand-badge">
-          <span class="brand-dot"></span>
+          <span class="brand-dot" />
           FitByShot · Telehealth Intake
         </div>
-        <h1 class="intake-title">Complete Your Remote Intake</h1>
-        <p class="intake-subtitle">Answer a few medical and lifestyle questions so our clinical team can personalize your treatment plan.</p>
+        <h1 class="intake-title">
+          Complete Your Remote Intake
+        </h1>
+        <p class="intake-subtitle">
+          Answer a few medical and lifestyle questions so our clinical team can personalize your treatment plan.
+        </p>
       </header>
 
       <PatientTypeStage
@@ -564,12 +609,34 @@ onMounted(() => scrollToTop(false))
       />
     </div>
 
-    <div v-if="submitError" class="error-dialog-backdrop" role="presentation">
-      <div class="error-dialog" role="dialog" aria-modal="true" aria-labelledby="intake-submit-error-title">
-        <div class="error-dialog-badge">Submission Error</div>
-        <h2 id="intake-submit-error-title" class="error-dialog-title">We couldn't submit your intake form</h2>
-        <p class="error-dialog-text">{{ submitError }}</p>
-        <button class="error-dialog-btn" type="button" @click="redirectToHome">
+    <div
+      v-if="submitError"
+      class="error-dialog-backdrop"
+      role="presentation"
+    >
+      <div
+        class="error-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="intake-submit-error-title"
+      >
+        <div class="error-dialog-badge">
+          Submission Error
+        </div>
+        <h2
+          id="intake-submit-error-title"
+          class="error-dialog-title"
+        >
+          We couldn't submit your intake form
+        </h2>
+        <p class="error-dialog-text">
+          {{ submitError }}
+        </p>
+        <button
+          class="error-dialog-btn"
+          type="button"
+          @click="redirectToHome"
+        >
           Go to Home
         </button>
       </div>

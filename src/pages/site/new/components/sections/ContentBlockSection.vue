@@ -20,11 +20,13 @@ const bullets = computed(() => props.section.bullets || content.value.bullets ||
 const rows = computed(() => props.section.rows || content.value.rows || [])
 const isCentered = computed(() => (props.section.alignment || content.value.alignment) === 'center')
 const isDocumentPage = computed(() => ['terms', 'privacy', 'legal'].includes(String(props.pageSlug || '').toLowerCase()))
+
 const contentWrapClass = computed(() => (
   (isCentered.value || isDocumentPage.value)
     ? 'max-w-4xl mx-auto text-left'
     : ''
 ))
+
 const sectionClasses = computed(() => {
   if (isDocumentPage.value)
     return 'px-4 py-5 bg-white'
@@ -38,6 +40,7 @@ const sectionClasses = computed(() => {
 
   return 'py-12 px-4 border-t border-gray-200 bg-white'
 })
+
 const maxWidthClass = computed(() => {
   if (isDocumentPage.value)
     return 'max-w-4xl'
@@ -48,6 +51,7 @@ const maxWidthClass = computed(() => {
     return 'max-w-5xl'
   if (maxWidth === 'full')
     return 'max-w-7xl'
+  
   return 'max-w-3xl'
 })
 </script>
@@ -55,7 +59,10 @@ const maxWidthClass = computed(() => {
 
 <template>
   <section :class="sectionClasses">
-    <div class="mx-auto" :class="[maxWidthClass, (isCentered && !isDocumentPage) ? 'text-center' : '']">
+    <div
+      class="mx-auto"
+      :class="[maxWidthClass, (isCentered && !isDocumentPage) ? 'text-center' : '']"
+    >
       <div :class="contentWrapClass">
         <p
           v-if="section.subtitle"
@@ -80,7 +87,10 @@ const maxWidthClass = computed(() => {
           {{ intro }}
         </p>
 
-        <div v-if="paragraphs.length" :class="isDocumentPage ? 'mt-4 space-y-4' : 'mt-6 space-y-4'">
+        <div
+          v-if="paragraphs.length"
+          :class="isDocumentPage ? 'mt-4 space-y-4' : 'mt-6 space-y-4'"
+        >
           <p
             v-for="(paragraph, index) in paragraphs"
             :key="`paragraph-${index}`"
@@ -97,12 +107,19 @@ const maxWidthClass = computed(() => {
           class="text-gray-700 list-disc"
           :class="isDocumentPage ? 'mt-4 space-y-2 pl-6 text-sm leading-relaxed' : (isCentered ? 'mt-6 space-y-3 max-w-none pl-6' : 'mt-6 space-y-3 pl-5')"
         >
-          <li v-for="(bullet, index) in bullets" :key="`bullet-${index}`">
+          <li
+            v-for="(bullet, index) in bullets"
+            :key="`bullet-${index}`"
+          >
             {{ bullet }}
           </li>
         </ul>
 
-        <div v-if="rows.length" class="card overflow-hidden text-left" :class="isDocumentPage ? 'mt-5' : 'mt-8'">
+        <div
+          v-if="rows.length"
+          class="card overflow-hidden text-left"
+          :class="isDocumentPage ? 'mt-5' : 'mt-8'"
+        >
           <div
             v-for="(row, index) in rows"
             :key="`row-${index}`"

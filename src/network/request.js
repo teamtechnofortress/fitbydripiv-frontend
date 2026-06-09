@@ -40,6 +40,7 @@ axios.interceptors.response.use(
       devLog('Auth interceptor clearing session due to 401/419', { url, status })
       clearSessionAndRedirect()
     }
+    
     return Promise.reject(error)
   },
 )
@@ -101,7 +102,7 @@ export function postRequest(url, headers, params, callback) {
     .catch(function (error) {            
       let message = ""
       if(error.response?.data?.data){
-        const data = error.response?.data?.data;
+        const data = error.response?.data?.data
 
         message = Object.values(data)[0].toLocaleString()
       }else{

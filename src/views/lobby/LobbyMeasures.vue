@@ -1,30 +1,30 @@
 <script setup>
-import * as Network from "@/network";
-import * as Const from "@/network/const";
+import * as Network from "@/network"
+import * as Const from "@/network/const"
 
-const ivData = ref([]);
-const addOnData = ref([]);
-const injectableData = ref([]);
-const othersData = ref([]);
+const ivData = ref([])
+const addOnData = ref([])
+const injectableData = ref([])
+const othersData = ref([])
 
-const getSalesMetrics = (value) => {
+const getSalesMetrics = value => {
   Network.getRequest(Const.GET_SALES_METRICS, {}, {}, 
-    (response) => {
+    response => {
       if(response.data.success){
-        ivData.value = response.data.data['iv therapy'];
-        addOnData.value = response.data.data.add_on;
-        injectableData.value = response.data.data.injectables;
-        othersData.value = response.data.data.other;
+        ivData.value = response.data.data['iv therapy']
+        addOnData.value = response.data.data.add_on
+        injectableData.value = response.data.data.injectables
+        othersData.value = response.data.data.other
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
 onMounted(()=>{
-  getSalesMetrics();
-});
+  getSalesMetrics()
+})
 </script>
 
 <template>
@@ -34,13 +34,19 @@ onMounted(()=>{
         <thead>
           <tr>
             <th scope="col">
-              <h2 class="text-primary">IV Therapy</h2>
+              <h2 class="text-primary">
+                IV Therapy
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Visits</h2>
+              <h2 class="text-primary">
+                Visits
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Goal</h2>
+              <h2 class="text-primary">
+                Goal
+              </h2>
             </th>
           </tr>
         </thead>
@@ -72,13 +78,19 @@ onMounted(()=>{
         <thead>
           <tr>
             <th scope="col">
-              <h2 class="text-primary">INJECTABLE</h2>
+              <h2 class="text-primary">
+                INJECTABLE
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Visits</h2>
+              <h2 class="text-primary">
+                Visits
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Goal</h2>
+              <h2 class="text-primary">
+                Goal
+              </h2>
             </th>
           </tr>
         </thead>
@@ -110,13 +122,19 @@ onMounted(()=>{
         <thead>
           <tr>
             <th scope="col">
-              <h2 class="text-primary">OTHERS</h2>
+              <h2 class="text-primary">
+                OTHERS
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Visits</h2>
+              <h2 class="text-primary">
+                Visits
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Goal</h2>
+              <h2 class="text-primary">
+                Goal
+              </h2>
             </th>
           </tr>
         </thead>
@@ -148,13 +166,19 @@ onMounted(()=>{
         <thead>
           <tr>
             <th scope="col">
-              <h2 class="text-primary">ADD ON</h2>
+              <h2 class="text-primary">
+                ADD ON
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Visits</h2>
+              <h2 class="text-primary">
+                Visits
+              </h2>
             </th>
             <th scope="col">
-              <h2 class="text-primary">Goal</h2>
+              <h2 class="text-primary">
+                Goal
+              </h2>
             </th>
           </tr>
         </thead>
@@ -181,7 +205,6 @@ onMounted(()=>{
           </tr>
         </tbody>
       </VTable>
-      
     </VCardText>
   </VCard>
 </template>

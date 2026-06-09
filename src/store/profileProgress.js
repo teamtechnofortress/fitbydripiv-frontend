@@ -28,16 +28,19 @@ const buildErrorMessage = error => {
     const firstKey = Object.keys(responseData.errors)[0]
     if (firstKey) {
       const firstValue = responseData.errors[firstKey]
+      
       return Array.isArray(firstValue) ? firstValue[0] : firstValue
     }
   }
   if (error?.message) return error.message
+  
   return 'Request failed. Please try again.'
 }
 
 const getAuthHeaders = () => {
   const token = getApiToken()
   if (!token) throw new Error('Authentication token missing. Please login again.')
+  
   return { Authorization: `Bearer ${token}` }
 }
 
@@ -59,12 +62,16 @@ export const useProfileProgressStore = defineStore('profileProgress', {
       this.error = null
       try {
         devLog('Profile progress fetch start')
+
         const response = await axios.get(PROFILE_PROGRESS_URL, { headers: getAuthHeaders() })
         const payload = extractPayload(response)
+
         this.setProgress(payload)
+        
         return payload
       } catch (error) {
         const message = buildErrorMessage(error)
+
         this.error = message
         devLog('Profile progress fetch failed', { message })
         throw new Error(message)
@@ -79,12 +86,16 @@ export const useProfileProgressStore = defineStore('profileProgress', {
       this.error = null
       try {
         devLog('Profile progress submit', { step })
+
         const response = await axios.post(endpoint, data, { headers: getAuthHeaders() })
         const payload = extractPayload(response)
+
         this.setProgress(payload)
+        
         return response?.data ?? { data: payload }
       } catch (error) {
         const message = buildErrorMessage(error)
+
         this.error = message
         devLog('Profile progress submit failed', { step, message })
         throw new Error(message)
@@ -97,12 +108,16 @@ export const useProfileProgressStore = defineStore('profileProgress', {
       this.error = null
       try {
         devLog('Profile progress skip', { step })
+
         const response = await axios.post(PROFILE_PROGRESS_SKIP_URL, { step }, { headers: getAuthHeaders() })
         const payload = extractPayload(response)
+
         this.setProgress(payload)
+        
         return response?.data ?? { data: payload }
       } catch (error) {
         const message = buildErrorMessage(error)
+
         this.error = message
         devLog('Profile progress skip failed', { step, message })
         throw new Error(message)
@@ -113,12 +128,16 @@ export const useProfileProgressStore = defineStore('profileProgress', {
     async fetchStepData(step) {
       try {
         devLog('Profile progress step fetch', { step })
+
         const response = await axios.get(`${PROFILE_PROGRESS_URL}/step/${step}`, {
           headers: getAuthHeaders(),
         })
+
+        
         return response?.data ?? null
       } catch (error) {
         const message = buildErrorMessage(error)
+
         devLog('Profile progress step fetch failed', { step, message })
         throw new Error(message)
       }

@@ -8,10 +8,10 @@ import listPlugin from '@fullcalendar/list'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import { useToast } from 'vue-toastification'
 
-const patientDataStore = usePatientDataStore();
-const {patientList, loading, error} = storeToRefs(patientDataStore);
+const patientDataStore = usePatientDataStore()
+const { patientList, loading, error } = storeToRefs(patientDataStore)
 
-patientDataStore.getAllPatient();
+patientDataStore.getAllPatient()
 
 export const blankEvent = {
   title: '',
@@ -72,7 +72,7 @@ export const useCalendar = (event, isEventHandlerSidebarActive, isLeftSidebarOpe
         description,
         staff_id,
         goal,
-        treatment
+        treatment,
       },
       allDay,
     }
@@ -103,7 +103,7 @@ export const useCalendar = (event, isEventHandlerSidebarActive, isLeftSidebarOpe
             location: 'location', //e.location,
             description: e.description,
             goal: e.goal,
-            treatment: e.treatment
+            treatment: e.treatment,
           },
         })))
       })
@@ -197,7 +197,7 @@ export const useCalendar = (event, isEventHandlerSidebarActive, isLeftSidebarOpe
             location: 'location',//r.value.location,
             description: r.value.description,
             goal: r.value.goal,
-            treatment: r.value.treatment
+            treatment: r.value.treatment,
           },
         }
         const propsToUpdate = ['id', 'title', 'url']
@@ -217,31 +217,32 @@ export const useCalendar = (event, isEventHandlerSidebarActive, isLeftSidebarOpe
   }
 
   function renderEventContent(arg) {
-    const event = arg.event;
+    const event = arg.event
 
     // Example icon logic based on event.extendedProps.type
-    let icon = '';
-    let allergy = "None";
+    let icon = ''
+    let allergy = "None"
     switch (event.extendedProps.goal) {
-      case 'INJECTABLES':
-        icon = '💉';
-        break;
-      case 'IV':
-        icon = '🧪';
-        break;
-      case 'WEIGHT LOSS':
-        icon = '🏃‍♂️';
-        break;
-      case 'OTHERS':
-        icon = '📋';
-        break;
-      default:
-        icon = '📅';
+    case 'INJECTABLES':
+      icon = '💉'
+      break
+    case 'IV':
+      icon = '🧪'
+      break
+    case 'WEIGHT LOSS':
+      icon = '🏃‍♂️'
+      break
+    case 'OTHERS':
+      icon = '📋'
+      break
+    default:
+      icon = '📅'
     }
+
     //console.log(event.extendedProps.goal, event.title)
     allergy = patientList.value.filter(
-      patient => `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}` === event.title
-      )?.[0]?.current_allergies;
+      patient => `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}` === event.title,
+    )?.[0]?.current_allergies
       
     return {
       domNodes: [
@@ -267,16 +268,18 @@ export const useCalendar = (event, isEventHandlerSidebarActive, isLeftSidebarOpe
                                       max-width: 100%;
                                     ">⚠ ${allergy}</div>` : ''}
             </div>
-        `)
-      ]
-    };
+        `),
+      ],
+    }
   }
 
   // Helper to create DOM node from HTML string
   function createElementWithHTML(html) {
-    const div = document.createElement('div');
-    div.innerHTML = html.trim();
-    return div.firstChild;
+    const div = document.createElement('div')
+
+    div.innerHTML = html.trim()
+    
+    return div.firstChild
   }
 
   // 👉 Calendar options
@@ -293,10 +296,11 @@ export const useCalendar = (event, isEventHandlerSidebarActive, isLeftSidebarOpe
       hour: 'numeric',
       minute: '2-digit',
       meridiem: 'short',
-      hour12: true
+      hour12: true,
     },
     events: fetchEvents,
     eventContent: renderEventContent,
+
     // ❗ We need this to be true because when its false and event is allDay event and end date is same as start data then Full calendar will set end to null
     forceEventDuration: true,
 

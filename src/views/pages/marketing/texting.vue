@@ -37,12 +37,13 @@ const reversedSignature = computed({
 })
 
 const totalPages = computed(() =>
-  Math.ceil(marketingStore.textCampaigns.length / pageSize.value)
+  Math.ceil(marketingStore.textCampaigns.length / pageSize.value),
 )
 
 const paginatedCampaigns = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
+  
   return marketingStore.textCampaigns?.slice(start, end)
 })
 
@@ -82,8 +83,8 @@ async function saveForm() {
     if (isValid){   
       try {        
         //convert from localtime to UTC time
-        const getYMD = formDate(form.value.send_date).split(' ')[0];
-        const utcDateTimeStr = convertUTCDate(getYMD, form.value.send_time);
+        const getYMD = formDate(form.value.send_date).split(' ')[0]
+        const utcDateTimeStr = convertUTCDate(getYMD, form.value.send_time)
 
         let params = {
           ...form.value,
@@ -269,18 +270,28 @@ async function saveForm() {
                   <thead>
                     <tr>
                       <th scope="col">
-                        <h2 class="text-primary">Title</h2>
+                        <h2 class="text-primary">
+                          Title
+                        </h2>
                       </th>
                       <th scope="col">
-                        <h2 class="text-primary">Created Date</h2>
+                        <h2 class="text-primary">
+                          Created Date
+                        </h2>
                       </th>              
                       <th scope="col">
-                        <h2 class="text-primary">Action</h2>
+                        <h2 class="text-primary">
+                          Action
+                        </h2>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(campaign, index) in paginatedCampaigns" :key="campaign.id" @click="handleItemClick(index + (currentPage - 1) * pageSize)">
+                    <tr
+                      v-for="(campaign, index) in paginatedCampaigns"
+                      :key="campaign.id"
+                      @click="handleItemClick(index + (currentPage - 1) * pageSize)"
+                    >
                       <td>{{ campaign.title }}</td>
                       <td>{{ new Date(campaign.created_at).toLocaleDateString() }}</td>
                       <td>
@@ -301,30 +312,36 @@ async function saveForm() {
                   </tbody>
                 </VTable>
                 <!-- Pagination Controls -->
-                <v-row class="mt-4" justify="end" align="center">
-                  <v-col class="d-flex justify-end align-center" cols="auto">
-
-                    <v-btn
+                <VRow
+                  class="mt-4"
+                  justify="end"
+                  align="center"
+                >
+                  <VCol
+                    class="d-flex justify-end align-center"
+                    cols="auto"
+                  >
+                    <VBtn
                       variant="outlined"
                       size="small"
                       :disabled="currentPage === 1"
-                      @click="prevPage"
                       class="me-2"
+                      @click="prevPage"
                     >
                       Previous
-                    </v-btn>
+                    </VBtn>
                     <span class="me-3">Page {{ currentPage }} of {{ totalPages }}</span>
 
-                    <v-btn
+                    <VBtn
                       variant="outlined"
                       size="small"
                       :disabled="currentPage === totalPages"
                       @click="nextPage"
                     >
                       Next
-                    </v-btn>
-                  </v-col>
-                </v-row>
+                    </VBtn>
+                  </VCol>
+                </VRow>
               </VCol>
             </VRow>
             <ConfirmDialog

@@ -43,7 +43,10 @@ const closeDialog = () => emit('update:modelValue', false)
           No webhooks are attached to this payment.
         </VAlert>
 
-        <div v-else class="webhook-list">
+        <div
+          v-else
+          class="webhook-list"
+        >
           <div
             v-for="hook in webhooks"
             :key="hook.id"
@@ -78,7 +81,10 @@ const closeDialog = () => emit('update:modelValue', false)
       <VDivider />
 
       <VCardActions class="justify-end pa-4">
-        <VBtn variant="text" @click="closeDialog">
+        <VBtn
+          variant="text"
+          @click="closeDialog"
+        >
           Close
         </VBtn>
       </VCardActions>

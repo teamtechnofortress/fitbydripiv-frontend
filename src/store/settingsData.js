@@ -7,6 +7,7 @@ import {
 } from "@/network/const"
 import { defineStore } from "pinia"
 import { useToast } from 'vue-toastification'
+
 const toast = useToast()
 export const useSettingsStore = defineStore('settingsData', {
   state: () => ({
@@ -43,31 +44,31 @@ export const useSettingsStore = defineStore('settingsData', {
       })
     },    
     async getBankingData(params) {
-        //
-        this.error = null;
-        this.loading = true;
-        this.bankingData = {};        
-        try {
-          const response = await new Promise((resolve, reject) => {
-            getRequest(GET_BANKING_URL, {}, params, res => {
-              if (res.data.success) resolve(res)
-              else reject(res)
-            })
+      //
+      this.error = null
+      this.loading = true
+      this.bankingData = {}        
+      try {
+        const response = await new Promise((resolve, reject) => {
+          getRequest(GET_BANKING_URL, {}, params, res => {
+            if (res.data.success) resolve(res)
+            else reject(res)
           })
+        })
   
-          const data = response.data.data
+        const data = response.data.data
   
-          this.bankingData = data.bankingData
-          this.error = null
-        } catch (err) {
-          let err_msg = err.data?.err_msg || 'Unknown error'
-          this.error = {
-            code: "Get Banking Data Failed",
-            message: err_msg,
-          }
-        } finally {
-          this.loading = false
-        }        
+        this.bankingData = data.bankingData
+        this.error = null
+      } catch (err) {
+        let err_msg = err.data?.err_msg || 'Unknown error'
+        this.error = {
+          code: "Get Banking Data Failed",
+          message: err_msg,
+        }
+      } finally {
+        this.loading = false
+      }        
     }, 
     async saveBusinessHours(params) {
       //
@@ -96,31 +97,31 @@ export const useSettingsStore = defineStore('settingsData', {
       })
     },    
     async getBusinessHours(params) {
-        //
-        this.error = null;
-        this.loading = true;
-        this.businessHours = {};        
-        try {
-          const response = await new Promise((resolve, reject) => {
-            getRequest(GET_BUSINESS_HOURS_URL, {}, params, res => {
-              if (res.data.success) resolve(res)
-              else reject(res)
-            })
+      //
+      this.error = null
+      this.loading = true
+      this.businessHours = {}        
+      try {
+        const response = await new Promise((resolve, reject) => {
+          getRequest(GET_BUSINESS_HOURS_URL, {}, params, res => {
+            if (res.data.success) resolve(res)
+            else reject(res)
           })
+        })
   
-          const data = response.data.data
+        const data = response.data.data
   
-          this.businessHours = data.businessHours
-          this.error = null
-        } catch (err) {
-          let err_msg = err.data?.err_msg || 'Unknown error'
-          this.error = {
-            code: "Get businessHours Failed",
-            message: err_msg,
-          }
-        } finally {
-          this.loading = false
-        }        
+        this.businessHours = data.businessHours
+        this.error = null
+      } catch (err) {
+        let err_msg = err.data?.err_msg || 'Unknown error'
+        this.error = {
+          code: "Get businessHours Failed",
+          message: err_msg,
+        }
+      } finally {
+        this.loading = false
+      }        
     }, 
   },
 })

@@ -13,6 +13,7 @@ const props = defineProps({
 const router = useRouter()
 const button = computed(() => props.section.content?.button || {})
 const headline = computed(() => props.section.content?.headline || props.section.title || 'Personalized Telehealth Consultations')
+
 const description = computed(() => (
   props.section.content?.description
   || props.section.subtitle
@@ -33,7 +34,10 @@ const navigate = path => {
       <p class="text-base text-gray-700 mb-6 max-w-2xl mx-auto">
         {{ description }}
       </p>
-      <button class="btn-secondary" @click="navigate(button.link)">
+      <button
+        class="btn-secondary"
+        @click="navigate(button.link)"
+      >
         {{ button.label || 'Learn More' }}
       </button>
     </div>

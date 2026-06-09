@@ -46,26 +46,34 @@ const navigate = path => {
       class="absolute inset-0 w-full h-full object-cover opacity-75"
       :poster="background.poster"
     >
-      <source :src="background.url" type="video/mp4">
+      <source
+        :src="background.url"
+        type="video/mp4"
+      >
     </video>
     <div
       v-else-if="backgroundImageStyle"
       class="absolute inset-0 bg-cover bg-center bg-no-repeat"
       :style="backgroundImageStyle"
     />
-    <div v-else class="absolute inset-0 bg-gray-800" />
+    <div
+      v-else
+      class="absolute inset-0 bg-gray-800"
+    />
     <div
       class="absolute inset-0"
       style="background: linear-gradient(to bottom, rgba(17,24,39,0.4), rgba(17,24,39,0.25), rgba(17,24,39,0.4));"
     />
 
     <div class="max-w-5xl mx-auto text-center relative z-10">
-      <!-- <div
+      <!--
+        <div
         v-if="eyebrow"
         class="inline-flex px-4 py-2 rounded-full border border-white/25 bg-white/10 text-xs font-semibold uppercase tracking-[0.14em] text-white mb-5"
-      >
+        >
         {{ eyebrow }}
-      </div> -->
+        </div> 
+      -->
 
       <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 min-h-[120px] md:min-h-[100px] flex flex-wrap justify-center items-center gap-x-3 gap-y-2 text-stroke">
         <span
@@ -76,11 +84,17 @@ const navigate = path => {
         >{{ word }}</span>
       </h1>
 
-      <p v-if="content.description" class="text-lg text-white/95 mb-6 max-w-3xl mx-auto text-stroke-light">
+      <p
+        v-if="content.description"
+        class="text-lg text-white/95 mb-6 max-w-3xl mx-auto text-stroke-light"
+      >
         {{ content.description }}
       </p>
 
-      <button class="btn-primary" @click="navigate(cta.link)">
+      <button
+        class="btn-primary"
+        @click="navigate(cta.link)"
+      >
         {{ cta.label || 'Start my journey' }}
       </button>
     </div>

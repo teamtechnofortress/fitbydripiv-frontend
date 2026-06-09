@@ -2,26 +2,58 @@
   <div class="patient-type-stage">
     <div class="stage-card">
       <div class="stage-header">
-        <h2 class="stage-title">Are you an existing or new patient?</h2>
-        <p class="stage-desc">This helps us retrieve your previous information or set up your profile.</p>
+        <h2 class="stage-title">
+          Are you an existing or new patient?
+        </h2>
+        <p class="stage-desc">
+          This helps us retrieve your previous information or set up your profile.
+        </p>
       </div>
 
       <div class="patient-choice-grid">
-        <button class="patient-choice-btn" @click="$emit('selectExisting')">
+        <button
+          class="patient-choice-btn"
+          @click="$emit('selectExisting')"
+        >
           <div class="choice-icon existing">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/>
-              <path d="M16 11h6M19 8v6" stroke-width="1.5" stroke-linecap="round"/>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+              <path
+                d="M16 11h6M19 8v6"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
           </div>
           <h3>Returning Patient</h3>
           <p>We have your records on file</p>
         </button>
 
-        <button class="patient-choice-btn" @click="$emit('selectNew')">
+        <button
+          class="patient-choice-btn"
+          @click="$emit('selectNew')"
+        >
           <div class="choice-icon new">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M16 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM12 7v6m3-3h-6" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path
+                d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M16 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM12 7v6m3-3h-6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </div>
           <h3>New Patient</h3>

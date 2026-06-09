@@ -17,11 +17,13 @@ const getSignedUrlFromQuery = () => {
   if (Array.isArray(queryValue)) {
     return queryValue[0]
   }
+  
   return queryValue || ''
 }
 
 const runVerification = async () => {
   const signedUrl = getSignedUrlFromQuery()
+
   devLog('Email verification extracted signed URL', { signedUrl, query: route.query })
 
   if (!signedUrl) {
@@ -29,12 +31,15 @@ const runVerification = async () => {
     success.value = false
     loading.value = false
     devLog('Email verification missing signed URL', { query: route.query })
+    
     return
   }
 
   try {
     devLog('Email verification request start', { signedUrl })
+
     const response = await verifyEmailRequest(signedUrl)
+
     devLog('Email verification request success', { response })
     success.value = true
     statusMessage.value = response?.message || 'Verification complete. You can now log in.'
@@ -50,7 +55,7 @@ const runVerification = async () => {
     errorMessage.value = 'An error occurred while verifying your email. Please try again later.'
   } finally {
     loading.value = false
-    }
+  }
 }
 
 const goToLogin = () => {
@@ -67,26 +72,56 @@ onMounted(() => {
 
 <template>
   <div class="verify-container">
-    <div v-if="loading" class="card loading">
+    <div
+      v-if="loading"
+      class="card loading"
+    >
       <div class="spinner" />
-      <p class="title loading-title">Verifying your email...</p>
-      <p class="loading-text">Please wait while we confirm your request.</p>
+      <p class="title loading-title">
+        Verifying your email...
+      </p>
+      <p class="loading-text">
+        Please wait while we confirm your request.
+      </p>
     </div>
 
-    <div v-else-if="success" class="card success">
-      <div class="status-icon">✓</div>
-      <p class="title">Verification complete</p>
-      <p class="status-message success-text">{{ statusMessage }}</p>
-      <button class="primary" @click="goToLogin">
+    <div
+      v-else-if="success"
+      class="card success"
+    >
+      <div class="status-icon">
+        ✓
+      </div>
+      <p class="title">
+        Verification complete
+      </p>
+      <p class="status-message success-text">
+        {{ statusMessage }}
+      </p>
+      <button
+        class="primary"
+        @click="goToLogin"
+      >
         Go to login
       </button>
     </div>
 
-    <div v-else class="card error">
-      <div class="status-icon">!</div>
-      <p class="title">Verification failed</p>
-      <p class="status-message error-text">{{ errorMessage }}</p>
-      <p class="small-text">Please try again later.</p>
+    <div
+      v-else
+      class="card error"
+    >
+      <div class="status-icon">
+        !
+      </div>
+      <p class="title">
+        Verification failed
+      </p>
+      <p class="status-message error-text">
+        {{ errorMessage }}
+      </p>
+      <p class="small-text">
+        Please try again later.
+      </p>
     </div>
   </div>
 </template>
@@ -245,5 +280,4 @@ onMounted(() => {
     transform: rotate(360deg);
   }
 }
-
 </style>

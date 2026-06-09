@@ -17,8 +17,15 @@ const isAccordion = computed(() => props.section.content?.layout !== 'list')
   <section class="py-12 px-4 border-t border-gray-200">
     <div class="max-w-4xl mx-auto">
       <div class="text-center mb-8">
-        <h2 class="section-title">{{ heading }}</h2>
-        <p v-if="description" class="text-sm text-gray-600 mt-2">{{ description }}</p>
+        <h2 class="section-title">
+          {{ heading }}
+        </h2>
+        <p
+          v-if="description"
+          class="text-sm text-gray-600 mt-2"
+        >
+          {{ description }}
+        </p>
       </div>
 
       <div class="grid gap-4">
@@ -39,8 +46,12 @@ const isAccordion = computed(() => props.section.content?.layout !== 'list')
           </template>
 
           <template v-else>
-            <h3 class="text-base font-semibold text-gray-900">{{ faq.question }}</h3>
-            <p class="text-sm text-gray-600 leading-7 mt-3">{{ faq.answer }}</p>
+            <h3 class="text-base font-semibold text-gray-900">
+              {{ faq.question }}
+            </h3>
+            <p class="text-sm text-gray-600 leading-7 mt-3">
+              {{ faq.answer }}
+            </p>
           </template>
         </article>
       </div>

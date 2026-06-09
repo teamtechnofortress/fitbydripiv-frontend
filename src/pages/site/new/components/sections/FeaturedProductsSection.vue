@@ -20,6 +20,7 @@ const canScrollLeft = ref(false)
 const canScrollRight = ref(true)
 
 const products = computed(() => (props.section.products || []).slice(0, props.section.content?.limit || 6))
+
 const navigate = path => {
   const target = normalizePublicSitePath(path)
   if (!target) return
@@ -29,6 +30,7 @@ const navigate = path => {
 
 const getProductPath = product => {
   if (product?.slug) return `/product/${product.slug}`
+  
   return '/products/select'
 }
 
@@ -36,6 +38,7 @@ const checkScrollButtons = () => {
   if (!scrollContainer.value) return
 
   const { scrollLeft, scrollWidth, clientWidth } = scrollContainer.value
+
   canScrollLeft.value = scrollLeft > 0
   canScrollRight.value = scrollLeft < scrollWidth - clientWidth - 10
 }
@@ -63,24 +66,50 @@ onMounted(async () => {
 <template>
   <section class="py-12 px-4 border-t border-gray-200 bg-gray-50">
     <div class="max-w-7xl mx-auto">
-      <div v-if="loading && !products.length" class="min-h-[240px] flex items-center justify-center text-sm text-gray-500">
+      <div
+        v-if="loading && !products.length"
+        class="min-h-[240px] flex items-center justify-center text-sm text-gray-500"
+      >
         Loading featured products...
       </div>
 
-      <div v-else-if="products.length > 0" class="relative group">
+      <div
+        v-else-if="products.length > 0"
+        class="relative group"
+      >
         <button
           v-if="canScrollLeft"
           class="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-100 transition-all"
           @click="scroll('left')"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1f2937"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><polyline points="15 18 9 12 15 6" /></svg>
         </button>
         <button
           v-if="canScrollRight"
           class="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-100 transition-all"
           @click="scroll('right')"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1f2937"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><polyline points="9 18 15 12 9 6" /></svg>
         </button>
 
         <div
@@ -114,7 +143,10 @@ onMounted(async () => {
                     :alt="product.name"
                     class="w-full h-full object-contain group-hover/card:scale-105 transition-transform duration-300"
                   >
-                  <div v-else class="w-full h-full flex items-center justify-center">
+                  <div
+                    v-else
+                    class="w-full h-full flex items-center justify-center"
+                  >
                     <div class="w-24 h-24 bg-white rounded-full border border-gray-200 flex items-center justify-center">
                       <span class="text-5xl font-bold text-blue-600">{{ product.name?.charAt(0) }}</span>
                     </div>
@@ -126,7 +158,10 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div v-else class="text-center text-sm text-gray-500">
+      <div
+        v-else
+        class="text-center text-sm text-gray-500"
+      >
         No featured products available right now.
       </div>
     </div>

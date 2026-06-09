@@ -14,6 +14,7 @@ const router = useRouter()
 
 const limitedProducts = computed(() => {
   const limit = Number(props.section.content?.limit || 12)
+  
   return (props.section.products || []).slice(0, limit)
 })
 
@@ -26,6 +27,7 @@ const navigate = path => {
 
 const getProductPath = product => {
   if (product?.slug) return `/product/${product.slug}`
+  
   return '/products/select'
 }
 </script>
@@ -33,7 +35,10 @@ const getProductPath = product => {
 <template>
   <section class="py-12 px-4 border-t border-gray-200 bg-gray-50">
     <div class="max-w-6xl mx-auto">
-      <div v-if="limitedProducts.length > 0" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        v-if="limitedProducts.length > 0"
+        class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
         <article
           v-for="product in limitedProducts"
           :key="product.id"
@@ -48,7 +53,10 @@ const getProductPath = product => {
               class="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
               loading="lazy"
             >
-            <div v-else class="w-full h-full flex items-center justify-center">
+            <div
+              v-else
+              class="w-full h-full flex items-center justify-center"
+            >
               <div class="w-20 h-20 bg-white rounded-full border border-gray-200 flex items-center justify-center">
                 <span class="text-3xl font-bold text-blue-600">{{ product.name?.charAt(0) }}</span>
               </div>
@@ -56,7 +64,9 @@ const getProductPath = product => {
           </div>
 
           <div class="p-5">
-            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ product.name }}</h3>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">
+              {{ product.name }}
+            </h3>
             <p class="text-sm text-gray-600 line-clamp-3 mb-4">
               {{ product.short_description || product.description }}
             </p>
@@ -67,7 +77,10 @@ const getProductPath = product => {
         </article>
       </div>
 
-      <div v-else class="text-center text-sm text-gray-500 py-10">
+      <div
+        v-else
+        class="text-center text-sm text-gray-500 py-10"
+      >
         Products coming soon. Check back later!
       </div>
     </div>

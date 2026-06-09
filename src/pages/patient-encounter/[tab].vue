@@ -1,9 +1,9 @@
 <script setup>
-import Appointment from '@/views/pages/patient-encounter-view/appointment.vue';
-import Encounter from '@/views/pages/patient-encounter-view/encounter.vue';
-import Payment from '@/views/pages/patient-encounter-view/payment.vue';
-import VisitView from '@/views/pages/patient-encounter-view/visit-view.vue';
-import { useRoute } from 'vue-router';
+import Appointment from '@/views/pages/patient-encounter-view/appointment.vue'
+import Encounter from '@/views/pages/patient-encounter-view/encounter.vue'
+import Payment from '@/views/pages/patient-encounter-view/payment.vue'
+import VisitView from '@/views/pages/patient-encounter-view/visit-view.vue'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const activeTab = ref(route.params.tab)
@@ -46,7 +46,11 @@ const tabs = [
         :value="item.tab"
         :to="{ name: 'patient-encounter-tab', params: { tab: item.tab } }"
       >
-        <VIcon size="20" start :icon="item.icon"/>
+        <VIcon
+          size="20"
+          start
+          :icon="item.icon"
+        />
         {{ item.title }}
       </VTab>
     </VTabs>

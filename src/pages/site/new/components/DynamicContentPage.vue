@@ -64,16 +64,17 @@ const logResolvedPage = (requestedSlug, sourceLabel, payload) => {
   })
 }
 
-const getSlugCandidates = (slug) => {
+const getSlugCandidates = slug => {
   const normalized = String(slug || '').trim().replace(/^\/+|\/+$/g, '')
   if (!normalized)
     return []
 
   const encoded = encodeURIComponent(normalized)
+  
   return encoded === normalized ? [normalized] : [normalized, encoded]
 }
 
-const getRequestedSlug = (slug) => {
+const getRequestedSlug = slug => {
   const normalizedSlug = String(slug || '').trim().replace(/^\/+|\/+$/g, '')
   const pathSlug = String(route.path || '').trim().replace(/^\/+|\/+$/g, '')
 
@@ -112,6 +113,7 @@ const loadPage = async slug => {
     for (const candidate of candidates) {
       try {
         const response = await axios.get(getContentPageUrl(candidate))
+
         page.value = response?.data?.data || null
         loaded = true
         logResolvedPage(requestedSlug, candidate === requestedSlug ? 'page' : 'page-encoded-slug', page.value)
@@ -126,6 +128,7 @@ const loadPage = async slug => {
   } catch (err) {
     try {
       const fallbackResponse = await axios.get(getContentPageUrl('category-template'))
+
       page.value = fallbackResponse?.data?.data || null
       logResolvedPage(requestedSlug, 'category-template-fallback', page.value)
     } catch (fallbackError) {
@@ -148,12 +151,18 @@ watch(() => props.slug, slug => {
 </script>
 
 <template>
-  <div v-if="loading" class="landing-status">
+  <div
+    v-if="loading"
+    class="landing-status"
+  >
     <div class="landing-status__spinner" />
     <!-- <p>Loading page content...</p> -->
   </div>
 
-  <div v-else-if="error" class="landing-status landing-status--error">
+  <div
+    v-else-if="error"
+    class="landing-status landing-status--error"
+  >
     <h2>Unable to load page</h2>
     <p>{{ error }}</p>
   </div>

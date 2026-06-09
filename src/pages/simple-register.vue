@@ -23,6 +23,7 @@ const authThemeImg = useGenerateImageVariant(
   authV2LoginIllustrationBorderedDark,
   true,
 )
+
 const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 
 const router = useRouter()
@@ -66,12 +67,14 @@ watch(loggedInUser, val => {
       // localStorage might be unavailable; ignore
     }
     const redirectTo = pendingRedirect.value
+
     const navigate = () => {
       if (redirectTo)
         router.replace(redirectTo)
       else
         router.push({ name: 'lobby' })
     }
+
     setTimeout(navigate, 600)
   }
 })
@@ -210,7 +213,6 @@ watch(error, value => {
         </VCardText>
       </VCard>
     </VCol>
-
   </VRow>
 </template>
 

@@ -38,12 +38,15 @@ const authHeaders = computed(() => ({
 
 // ── Data ────────────────────────────────────────────────
 const loadOrder = async () => {
-  if (!orderId.value) { error.value = 'Missing order ID.'; return }
+  if (!orderId.value) { error.value = 'Missing order ID.' 
+
+    return }
   loading.value = true
   error.value   = ''
   order.value   = null
   try {
     const { data } = await axios.get(getAdminOrderDetailUrl(orderId.value), { headers: authHeaders.value })
+
     order.value = data
   } catch (err) {
     error.value = err?.response?.data?.message || 'Failed to load order details.'
@@ -66,6 +69,7 @@ const viewWebhookPayload = async (webhookId, parentLabel = 'View order') => {
   webhookParentLabel.value = parentLabel
   try {
     const { data } = await axios.get(getAdminWebhookDetailUrl(webhookId), { headers: authHeaders.value })
+
     selectedWebhook.value = data
   } catch (err) {
     webhookError.value = err?.response?.data?.message || 'Failed to load webhook payload.'
@@ -88,48 +92,85 @@ watch(() => route.params.id, loadOrder)
 <template>
   <div class="detail-page">
     <div class="detail-shell">
-
       <!-- ── Back bar ──────────────────────────────────── -->
       <div class="hero-bar">
-        <button class="back-btn" @click="goBack">
+        <button
+          class="back-btn"
+          @click="goBack"
+        >
           <span class="mdi mdi-arrow-left" />
           Back to Payments
         </button>
       </div>
 
       <!-- ── Loading ──────────────────────────────────── -->
-      <div v-if="loading" class="state-card">
-        <VProgressCircular indeterminate color="primary" :size="52" :width="5" />
+      <div
+        v-if="loading"
+        class="state-card"
+      >
+        <VProgressCircular
+          indeterminate
+          color="primary"
+          :size="52"
+          :width="5"
+        />
         <h2>Loading order…</h2>
         <p>Fetching the latest order, payment, and webhook details.</p>
       </div>
 
       <!-- ── Error ──────────────────────────────────── -->
-      <div v-else-if="error" class="state-card">
-        <VAlert type="error" variant="tonal">{{ error }}</VAlert>
-        <VBtn color="primary" @click="loadOrder">Retry</VBtn>
+      <div
+        v-else-if="error"
+        class="state-card"
+      >
+        <VAlert
+          type="error"
+          variant="tonal"
+        >
+          {{ error }}
+        </VAlert>
+        <VBtn
+          color="primary"
+          @click="loadOrder"
+        >
+          Retry
+        </VBtn>
       </div>
 
       <!-- ── Content ──────────────────────────────────── -->
       <template v-else-if="order">
-
         <!-- Hero card -->
         <div class="hero-card">
           <div class="hero-copy">
-            <p class="eyebrow">Admin · Order</p>
-            <h1 class="hero-uuid">{{ order.order_uuid }}</h1>
+            <p class="eyebrow">
+              Admin · Order
+            </p>
+            <h1 class="hero-uuid">
+              {{ order.order_uuid }}
+            </h1>
             <p class="hero-sub">
               Order #{{ order.id }} — {{ order.product?.name || 'Unknown product' }}
               placed by {{ order.patient?.name || 'Unknown patient' }}
             </p>
             <div class="chip-row">
-              <VChip :color="statusColor(order.status)" variant="flat" size="small">
+              <VChip
+                :color="statusColor(order.status)"
+                variant="flat"
+                size="small"
+              >
                 {{ prettyLabel(order.status) }}
               </VChip>
-              <VChip :color="statusColor(order.payment_status)" variant="tonal" size="small">
+              <VChip
+                :color="statusColor(order.payment_status)"
+                variant="tonal"
+                size="small"
+              >
                 {{ prettyLabel(order.payment_status) }}
               </VChip>
-              <VChip variant="outlined" size="small">
+              <VChip
+                variant="outlined"
+                size="small"
+              >
                 {{ prettyLabel(order.purchase_type) }}
               </VChip>
             </div>
@@ -211,13 +252,19 @@ watch(() => route.params.id, loadOrder)
         </div>
 
         <!-- Linked subscription -->
-        <div v-if="order.subscription" class="detail-card accent-card">
+        <div
+          v-if="order.subscription"
+          class="detail-card accent-card"
+        >
           <div class="card-head">
             <div class="card-head-left">
               <span class="mdi mdi-calendar-sync-outline card-icon" />
               <h3>Linked Subscription</h3>
             </div>
-            <button class="outline-btn" @click="openSubscription(order.subscription.id)">
+            <button
+              class="outline-btn"
+              @click="openSubscription(order.subscription.id)"
+            >
               <span class="mdi mdi-open-in-new" />
               Open subscription
             </button>
@@ -225,7 +272,11 @@ watch(() => route.params.id, loadOrder)
           <div class="info-grid">
             <div class="info-item">
               <span class="info-label">Status</span>
-              <VChip :color="statusColor(order.subscription.status)" variant="tonal" size="small">
+              <VChip
+                :color="statusColor(order.subscription.status)"
+                variant="tonal"
+                size="small"
+              >
                 {{ prettyLabel(order.subscription.status) }}
               </VChip>
             </div>
@@ -267,8 +318,15 @@ watch(() => route.params.id, loadOrder)
               <span class="count-badge">{{ order.payments?.length || 0 }}</span>
             </div>
           </div>
-          <div v-if="order.payments?.length" class="timeline">
-            <div v-for="payment in order.payments" :key="payment.id" class="timeline-item">
+          <div
+            v-if="order.payments?.length"
+            class="timeline"
+          >
+            <div
+              v-for="payment in order.payments"
+              :key="payment.id"
+              class="timeline-item"
+            >
               <div class="timeline-row">
                 <div class="timeline-left">
                   <div class="timeline-dot" />
@@ -279,7 +337,11 @@ watch(() => route.params.id, loadOrder)
                   </div>
                 </div>
                 <div class="timeline-actions">
-                  <VChip :color="statusColor(payment.status)" variant="flat" size="small">
+                  <VChip
+                    :color="statusColor(payment.status)"
+                    variant="flat"
+                    size="small"
+                  >
                     {{ prettyLabel(payment.status) }}
                   </VChip>
                   <button
@@ -295,7 +357,10 @@ watch(() => route.params.id, loadOrder)
               </div>
 
               <!-- Inline webhook summary (status only, no payload) -->
-              <div v-if="payment.webhooks?.length" class="webhook-summary">
+              <div
+                v-if="payment.webhooks?.length"
+                class="webhook-summary"
+              >
                 <div
                   v-for="hook in payment.webhooks"
                   :key="hook.id"
@@ -313,7 +378,12 @@ watch(() => route.params.id, loadOrder)
               </div>
             </div>
           </div>
-          <p v-else class="empty-msg">No payments recorded for this order.</p>
+          <p
+            v-else
+            class="empty-msg"
+          >
+            No payments recorded for this order.
+          </p>
         </div>
 
         <!-- Order webhooks -->
@@ -325,7 +395,10 @@ watch(() => route.params.id, loadOrder)
               <span class="count-badge">{{ order.webhooks?.length || 0 }}</span>
             </div>
           </div>
-          <div v-if="order.webhooks?.length" class="webhook-table">
+          <div
+            v-if="order.webhooks?.length"
+            class="webhook-table"
+          >
             <div
               v-for="hook in order.webhooks"
               :key="hook.id"
@@ -337,25 +410,39 @@ watch(() => route.params.id, loadOrder)
                   <strong>{{ hook.event_type }}</strong>
                   <span class="webhook-stripe-id">{{ hook.stripe_event_id || '—' }}</span>
                   <span class="webhook-meta">Created {{ formatDateTime(hook.created_at) }}</span>
-                  <span v-if="hook.processed_at" class="webhook-meta">
+                  <span
+                    v-if="hook.processed_at"
+                    class="webhook-meta"
+                  >
                     Processed {{ formatDateTime(hook.processed_at) }}
                   </span>
                 </div>
               </div>
               <div class="webhook-actions">
-                <VChip :color="hook.processed ? 'success' : 'warning'" variant="tonal" size="x-small">
+                <VChip
+                  :color="hook.processed ? 'success' : 'warning'"
+                  variant="tonal"
+                  size="x-small"
+                >
                   {{ hook.processed ? 'Processed' : 'Pending' }}
                 </VChip>
-                <button class="payload-btn" @click="viewWebhookPayload(hook.id, 'View order')">
+                <button
+                  class="payload-btn"
+                  @click="viewWebhookPayload(hook.id, 'View order')"
+                >
                   <span class="mdi mdi-code-json" />
                   View payload
                 </button>
               </div>
             </div>
           </div>
-          <p v-else class="empty-msg">No order-level webhooks available.</p>
+          <p
+            v-else
+            class="empty-msg"
+          >
+            No order-level webhooks available.
+          </p>
         </div>
-
       </template>
     </div>
 

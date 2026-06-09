@@ -1,11 +1,11 @@
 <script setup>
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import { initialAbility } from '@/plugins/casl/ability';
-import { useAppAbility } from '@/plugins/casl/useAppAbility';
-import ResetPass from '@/views/pages/settings/reset-pass.vue';
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import { initialAbility } from '@/plugins/casl/ability'
+import { useAppAbility } from '@/plugins/casl/useAppAbility'
+import ResetPass from '@/views/pages/settings/reset-pass.vue'
 import { computed, onMounted, ref, onUnmounted } from 'vue'
-import { useToast } from 'vue-toastification';
+import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -15,29 +15,38 @@ const toast = useToast()
 const EMAIL_PROMPT_STORAGE_KEY = 'pendingEmailVerificationPrompt'
 const showResetPassDialog = ref(false)
 const twoFactorLoading = ref(false)
+
 const twoFactorStatus = ref({
   enabled: !!userData.value?.two_factor_confirmed_at,
   confirmed_at: userData.value?.two_factor_confirmed_at || null,
 })
+
 const twoFactorEnabled = computed(() => !!twoFactorStatus.value?.enabled)
 const emailLoading = ref(false)
+
 const emailStatus = ref({
   email: userData.value?.email,
   email_verified: !!userData.value?.email_verified_at,
   email_verified_at: userData.value?.email_verified_at || null,
 })
+
 const emailVerified = computed(() => !!emailStatus.value?.email_verified)
 const profileStep = computed(() => userData.value?.profile_step ?? null)
 const profileCompleted = computed(() => !!userData.value?.profile_completed_at)
+
 const profileStepLabel = computed(() => {
   if (profileCompleted.value) return 'Profile complete'
   if (profileStep.value) return `Profile step ${profileStep.value}/5`
+  
   return 'Complete profile'
 })
+
 const profileStatusChip = computed(() => {
   if (profileCompleted.value) return 'Complete'
+  
   return profileStep.value ? `Step ${profileStep.value}` : 'In progress'
 })
+
 const showEmailVerifyDialog = ref(false)
 const showProfilePromptDialog = ref(false)
 const profilePromptTimer = ref(null)
@@ -63,6 +72,7 @@ const fetchTwoFactorStatus = () => {
   twoFactorLoading.value = true
   Network.getRequest(Const.GET_TWO_FACTOR_STATUS_URL, {}, {}, response => {
     twoFactorLoading.value = false
+
     const payload = response?.data?.data ?? response?.data ?? {}
     if (payload) {
       twoFactorStatus.value = {
@@ -77,6 +87,7 @@ const fetchEmailStatus = () => {
   emailLoading.value = true
   Network.getRequest(Const.GET_EMAIL_STATUS_URL, {}, {}, response => {
     emailLoading.value = false
+
     const payload = response?.data?.data ?? response?.data ?? null
     if (payload) {
       emailStatus.value = {
@@ -109,6 +120,7 @@ const maybePromptForEmailVerification = () => {
   if (emailVerified.value) {
     clearPendingEmailPrompt()
     showEmailVerifyDialog.value = false
+    
     return
   }
   if (hasPendingEmailPrompt()) {
@@ -154,9 +166,11 @@ onMounted(() => {
   const handler = () => {
     fetchTwoFactorStatus()
   }
+
   const emailHandler = () => {
     fetchEmailStatus()
   }
+
   window.addEventListener('two-factor-status-updated', handler)
   window.addEventListener('email-status-updated', emailHandler)
   fetchTwoFactorStatus()
@@ -205,7 +219,11 @@ onMounted(() => {
         transition="slide-y-transition"
         :close-on-content-click="false"
       >
-        <VCard class="profile-menu-card" elevation="10" rounded="lg">
+        <VCard
+          class="profile-menu-card"
+          elevation="10"
+          rounded="lg"
+        >
           <!-- Premium Header with Gradient -->
           <VCardItem class="profile-header pa-4">
             <template #prepend>
@@ -248,13 +266,16 @@ onMounted(() => {
           <VDivider />
 
           <!-- Menu Items with Modern Design -->
-          <VList class="py-2" density="compact">
+          <VList
+            class="py-2"
+            density="compact"
+          >
             <!-- Password Reset -->
             <VListItem
               class="menu-item"
-              @click="showResetPassDialog = true"
               active-color="primary"
               rounded="lg"
+              @click="showResetPassDialog = true"
             >
               <template #prepend>
                 <VIcon
@@ -343,7 +364,10 @@ onMounted(() => {
                     bg-color="info-lighten-4"
                     rounded
                   />
-                  <span v-else class="text-caption text-success">✓ Profile completed</span>
+                  <span
+                    v-else
+                    class="text-caption text-success"
+                  >✓ Profile completed</span>
                 </div>
               </div>
             </VListItem>

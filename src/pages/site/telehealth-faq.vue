@@ -16,7 +16,7 @@ const telehealthFAQs = [
   { question: 'Can I use telehealth if I live in any state?', answer: 'Telehealth regulations vary by state. We are continuously expanding our service areas. During the intake process, we will verify that we can serve patients in your location. If we cannot currently serve your state, we will let you know.' },
 ]
 
-const toggleFAQ = (index) => {
+const toggleFAQ = index => {
   openIndex.value = openIndex.value === index ? null : index
 }
 </script>
@@ -25,15 +25,21 @@ const toggleFAQ = (index) => {
   <div class="min-h-screen pt-20 bg-white">
     <section class="py-8 px-4 border-b border-gray-200 gradient-bg-light">
       <div class="max-w-4xl mx-auto text-center">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Personalized Telehealth Consultations</h1>
-        <p class="text-base text-gray-700">Everything you need to know about our remote healthcare services</p>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">
+          Personalized Telehealth Consultations
+        </h1>
+        <p class="text-base text-gray-700">
+          Everything you need to know about our remote healthcare services
+        </p>
       </div>
     </section>
 
     <section class="py-12 bg-white">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="mb-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-4">How Telehealth Works at FitByShot</h2>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">
+            How Telehealth Works at FitByShot
+          </h2>
           <p class="text-sm text-gray-700 leading-relaxed mb-4">
             Our telehealth process is designed to be simple, secure, and effective. Complete our comprehensive intake form about your health and goals, and our licensed medical professionals will review your information to determine your eligibility for treatment. Once approved, your customized prescription is delivered directly to your door.
           </p>
@@ -43,20 +49,60 @@ const toggleFAQ = (index) => {
         </div>
 
         <div class="space-y-3">
-          <div v-for="(faq, index) in telehealthFAQs" :key="index" class="card">
-            <button class="w-full px-5 py-4 text-left flex items-center justify-between" @click="toggleFAQ(index)">
-              <h3 class="text-base font-semibold text-gray-900 pr-6">{{ faq.question }}</h3>
-              <svg v-if="openIndex === index" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0"><polyline points="18 15 12 9 6 15"/></svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0"><polyline points="6 9 12 15 18 9"/></svg>
+          <div
+            v-for="(faq, index) in telehealthFAQs"
+            :key="index"
+            class="card"
+          >
+            <button
+              class="w-full px-5 py-4 text-left flex items-center justify-between"
+              @click="toggleFAQ(index)"
+            >
+              <h3 class="text-base font-semibold text-gray-900 pr-6">
+                {{ faq.question }}
+              </h3>
+              <svg
+                v-if="openIndex === index"
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#059669"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+class="flex-shrink-0"
+              ><polyline points="18 15 12 9 6 15" /></svg>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#9ca3af"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+class="flex-shrink-0"
+              ><polyline points="6 9 12 15 18 9" /></svg>
             </button>
-            <div v-if="openIndex === index" class="px-5 pb-4 pt-1">
-              <p class="text-sm text-gray-700 leading-relaxed">{{ faq.answer }}</p>
+            <div
+              v-if="openIndex === index"
+              class="px-5 pb-4 pt-1"
+            >
+              <p class="text-sm text-gray-700 leading-relaxed">
+                {{ faq.answer }}
+              </p>
             </div>
           </div>
         </div>
 
         <div class="mt-12 bg-emerald-50 border-2 border-emerald-200 rounded-lg p-6">
-          <h3 class="text-lg font-bold text-gray-900 mb-3">Ready to Get Started?</h3>
+          <h3 class="text-lg font-bold text-gray-900 mb-3">
+            Ready to Get Started?
+          </h3>
           <p class="text-sm text-gray-700 leading-relaxed mb-4">
             Take the first step toward your health and wellness goals. Complete our telehealth intake form, and our medical team will review your information within 0-48 hours to determine your eligibility for treatment.
           </p>

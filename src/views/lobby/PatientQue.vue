@@ -1,30 +1,30 @@
 <script setup>
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import { getHumanDate } from '@/router/utils';
-import QueDialog from "./que-dialog.vue";
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import { getHumanDate } from '@/router/utils'
+import QueDialog from "./que-dialog.vue"
 
 const searchQuery = ref('')
 const rowPerPage = ref(5)
 const currentPage = ref(1)
 const totalPage = ref(1)
 const totalProjects = ref(0)
-const patientQueList = ref([]);
-const isEditQueDialogOpen = ref(false);
-const sltPhysicalExam = ref();
-const sltComplaint = ref();
-const patientFullName = ref("");
+const patientQueList = ref([])
+const isEditQueDialogOpen = ref(false)
+const sltPhysicalExam = ref()
+const sltComplaint = ref()
+const patientFullName = ref("")
 
-const getPatientQue = (value) => {
+const getPatientQue = value => {
   Network.getRequest(Const.GET_PATIENT_QUE, {}, {}, 
-    (response) => {
+    response => {
       if(response.data.success){        
-        patientQueList.value = response.data.data.que;
+        patientQueList.value = response.data.data.que
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
 // 👉 Computing pagination data
@@ -36,18 +36,14 @@ const paginationData = computed(() => {
 })
 
 const patientsQue = computed(()=>{
-  const filtered = patientQueList.value.filter((item) => {
-    return (item.patient.first_name+item.patient.middle_name+item.patient.last_name).toLowerCase().includes(searchQuery.value.toLowerCase());
-  });
-
-  return filtered;
-});
+  return patientQueList.value.filter(item => {
+    return (item.patient.first_name+item.patient.middle_name+item.patient.last_name).toLowerCase().includes(searchQuery.value.toLowerCase())
+  })
+})
 
 onMounted(()=>{
-  getPatientQue();
-});
-
-
+  getPatientQue()
+})
 </script>
 
 <template>
@@ -76,13 +72,48 @@ onMounted(()=>{
       <!-- 👉 Table head -->
       <thead>
         <tr>
-          <th scope="col" class="font-weight-semibold">NAME</th>
-          <th scope="col" class="font-weight-semibold">ARRIVAL TIME</th>
-          <th scope="col" class="font-weight-semibold">SERVICE</th>
-          <th scope="col" class="font-weight-semibold">TEMP</th>
-          <th scope="col" class="font-weight-semibold">BP</th>
-          <th scope="col" class="font-weight-semibold">HEART RATE</th>          
-          <th scope="col" class="font-weight-semibold">Action</th>          
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            NAME
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            ARRIVAL TIME
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            SERVICE
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            TEMP
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            BP
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            HEART RATE
+          </th>          
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            Action
+          </th>          
         </tr>
       </thead>
 
@@ -97,7 +128,10 @@ onMounted(()=>{
           <td>
             <div class="d-flex align-center gap-3">              
               <div>
-                <RouterLink :to="{name: 'patient-chart-tab', params:{tab: 'chart'}, query: {pid: item.patient.id, type: item?.patient?.complaint?.treatment_type}}" class="font-weight-semibold">                  
+                <RouterLink
+                  :to="{name: 'patient-chart-tab', params:{tab: 'chart'}, query: {pid: item.patient.id, type: item?.patient?.complaint?.treatment_type}}"
+                  class="font-weight-semibold"
+                >                  
                   {{ `${item.patient.first_name} ${item.patient.middle_name || ''} ${item.patient.last_name}` }}
                 </RouterLink>
               </div>
@@ -126,7 +160,11 @@ onMounted(()=>{
             {{ item?.patient?.physicalExam?.HR || '--' }}
           </td>
           <td class="text-center">
-            <VIcon v-if="item?.patient.physicalExam" size="18" icon="tabler-edit" color="primary"
+            <VIcon
+              v-if="item?.patient.physicalExam"
+              size="18"
+              icon="tabler-edit"
+              color="primary"
               @click="isEditQueDialogOpen = true; 
                       sltPhysicalExam = item?.patient.physicalExam; 
                       sltComplaint = item?.patient.complaint;
@@ -167,7 +205,12 @@ onMounted(()=>{
     </VCardText>
   <!-- !SECTION -->
   </VCard>
-  <QueDialog v-model="isEditQueDialogOpen" :physicalExamData="sltPhysicalExam" :complaintData="sltComplaint" :patientName="patientFullName"/>
+  <QueDialog
+    v-model="isEditQueDialogOpen"
+    :physical-exam-data="sltPhysicalExam"
+    :complaint-data="sltComplaint"
+    :patient-name="patientFullName"
+  />
 </template>
 
 <style lang="scss">

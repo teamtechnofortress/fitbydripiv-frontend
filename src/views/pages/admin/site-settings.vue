@@ -31,6 +31,7 @@ const pages = ref([])
 const categories = ref([])
 const settingsRows = ref([])
 const layoutRows = ref([])
+
 const footerResearchDraft = reactive({
   title: '',
   article_url: '',
@@ -198,6 +199,7 @@ const socialItemOptions = [
 
 const SOCIAL_ITEM_KEYS = new Set(socialItemOptions.map(item => item.value))
 const FOOTER_SOCIAL_PLATFORM_KEYS = new Set(footerSocialPlatformOptions.map(item => item.value))
+
 const LEGACY_SOCIAL_SETTING_KEYS = {
   facebook: 'facebook_url',
   instagram: 'instagram_url',
@@ -225,6 +227,7 @@ const buildErrorMessage = error => {
     const firstKey = Object.keys(responseData.errors)[0]
     if (firstKey) {
       const entry = responseData.errors[firstKey]
+      
       return Array.isArray(entry) ? entry[0] : entry
     }
   }
@@ -235,6 +238,7 @@ const buildErrorMessage = error => {
 const normalizeRows = body => {
   if (Array.isArray(body?.data)) return body.data
   if (Array.isArray(body?.data?.data)) return body.data.data
+  
   return []
 }
 
@@ -257,9 +261,14 @@ const normalizeLayoutResponse = body => {
 const normalizeSlugValue = value => {
   if (!value) return ''
 
-  const raw = String(value).trim()
+  const rawSource = typeof value === 'object'
+    ? value.value || value.slug || value.path || value.href || value.url || ''
+    : value
+
+  const raw = String(rawSource || '').trim()
   if (!raw) return ''
   if (/^https?:\/\//i.test(raw)) return ''
+  if (/^\[object object\]$/i.test(raw)) return ''
 
   return raw
     .replace(/^\/+/, '')
@@ -286,6 +295,7 @@ const normalizeSelectableItemValue = (source, item) => {
   if (typeof item === 'string') {
     if (source === 'social_links') return normalizeSocialItemValue(item)
     if (source === 'manual') return item.trim()
+    
     return normalizeSlugValue(item)
   }
 
@@ -324,6 +334,7 @@ const pageRows = computed(() => pages.value.slice().sort((a, b) => String(a?.tit
 const categoryOptions = computed(() => categories.value.map(item => ({ title: item.name, value: item.slug })))
 const staticPageOptions = computed(() => pageRows.value.map(item => ({ title: item.title || item.slug, value: item.slug })))
 const settingsByKey = computed(() => Object.fromEntries(settingsRows.value.map(item => [item.key, item])))
+
 const staticPageTitleBySlug = computed(() => Object.fromEntries(
   pageRows.value.map(item => [String(item.slug || '').trim(), item.title || item.slug || '']),
 ))
@@ -334,6 +345,7 @@ const getFilePreviewUrl = value => {
   if (!value) return ''
   if (/^https?:\/\//.test(value)) return value
   if (value.startsWith('/')) return `${SERVER_DOMAIN}${value}`
+  
   return `${SERVER_DOMAIN}/storage/${value.replace(/^\/+/, '')}`
 }
 
@@ -354,6 +366,7 @@ const getLegacySocialSettingValue = platform => {
   if (typeof draftValue === 'string' && draftValue.trim()) return draftValue.trim()
 
   const persistedValue = settingsByKey.value[key]?.value
+  
   return typeof persistedValue === 'string' ? persistedValue.trim() : ''
 }
 
@@ -382,9 +395,15 @@ const normalizeFooterSocialPlatformValue = value => {
 }
 
 const getFooterLinkMode = item => {
-  const href = String(item?.href || '').trim()
+  const href = String(
+    typeof item?.href === 'object'
+      ? item?.href?.href || item?.href?.url || item?.href?.value || item?.href?.path || item?.href?.slug || ''
+      : item?.href || '',
+  ).trim()
+
   if (/^(?:https?:|mailto:|tel:|sms:|\/\/)/i.test(href)) return 'external'
   if (item?.external && href) return 'external'
+  
   return 'internal'
 }
 
@@ -396,6 +415,7 @@ const getFooterLinkLabel = item => {
   if (slug) return slug
 
   const href = String(item?.href || '').trim()
+  
   return href || ''
 }
 
@@ -418,7 +438,15 @@ const normalizeFooterLinkItem = item => {
 
   const mode = getFooterLinkMode(item)
   const slug = mode === 'internal' ? normalizeSlugValue(item.slug || item.href) : ''
-  const href = mode === 'external' ? String(item.href || item.url || '').trim() : ''
+
+  const href = mode === 'external'
+    ? String(
+      typeof item?.href === 'object'
+        ? item?.href?.href || item?.href?.url || item?.href?.value || item?.href?.path || item?.href?.slug || ''
+        : item?.href || item?.url || '',
+    ).trim()
+    : ''
+
   const label = getFooterLinkLabel({ ...item, slug, href })
 
   if (!label) return null
@@ -440,6 +468,7 @@ const normalizeFooterSocialHref = (platform, value) => {
   if (!raw) return ''
 
   if (platform === 'email' && raw.includes('@') && !raw.startsWith('mailto:')) return `mailto:${raw}`
+  
   return raw
 }
 
@@ -455,6 +484,7 @@ const normalizeFooterSocialLinkItem = item => {
   if (!platform) return null
 
   const meta = getFooterSocialPlatformMeta(platform)
+
   const href = normalizeFooterSocialHref(
     platform,
     typeof item === 'string'
@@ -537,16 +567,19 @@ const addFooterCustomLink = column => {
 
   if (!label) {
     toast.error('Link label is required.')
+    
     return
   }
 
   if (mode === 'internal' && !slug) {
     toast.error('Select or enter a site page path.')
+    
     return
   }
 
   if (mode === 'external' && !href) {
     toast.error('External URL is required.')
+    
     return
   }
 
@@ -573,6 +606,7 @@ const moveFooterCustomLink = (column, index, direction) => {
 
   const items = [...column.items]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   column.items = items
 }
@@ -585,6 +619,7 @@ const updateFooterCustomLinkMode = (item, value) => {
     if (!item.href && /^https?:\/\//i.test(String(item.label || '').trim()))
       item.href = String(item.label || '').trim()
     item.external = true
+    
     return
   }
 
@@ -597,18 +632,18 @@ const updateFooterCustomLinkMode = (item, value) => {
 const createHeaderMenuItem = (type = 'group') => (
   type === 'link'
     ? {
-        type: 'link',
-        label: '',
-        slug: '',
-        href: '',
-        external: false,
-      }
+      type: 'link',
+      label: '',
+      slug: '',
+      href: '',
+      external: false,
+    }
     : {
-        type: 'group',
-        label: '',
-        source: 'categories',
-        items: [],
-      }
+      type: 'group',
+      label: '',
+      source: 'categories',
+      items: [],
+    }
 )
 
 const createFooterColumnId = () => (
@@ -618,50 +653,51 @@ const createFooterColumnId = () => (
 
 const toFooterColumnSortOrder = (value, fallback) => {
   const parsed = Number(value)
+  
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback
 }
 
 const createFooterColumn = (source, overrides = {}) => {
   const base = source === 'brand'
     ? {
-        source: 'brand',
-        title: 'FitByShot',
-        items: [],
-      }
+      source: 'brand',
+      title: 'FitByShot',
+      items: [],
+    }
     : source === 'certification'
       ? {
-          source: 'certification',
-          title: 'Certification',
-          items: [
-            {
-              image: '',
-              description: '',
-            },
-          ],
-        }
-    : source === 'social_links'
-      ? {
+        source: 'certification',
+        title: 'Certification',
+        items: [
+          {
+            image: '',
+            description: '',
+          },
+        ],
+      }
+      : source === 'social_links'
+        ? {
           source: 'social_links',
           title: 'Connect',
           items: [],
         }
-    : source === 'research_links'
-      ? {
-          source: 'research_links',
-          title: 'Research & Resources',
-          items: [],
-        }
-    : source === 'manual'
-      ? {
-          source: 'manual',
-          title: 'Helpful Links',
-          items: [],
-        }
-    : {
-        source,
-        title: '',
-        items: [],
-      }
+        : source === 'research_links'
+          ? {
+            source: 'research_links',
+            title: 'Research & Resources',
+            items: [],
+          }
+          : source === 'manual'
+            ? {
+              source: 'manual',
+              title: 'Helpful Links',
+              items: [],
+            }
+            : {
+              source,
+              title: '',
+              items: [],
+            }
 
   return {
     id: createFooterColumnId(),
@@ -708,6 +744,7 @@ const hydrateSettingsForm = rows => {
     .forEach(field => {
       const matchedRow = rows.find(item => item.key === field.key)
       const value = matchedRow?.value || ''
+
       settingsForm[field.key] = value
       settingsInitialValues[field.key] = value
     })
@@ -789,6 +826,7 @@ const fetchPages = async () => {
 const fetchCategories = async () => {
   try {
     const response = await axios.get(CMS_GET_CATEGORIES)
+
     categories.value = normalizeRows(response?.data)
   } catch {
     categories.value = []
@@ -803,7 +841,9 @@ const fetchLayout = async () => {
     })
 
     devLog('Global sections fetch response (admin)', response?.data)
+
     const normalizedLayout = normalizeLayoutResponse(response?.data)
+
     devLog('Global sections normalized payload (admin)', normalizedLayout)
 
     hydrateLayoutForm(normalizedLayout)
@@ -826,6 +866,7 @@ const saveSettings = async () => {
 
   if (!changedFields.length) {
     toast.info('No settings changed.')
+    
     return
   }
 
@@ -862,6 +903,7 @@ const uploadSettingFile = async (files, key) => {
   uploadingSettingKey.value = key
   try {
     const formData = new FormData()
+
     formData.append('file', file)
     formData.append('type', 'misc')
 
@@ -870,6 +912,7 @@ const uploadSettingFile = async (files, key) => {
     })
 
     const payload = response?.data?.data || {}
+
     settingsForm[key] = payload.path || payload.url || ''
     toast.success(`${file.name} uploaded`)
   } catch (error) {
@@ -886,6 +929,7 @@ const uploadFooterColumnAsset = async (files, column, fieldKey) => {
   uploadingLayoutAssetKey.value = `footer.${column.source}.${fieldKey}`
   try {
     const formData = new FormData()
+
     formData.append('file', file)
     formData.append('type', 'misc')
 
@@ -899,6 +943,7 @@ const uploadFooterColumnAsset = async (files, column, fieldKey) => {
     }
 
     const certificationItem = column.items[0]
+
     certificationItem[fieldKey] = payload.path || payload.url || ''
     toast.success(`${file.name} uploaded`)
   } catch (error) {
@@ -917,6 +962,7 @@ const updateHeaderMenuItemSource = (item, source) => {
 
   if (item.source === 'categories') {
     item.items = []
+    
     return
   }
 
@@ -928,6 +974,7 @@ const moveHeaderMenuItem = (index, direction) => {
   if (targetIndex < 0 || targetIndex >= layoutForm.header.config.menu.length) return
   const items = [...layoutForm.header.config.menu]
   const [moved] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, moved)
   layoutForm.header.config.menu = items
 }
@@ -949,12 +996,14 @@ const moveFooterColumn = (index, direction) => {
   if (targetIndex < 0 || targetIndex >= layoutForm.footer.config.columns.length) return
   const columns = [...layoutForm.footer.config.columns]
   const [moved] = columns.splice(index, 1)
+
   columns.splice(targetIndex, 0, moved)
   layoutForm.footer.config.columns = reindexFooterColumns(columns)
 }
 
 const updateFooterColumnSource = (column, source) => {
   const nextColumn = createFooterColumn(source)
+
   column.source = source
 
   if (column.source === 'categories') {
@@ -978,6 +1027,7 @@ const addFooterSocialLink = column => {
 
   if (!href) {
     toast.error('Social link URL is required.')
+    
     return
   }
 
@@ -1008,6 +1058,7 @@ const moveFooterSocialLink = (column, index, direction) => {
 
   const items = [...column.items]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   column.items = items
 }
@@ -1018,6 +1069,7 @@ const addFooterResearchLink = column => {
 
   if (!title || !articleUrl) {
     toast.error('Research title and article URL are required.')
+    
     return
   }
 
@@ -1056,6 +1108,7 @@ const moveFooterResearchLink = (column, index, direction) => {
 
   const items = [...column.items]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   column.items = items
 }
@@ -1076,20 +1129,20 @@ const buildHeaderPayload = () => ({
     menu: layoutForm.header.config.menu.map(item => (
       item.type === 'link'
         ? {
-            type: 'link',
-            label: item.label,
-            slug: item.slug || undefined,
-            href: item.href || undefined,
-            external: !!item.external,
-          }
+          type: 'link',
+          label: item.label,
+          slug: item.slug || undefined,
+          href: item.href || undefined,
+          external: !!item.external,
+        }
         : {
-            type: 'group',
-            label: item.label,
-            source: item.source || 'categories',
-            items: item.source === 'categories'
-              ? []
-              : normalizeSourceItems(item.source || 'categories', item.items),
-          }
+          type: 'group',
+          label: item.label,
+          source: item.source || 'categories',
+          items: item.source === 'categories'
+            ? []
+            : normalizeSourceItems(item.source || 'categories', item.items),
+        }
     )),
   },
 })
@@ -1120,7 +1173,7 @@ const buildFooterPayload = () => ({
         items: column.source === 'categories'
           ? []
           : column.source === 'research_links'
-          ? (Array.isArray(column.items) ? column.items.map((item, index) => ({
+            ? (Array.isArray(column.items) ? column.items.map((item, index) => ({
               title: item.title,
               article_url: item.article_url,
               authors: item.authors || undefined,
@@ -1130,22 +1183,22 @@ const buildFooterPayload = () => ({
               doi: item.doi || undefined,
               display_order: index,
             })) : [])
-          : column.source === 'social_links'
-            ? (Array.isArray(column.items) ? column.items.map(item => serializeFooterSocialLinkItem(item)).filter(Boolean) : [])
-          : column.source === 'certification'
-            ? (() => {
-                const certificationItem = getFooterCertificationItem(column)
+            : column.source === 'social_links'
+              ? (Array.isArray(column.items) ? column.items.map(item => serializeFooterSocialLinkItem(item)).filter(Boolean) : [])
+              : column.source === 'certification'
+                ? (() => {
+                  const certificationItem = getFooterCertificationItem(column)
 
-                return certificationItem.image || certificationItem.description
-                  ? [{
+                  return certificationItem.image || certificationItem.description
+                    ? [{
                       image: certificationItem.image || undefined,
                       description: certificationItem.description || undefined,
                     }]
-                  : []
-              })()
-          : column.source === 'static_pages' || column.source === 'manual'
-            ? (Array.isArray(column.items) ? column.items.map(item => normalizeFooterLinkItem(item)).filter(Boolean) : [])
-          : normalizeSourceItems(column.source, column.items),
+                    : []
+                })()
+                : column.source === 'static_pages' || column.source === 'manual'
+                  ? (Array.isArray(column.items) ? column.items.map(item => normalizeFooterLinkItem(item)).filter(Boolean) : [])
+                  : normalizeSourceItems(column.source, column.items),
       }
     }),
     bottom: {
@@ -1183,11 +1236,13 @@ const openPanel = async action => {
 
   if (action === 'general') {
     await fetchSettings()
+    
     return
   }
 
   if (action === 'pages') {
     await fetchPages()
+    
     return
   }
 
@@ -1200,6 +1255,7 @@ const openPanel = async action => {
 
 const shorten = (value, fallback) => {
   if (!value) return fallback
+  
   return value.length > 120 ? `${value.slice(0, 120)}...` : value
 }
 
@@ -1469,14 +1525,20 @@ const openPageBuilder = page => {
                   Brand
                 </div>
                 <VRow>
-                  <VCol cols="12" md="6">
+                  <VCol
+                    cols="12"
+                    md="6"
+                  >
                     <VTextField
                       v-model="layoutForm.header.config.brand.name"
                       label="Brand Name"
                       variant="outlined"
                     />
                   </VCol>
-                  <VCol cols="12" md="6">
+                  <VCol
+                    cols="12"
+                    md="6"
+                  >
                     <VTextField
                       v-model="layoutForm.header.config.brand.home_url"
                       label="Home URL"
@@ -1492,7 +1554,11 @@ const openPageBuilder = page => {
                     />
                   </VCol>
                   <VCol cols="12">
-                    <VAlert color="info" variant="tonal" class="mb-4">
+                    <VAlert
+                      color="info"
+                      variant="tonal"
+                      class="mb-4"
+                    >
                       Header logo uses the shared logo from General Settings, matching the footer brand behavior.
                     </VAlert>
 
@@ -1551,10 +1617,20 @@ const openPageBuilder = page => {
                     Menu Items
                   </div>
                   <div class="d-flex gap-2 flex-wrap">
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addHeaderMenuItem('group')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addHeaderMenuItem('group')"
+                    >
                       Add Group
                     </VBtn>
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addHeaderMenuItem('link')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addHeaderMenuItem('link')"
+                    >
                       Add Link
                     </VBtn>
                   </div>
@@ -1572,14 +1648,35 @@ const openPageBuilder = page => {
                           Menu Item {{ index + 1 }}
                         </div>
                         <div class="d-flex gap-2">
-                          <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveHeaderMenuItem(index, -1)" />
-                          <VBtn size="small" variant="text" icon="tabler-arrow-down" :disabled="index === layoutForm.header.config.menu.length - 1" @click="moveHeaderMenuItem(index, 1)" />
-                          <VBtn size="small" color="error" variant="text" icon="tabler-trash" @click="removeHeaderMenuItem(index)" />
+                          <VBtn
+                            size="small"
+                            variant="text"
+                            icon="tabler-arrow-up"
+                            :disabled="index === 0"
+                            @click="moveHeaderMenuItem(index, -1)"
+                          />
+                          <VBtn
+                            size="small"
+                            variant="text"
+                            icon="tabler-arrow-down"
+                            :disabled="index === layoutForm.header.config.menu.length - 1"
+                            @click="moveHeaderMenuItem(index, 1)"
+                          />
+                          <VBtn
+                            size="small"
+                            color="error"
+                            variant="text"
+                            icon="tabler-trash"
+                            @click="removeHeaderMenuItem(index)"
+                          />
                         </div>
                       </div>
 
                       <VRow>
-                        <VCol cols="12" md="4">
+                        <VCol
+                          cols="12"
+                          md="4"
+                        >
                           <VSelect
                             v-model="item.type"
                             :items="[
@@ -1590,7 +1687,10 @@ const openPageBuilder = page => {
                             variant="outlined"
                           />
                         </VCol>
-                        <VCol cols="12" md="8">
+                        <VCol
+                          cols="12"
+                          md="8"
+                        >
                           <VTextField
                             v-model="item.label"
                             label="Label"
@@ -1599,7 +1699,10 @@ const openPageBuilder = page => {
                         </VCol>
 
                         <template v-if="item.type === 'group'">
-                          <VCol cols="12" md="4">
+                          <VCol
+                            cols="12"
+                            md="4"
+                          >
                             <VSelect
                               :model-value="item.source"
                               :items="headerGroupSourceOptions"
@@ -1613,7 +1716,10 @@ const openPageBuilder = page => {
                             cols="12"
                             md="8"
                           >
-                            <VAlert color="info" variant="tonal">
+                            <VAlert
+                              color="info"
+                              variant="tonal"
+                            >
                               All CMS categories will be shown automatically. No category selection is needed here.
                             </VAlert>
                           </VCol>
@@ -1661,21 +1767,30 @@ const openPageBuilder = page => {
                         </template>
 
                         <template v-else>
-                          <VCol cols="12" md="4">
+                          <VCol
+                            cols="12"
+                            md="4"
+                          >
                             <VTextField
                               v-model="item.slug"
                               label="Internal Page Slug"
                               variant="outlined"
                             />
                           </VCol>
-                          <VCol cols="12" md="5">
+                          <VCol
+                            cols="12"
+                            md="5"
+                          >
                             <VTextField
                               v-model="item.href"
                               label="Href"
                               variant="outlined"
                             />
                           </VCol>
-                          <VCol cols="12" md="3">
+                          <VCol
+                            cols="12"
+                            md="3"
+                          >
                             <VSwitch
                               v-model="item.external"
                               label="External"
@@ -1698,25 +1813,60 @@ const openPageBuilder = page => {
                     Footer Columns
                   </div>
                   <div class="d-flex gap-2 flex-wrap">
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('brand')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addFooterColumn('brand')"
+                    >
                       Brand
                     </VBtn>
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('categories')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addFooterColumn('categories')"
+                    >
                       Categories
                     </VBtn>
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('static_pages')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addFooterColumn('static_pages')"
+                    >
                       Static Pages
                     </VBtn>
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('manual')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addFooterColumn('manual')"
+                    >
                       Custom Links
                     </VBtn>
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('certification')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addFooterColumn('certification')"
+                    >
                       Certification
                     </VBtn>
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('research_links')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addFooterColumn('research_links')"
+                    >
                       Research
                     </VBtn>
-                    <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="addFooterColumn('social_links')">
+                    <VBtn
+                      size="small"
+                      variant="tonal"
+                      prepend-icon="tabler-plus"
+                      @click="addFooterColumn('social_links')"
+                    >
                       Social
                     </VBtn>
                   </div>
@@ -1734,14 +1884,35 @@ const openPageBuilder = page => {
                           Column {{ column.sort_order || index + 1 }}
                         </div>
                         <div class="d-flex gap-2">
-                          <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveFooterColumn(index, -1)" />
-                          <VBtn size="small" variant="text" icon="tabler-arrow-down" :disabled="index === layoutForm.footer.config.columns.length - 1" @click="moveFooterColumn(index, 1)" />
-                          <VBtn size="small" color="error" variant="text" icon="tabler-trash" @click="removeFooterColumn(index)" />
+                          <VBtn
+                            size="small"
+                            variant="text"
+                            icon="tabler-arrow-up"
+                            :disabled="index === 0"
+                            @click="moveFooterColumn(index, -1)"
+                          />
+                          <VBtn
+                            size="small"
+                            variant="text"
+                            icon="tabler-arrow-down"
+                            :disabled="index === layoutForm.footer.config.columns.length - 1"
+                            @click="moveFooterColumn(index, 1)"
+                          />
+                          <VBtn
+                            size="small"
+                            color="error"
+                            variant="text"
+                            icon="tabler-trash"
+                            @click="removeFooterColumn(index)"
+                          />
                         </div>
                       </div>
 
                       <VRow>
-                        <VCol cols="12" md="4">
+                        <VCol
+                          cols="12"
+                          md="4"
+                        >
                           <VSelect
                             :model-value="column.source"
                             :items="footerSourceOptions"
@@ -1750,14 +1921,20 @@ const openPageBuilder = page => {
                             @update:model-value="value => updateFooterColumnSource(column, value)"
                           />
                         </VCol>
-                        <VCol cols="12" md="8">
+                        <VCol
+                          cols="12"
+                          md="8"
+                        >
                           <VTextField
                             v-model="column.title"
                             label="Column Title"
                             variant="outlined"
                           />
                         </VCol>
-                        <VCol cols="12" md="4">
+                        <VCol
+                          cols="12"
+                          md="4"
+                        >
                           <VTextField
                             :model-value="column.sort_order || index + 1"
                             label="Sort Order"
@@ -1765,7 +1942,10 @@ const openPageBuilder = page => {
                             readonly
                           />
                         </VCol>
-                        <VCol cols="12" md="8">
+                        <VCol
+                          cols="12"
+                          md="8"
+                        >
                           <VSwitch
                             v-model="column.start_new_row"
                             color="primary"
@@ -1777,7 +1957,10 @@ const openPageBuilder = page => {
 
                         <template v-if="column.source === 'brand'">
                           <VCol cols="12">
-                            <VAlert color="info" variant="tonal">
+                            <VAlert
+                              color="info"
+                              variant="tonal"
+                            >
                               Brand column uses the global header/site brand settings and public resolver defaults. Title is configurable here.
                             </VAlert>
                           </VCol>
@@ -1787,7 +1970,10 @@ const openPageBuilder = page => {
                           v-else-if="column.source === 'categories'"
                           cols="12"
                         >
-                          <VAlert color="info" variant="tonal">
+                          <VAlert
+                            color="info"
+                            variant="tonal"
+                          >
                             All CMS categories will be shown automatically. No category selection is needed here.
                           </VAlert>
                         </VCol>
@@ -1797,12 +1983,19 @@ const openPageBuilder = page => {
                           cols="12"
                         >
                           <div class="research-links-editor">
-                            <VAlert color="info" variant="tonal" class="mb-4">
+                            <VAlert
+                              color="info"
+                              variant="tonal"
+                              class="mb-4"
+                            >
                               Add footer links with a custom label. Choose a page from the site or enter an external URL.
                             </VAlert>
 
                             <VRow>
-                              <VCol cols="12" md="4">
+                              <VCol
+                                cols="12"
+                                md="4"
+                              >
                                 <VTextField
                                   v-model="footerLinkDraft.label"
                                   label="Link Label"
@@ -1812,7 +2005,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="4">
+                              <VCol
+                                cols="12"
+                                md="4"
+                              >
                                 <VSelect
                                   v-model="footerLinkDraft.mode"
                                   :items="[
@@ -1833,6 +2029,9 @@ const openPageBuilder = page => {
                                 <VCombobox
                                   v-model="footerLinkDraft.slug"
                                   :items="staticPageOptions"
+                                  item-title="title"
+                                  item-value="value"
+                                  :return-object="false"
                                   label="Page Slug or Path"
                                   placeholder="/contact"
                                   variant="outlined"
@@ -1868,7 +2067,10 @@ const openPageBuilder = page => {
                             </VRow>
 
                             <div class="d-flex justify-end mt-4">
-                              <VBtn color="primary" @click="addFooterCustomLink(column)">
+                              <VBtn
+                                color="primary"
+                                @click="addFooterCustomLink(column)"
+                              >
                                 Add Link
                               </VBtn>
                             </div>
@@ -1885,7 +2087,10 @@ const openPageBuilder = page => {
                                 <div class="d-flex justify-space-between gap-4 mb-4">
                                   <div class="d-flex align-center gap-3">
                                     <span class="footer-link-card__tick">
-                                      <VIcon icon="tabler-check" size="15" />
+                                      <VIcon
+                                        icon="tabler-check"
+                                        size="15"
+                                      />
                                     </span>
                                     <div>
                                       <div class="text-subtitle-2 font-weight-bold">
@@ -1898,14 +2103,35 @@ const openPageBuilder = page => {
                                   </div>
 
                                   <div class="d-flex gap-2">
-                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-up" :disabled="itemIndex === 0" @click="moveFooterCustomLink(column, itemIndex, -1)" />
-                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-down" :disabled="itemIndex === column.items.length - 1" @click="moveFooterCustomLink(column, itemIndex, 1)" />
-                                    <VBtn size="x-small" color="error" variant="text" icon="tabler-trash" @click="removeFooterCustomLink(column, itemIndex)" />
+                                    <VBtn
+                                      size="x-small"
+                                      variant="text"
+                                      icon="tabler-arrow-up"
+                                      :disabled="itemIndex === 0"
+                                      @click="moveFooterCustomLink(column, itemIndex, -1)"
+                                    />
+                                    <VBtn
+                                      size="x-small"
+                                      variant="text"
+                                      icon="tabler-arrow-down"
+                                      :disabled="itemIndex === column.items.length - 1"
+                                      @click="moveFooterCustomLink(column, itemIndex, 1)"
+                                    />
+                                    <VBtn
+                                      size="x-small"
+                                      color="error"
+                                      variant="text"
+                                      icon="tabler-trash"
+                                      @click="removeFooterCustomLink(column, itemIndex)"
+                                    />
                                   </div>
                                 </div>
 
                                 <VRow>
-                                  <VCol cols="12" md="4">
+                                  <VCol
+                                    cols="12"
+                                    md="4"
+                                  >
                                     <VTextField
                                       v-model="item.label"
                                       label="Link Label"
@@ -1914,7 +2140,10 @@ const openPageBuilder = page => {
                                       hide-details="auto"
                                     />
                                   </VCol>
-                                  <VCol cols="12" md="4">
+                                  <VCol
+                                    cols="12"
+                                    md="4"
+                                  >
                                     <VSelect
                                       :model-value="getFooterLinkMode(item)"
                                       :items="[
@@ -1936,6 +2165,9 @@ const openPageBuilder = page => {
                                     <VCombobox
                                       v-model="item.slug"
                                       :items="staticPageOptions"
+                                      item-title="title"
+                                      item-value="value"
+                                      :return-object="false"
                                       label="Page Slug or Path"
                                       variant="outlined"
                                       density="comfortable"
@@ -1977,12 +2209,19 @@ const openPageBuilder = page => {
                           cols="12"
                         >
                           <div class="research-links-editor">
-                            <VAlert color="info" variant="tonal" class="mb-4">
+                            <VAlert
+                              color="info"
+                              variant="tonal"
+                              class="mb-4"
+                            >
                               Add each social platform with its public link. The footer icon is chosen automatically from the selected platform.
                             </VAlert>
 
                             <VRow>
-                              <VCol cols="12" md="5">
+                              <VCol
+                                cols="12"
+                                md="5"
+                              >
                                 <VSelect
                                   v-model="footerSocialDraft.platform"
                                   :items="footerSocialPlatformOptions"
@@ -1992,7 +2231,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="7">
+                              <VCol
+                                cols="12"
+                                md="7"
+                              >
                                 <VTextField
                                   v-model="footerSocialDraft.href"
                                   label="Profile URL or Email"
@@ -2005,7 +2247,10 @@ const openPageBuilder = page => {
                             </VRow>
 
                             <div class="d-flex justify-end mt-4">
-                              <VBtn color="primary" @click="addFooterSocialLink(column)">
+                              <VBtn
+                                color="primary"
+                                @click="addFooterSocialLink(column)"
+                              >
                                 Add Social Link
                               </VBtn>
                             </div>
@@ -2021,21 +2266,45 @@ const openPageBuilder = page => {
                               >
                                 <div class="d-flex justify-space-between gap-4 mb-4">
                                   <div class="d-flex align-center gap-3">
-                                    <VIcon :icon="item.icon || getFooterSocialPlatformMeta(item.platform).icon" size="20" />
+                                    <VIcon
+                                      :icon="item.icon || getFooterSocialPlatformMeta(item.platform).icon"
+                                      size="20"
+                                    />
                                     <div class="text-subtitle-2 font-weight-bold">
                                       {{ item.label || getFooterSocialPlatformMeta(item.platform).title }}
                                     </div>
                                   </div>
 
                                   <div class="d-flex gap-2">
-                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-up" :disabled="itemIndex === 0" @click="moveFooterSocialLink(column, itemIndex, -1)" />
-                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-down" :disabled="itemIndex === column.items.length - 1" @click="moveFooterSocialLink(column, itemIndex, 1)" />
-                                    <VBtn size="x-small" color="error" variant="text" icon="tabler-trash" @click="removeFooterSocialLink(column, itemIndex)" />
+                                    <VBtn
+                                      size="x-small"
+                                      variant="text"
+                                      icon="tabler-arrow-up"
+                                      :disabled="itemIndex === 0"
+                                      @click="moveFooterSocialLink(column, itemIndex, -1)"
+                                    />
+                                    <VBtn
+                                      size="x-small"
+                                      variant="text"
+                                      icon="tabler-arrow-down"
+                                      :disabled="itemIndex === column.items.length - 1"
+                                      @click="moveFooterSocialLink(column, itemIndex, 1)"
+                                    />
+                                    <VBtn
+                                      size="x-small"
+                                      color="error"
+                                      variant="text"
+                                      icon="tabler-trash"
+                                      @click="removeFooterSocialLink(column, itemIndex)"
+                                    />
                                   </div>
                                 </div>
 
                                 <VRow>
-                                  <VCol cols="12" md="4">
+                                  <VCol
+                                    cols="12"
+                                    md="4"
+                                  >
                                     <VSelect
                                       v-model="item.platform"
                                       :items="footerSocialPlatformOptions"
@@ -2046,7 +2315,10 @@ const openPageBuilder = page => {
                                       @update:model-value="value => { const meta = getFooterSocialPlatformMeta(value); item.icon = meta.icon; item.label = meta.title; item.external = value !== 'email'; item.href = normalizeFooterSocialHref(value, item.href) }"
                                     />
                                   </VCol>
-                                  <VCol cols="12" md="8">
+                                  <VCol
+                                    cols="12"
+                                    md="8"
+                                  >
                                     <VTextField
                                       v-model="item.href"
                                       label="Profile URL or Email"
@@ -2067,7 +2339,11 @@ const openPageBuilder = page => {
                           cols="12"
                         >
                           <div class="research-links-editor">
-                            <VAlert color="info" variant="tonal" class="mb-4">
+                            <VAlert
+                              color="info"
+                              variant="tonal"
+                              class="mb-4"
+                            >
                               Upload a certification badge or document image and add a short description for the footer.
                             </VAlert>
 
@@ -2121,7 +2397,10 @@ const openPageBuilder = page => {
                         >
                           <div class="research-links-editor">
                             <VRow>
-                              <VCol cols="12" md="6">
+                              <VCol
+                                cols="12"
+                                md="6"
+                              >
                                 <VTextField
                                   v-model="footerResearchDraft.title"
                                   label="Title"
@@ -2131,7 +2410,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="6">
+                              <VCol
+                                cols="12"
+                                md="6"
+                              >
                                 <VTextField
                                   v-model="footerResearchDraft.article_url"
                                   label="Article URL"
@@ -2141,7 +2423,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="6">
+                              <VCol
+                                cols="12"
+                                md="6"
+                              >
                                 <VTextField
                                   v-model="footerResearchDraft.authors"
                                   label="Authors"
@@ -2150,7 +2435,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="6">
+                              <VCol
+                                cols="12"
+                                md="6"
+                              >
                                 <VTextField
                                   v-model="footerResearchDraft.journal"
                                   label="Journal"
@@ -2159,7 +2447,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="4">
+                              <VCol
+                                cols="12"
+                                md="4"
+                              >
                                 <VTextField
                                   v-model="footerResearchDraft.publication_year"
                                   label="Publication Year"
@@ -2169,7 +2460,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="4">
+                              <VCol
+                                cols="12"
+                                md="4"
+                              >
                                 <VTextField
                                   v-model="footerResearchDraft.pubmed_id"
                                   label="PubMed ID"
@@ -2178,7 +2472,10 @@ const openPageBuilder = page => {
                                   hide-details="auto"
                                 />
                               </VCol>
-                              <VCol cols="12" md="4">
+                              <VCol
+                                cols="12"
+                                md="4"
+                              >
                                 <VTextField
                                   v-model="footerResearchDraft.doi"
                                   label="DOI"
@@ -2190,7 +2487,10 @@ const openPageBuilder = page => {
                             </VRow>
 
                             <div class="d-flex justify-end mt-4">
-                              <VBtn color="primary" @click="addFooterResearchLink(column)">
+                              <VBtn
+                                color="primary"
+                                @click="addFooterResearchLink(column)"
+                              >
                                 Add Research Link
                               </VBtn>
                             </div>
@@ -2206,7 +2506,9 @@ const openPageBuilder = page => {
                               >
                                 <div class="d-flex justify-space-between gap-4">
                                   <div>
-                                    <h6 class="text-subtitle-2 font-weight-bold mb-1">{{ item.title }}</h6>
+                                    <h6 class="text-subtitle-2 font-weight-bold mb-1">
+                                      {{ item.title }}
+                                    </h6>
                                     <a
                                       :href="item.article_url"
                                       target="_blank"
@@ -2218,18 +2520,46 @@ const openPageBuilder = page => {
                                   </div>
 
                                   <div class="d-flex gap-2">
-                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-up" :disabled="itemIndex === 0" @click="moveFooterResearchLink(column, itemIndex, -1)" />
-                                    <VBtn size="x-small" variant="text" icon="tabler-arrow-down" :disabled="itemIndex === column.items.length - 1" @click="moveFooterResearchLink(column, itemIndex, 1)" />
-                                    <VBtn size="x-small" color="error" variant="text" icon="tabler-trash" @click="removeFooterResearchLink(column, itemIndex)" />
+                                    <VBtn
+                                      size="x-small"
+                                      variant="text"
+                                      icon="tabler-arrow-up"
+                                      :disabled="itemIndex === 0"
+                                      @click="moveFooterResearchLink(column, itemIndex, -1)"
+                                    />
+                                    <VBtn
+                                      size="x-small"
+                                      variant="text"
+                                      icon="tabler-arrow-down"
+                                      :disabled="itemIndex === column.items.length - 1"
+                                      @click="moveFooterResearchLink(column, itemIndex, 1)"
+                                    />
+                                    <VBtn
+                                      size="x-small"
+                                      color="error"
+                                      variant="text"
+                                      icon="tabler-trash"
+                                      @click="removeFooterResearchLink(column, itemIndex)"
+                                    />
                                   </div>
                                 </div>
 
                                 <div class="footer-research-meta">
-                                  <div v-if="item.authors"><strong>Authors:</strong> {{ item.authors }}</div>
-                                  <div v-if="item.journal"><strong>Journal:</strong> {{ item.journal }}</div>
-                                  <div v-if="item.publication_year"><strong>Year:</strong> {{ item.publication_year }}</div>
-                                  <div v-if="item.pubmed_id"><strong>PubMed:</strong> {{ item.pubmed_id }}</div>
-                                  <div v-if="item.doi"><strong>DOI:</strong> {{ item.doi }}</div>
+                                  <div v-if="item.authors">
+                                    <strong>Authors:</strong> {{ item.authors }}
+                                  </div>
+                                  <div v-if="item.journal">
+                                    <strong>Journal:</strong> {{ item.journal }}
+                                  </div>
+                                  <div v-if="item.publication_year">
+                                    <strong>Year:</strong> {{ item.publication_year }}
+                                  </div>
+                                  <div v-if="item.pubmed_id">
+                                    <strong>PubMed:</strong> {{ item.pubmed_id }}
+                                  </div>
+                                  <div v-if="item.doi">
+                                    <strong>DOI:</strong> {{ item.doi }}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -2240,7 +2570,10 @@ const openPageBuilder = page => {
                           v-else
                           cols="12"
                         >
-                          <VAlert color="info" variant="tonal">
+                          <VAlert
+                            color="info"
+                            variant="tonal"
+                          >
                             This source resolves dynamically from backend data. No manual item selection is needed.
                           </VAlert>
                         </VCol>
@@ -2255,14 +2588,20 @@ const openPageBuilder = page => {
                   Bottom Bar
                 </div>
                 <VRow>
-                  <VCol cols="12" md="6">
+                  <VCol
+                    cols="12"
+                    md="6"
+                  >
                     <VTextField
                       v-model="layoutForm.footer.config.bottom.copyright"
                       label="Copyright"
                       variant="outlined"
                     />
                   </VCol>
-                  <VCol cols="12" md="6">
+                  <VCol
+                    cols="12"
+                    md="6"
+                  >
                     <VTextField
                       v-model="layoutForm.footer.config.bottom.credit"
                       label="Credit"
@@ -2385,7 +2724,10 @@ const openPageBuilder = page => {
 
                 <span class="site-page-open">
                   Open
-                  <VIcon icon="tabler-arrow-up-right" size="16" />
+                  <VIcon
+                    icon="tabler-arrow-up-right"
+                    size="16"
+                  />
                 </span>
               </div>
             </div>

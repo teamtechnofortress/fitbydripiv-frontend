@@ -12,6 +12,7 @@ const sending = ref(false)
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken')
+  
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -20,6 +21,7 @@ const loadStatus = async () => {
   try {
     const { data } = await axios.get(GET_EMAIL_STATUS_URL, { headers: getAuthHeaders() })
     const payload = data?.data ?? data ?? {}
+
     status.value = {
       email: payload.email,
       email_verified: !!payload.email_verified,
@@ -67,7 +69,9 @@ onMounted(() => {
       <VCardTitle>Email Verification</VCardTitle>
       <VDivider />
       <VCardText>
-        <p class="text-body-1">Manage your email verification status.</p>
+        <p class="text-body-1">
+          Manage your email verification status.
+        </p>
         <VAlert
           :type="status.email_verified ? 'success' : 'warning'"
           variant="tonal"
@@ -83,21 +87,34 @@ onMounted(() => {
         </VAlert>
 
         <VRow>
-          <VCol cols="12" md="6">
+          <VCol
+            cols="12"
+            md="6"
+          >
             <VCard variant="outlined">
               <VCardTitle>Status Details</VCardTitle>
               <VCardText>
                 <p>Email: <strong>{{ status.email || 'N/A' }}</strong></p>
                 <p>Status: <strong>{{ status.email_verified ? 'Verified' : 'Pending Verification' }}</strong></p>
-                <p v-if="status.email_verified_at">Verified At: {{ status.email_verified_at }}</p>
+                <p v-if="status.email_verified_at">
+                  Verified At: {{ status.email_verified_at }}
+                </p>
               </VCardText>
             </VCard>
           </VCol>
-          <VCol cols="12" md="6">
-            <VCard variant="outlined" class="h-100">
+          <VCol
+            cols="12"
+            md="6"
+          >
+            <VCard
+              variant="outlined"
+              class="h-100"
+            >
               <VCardTitle>Actions</VCardTitle>
               <VCardText>
-                <p v-if="status.email_verified">Your email is already verified.</p>
+                <p v-if="status.email_verified">
+                  Your email is already verified.
+                </p>
                 <template v-else>
                   <p>Click the button below to receive a fresh verification link.</p>
                   <VBtn

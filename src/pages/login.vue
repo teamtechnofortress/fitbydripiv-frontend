@@ -46,19 +46,24 @@ const onSubmit = () => {
 const handleLogin = async () => {
   try {
     devLog('Auth submitting login form', { email: email.value })
+
     const result = await authDataStore.login({
       email: email.value,
       password: password.value,
     })
+
     devLog('Auth login result', result)
     if (result?.requiresTwoFactor) {
       devLog('Auth redirecting to OTP challenge')
       router.push('/otp')
+      
       return
     }
+
     // If backend already returned a session, lobby watcher will fire
   } catch (error) {
     devLog('Auth login handler error', { message: error?.message })
+
     // Errors surface via the auth store watcher/toast
   }
 }
@@ -69,13 +74,13 @@ const handleLogin = async () => {
 watch(loggedInUser, val => {  
   if(val && val.id){   
     if(val.password_reset){      
-      window.location.href="/forgot-password";
+      window.location.href="/forgot-password"
     }else{
-      toast.success("Successfully Logged In !");
+      toast.success("Successfully Logged In !")
   
       setTimeout(() => {    
-        router.push({ name: 'lobby' });
-      }, 500);
+        router.push({ name: 'lobby' })
+      }, 500)
     }
   }
 })
@@ -208,12 +213,14 @@ watch(error, value => {
                 cols="12"
                 class="text-center"
               >
-                <!-- <RouterLink
+                <!--
+                  <RouterLink
                   class="text-primary ms-2"
                   :to="{ name: 'register' }"
-                >
+                  >
                   Register
-                </RouterLink>  -->
+                  </RouterLink>  
+                -->
 
                 <RouterLink
                   class="text-primary ms-2"

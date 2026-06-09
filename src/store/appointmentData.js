@@ -67,7 +67,7 @@ export const useAppointmentDataStore = defineStore('appointmentData', {
         location: event.extendedProps.location,
         description: event.extendedProps.description,
         goal:event.extendedProps.goal,
-        treatment: event.extendedProps.treatment
+        treatment: event.extendedProps.treatment,
       }
 
       postRequest(ADD_APPOINTMENT_URL, {}, params, response => {
@@ -87,6 +87,7 @@ export const useAppointmentDataStore = defineStore('appointmentData', {
             message: err_msg,
           }
           toast.error("Add new Appointment is failed!")
+
           //
           this.error = error
           this.loading = false
@@ -114,6 +115,7 @@ export const useAppointmentDataStore = defineStore('appointmentData', {
             message: err_msg,
           }
           toast.error("Appointment Update is failed!")
+
           //
           this.error = error
           this.loading = false
@@ -138,7 +140,7 @@ export const useAppointmentDataStore = defineStore('appointmentData', {
         location: event.extendedProps.location,
         description: event.extendedProps.description,
         goal:event.extendedProps.goal,
-        treatment: event.extendedProps.treatment
+        treatment: event.extendedProps.treatment,
       }
 
       try {

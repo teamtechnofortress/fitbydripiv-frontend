@@ -29,10 +29,13 @@ const loadStatus = async () => {
   statusLoading.value = true
   try {
     const token = localStorage.getItem('accessToken')
+
     const { data } = await axios.get(GET_TWO_FACTOR_STATUS_URL, {
       headers: { Authorization: `Bearer ${token}` },
     })
+
     const payload = data?.data ?? data ?? {}
+
     status.value = {
       enabled: !!payload.enabled,
       confirmed_at: payload.confirmed_at || null,
@@ -51,6 +54,7 @@ const startSetup = async () => {
   setupLoading.value = true
   try {
     const payload = await authStore.enableTwoFactor()
+
     setupPayload.value = {
       secret: payload.secret,
       qr: payload.qr,
@@ -69,6 +73,7 @@ const startSetup = async () => {
 const confirmSetup = async () => {
   if (!otpCode.value) {
     toast.error('Please enter the authentication code first.')
+    
     return
   }
   confirmLoading.value = true
@@ -123,6 +128,7 @@ const confirmRegenerate = async () => {
   regenerateLoading.value = true
   try {
     const payload = await authStore.regenerateTwoFactor()
+
     toast.success('Two-factor authentication secret regenerated. Scan the new code and confirm to continue.')
     devLog('TwoFactor regenerated secret')
     setupPayload.value = payload
@@ -155,6 +161,7 @@ const downloadRecoveryCodesImage = () => {
   const width = 400
   const lineHeight = 30
   const height = lineHeight * (codes.length + 3)
+
   canvas.width = width
   canvas.height = height
   ctx.fillStyle = '#ffffff'
@@ -165,7 +172,9 @@ const downloadRecoveryCodesImage = () => {
   codes.forEach((code, index) => {
     ctx.fillText(`${index + 1}. ${code}`, 20, 60 + index * lineHeight)
   })
+
   const link = document.createElement('a')
+
   link.href = canvas.toDataURL('image/png')
   link.download = 'recovery-codes.png'
   link.click()
@@ -183,127 +192,190 @@ onMounted(() => {
 <template>
   <div class="two-factor-page">
     <VContainer class="pa-6">
-    <VBtn
-      variant="text"
-      class="mb-4"
-      prepend-icon="tabler-arrow-left"
-      @click="router.back()"
-    >
-      Back
-    </VBtn>
+      <VBtn
+        variant="text"
+        class="mb-4"
+        prepend-icon="tabler-arrow-left"
+        @click="router.back()"
+      >
+        Back
+      </VBtn>
 
-    <VCard>
-      <VCardTitle class="d-flex align-center justify-space-between">
-        <div>
-          <div class="text-h5">Two-Factor Authentication</div>
-          <div class="text-subtitle-2 text-medium-emphasis">Protect your account with an extra verification step.</div>
-        </div>
-        <VSwitch
-          v-if="status?.enabled"
-          v-model="enableSwitch"
-          :loading="statusLoading"
-          color="primary"
-          label="Two-Factor Auth"
-          @update:model-value="handleSwitchChange"
-        />
-      </VCardTitle>
-
-      <VDivider />
-
-      <VCardText>
-        <div v-if="status?.enabled && !isSetupVisible" class="text-success text-subtitle-1 mb-4 d-flex flex-wrap align-center gap-4">
+      <VCard>
+        <VCardTitle class="d-flex align-center justify-space-between">
           <div>
-            <VIcon icon="tabler-shield-check" color="success" class="me-2" />
-            Two-factor authentication is currently enabled for this account.
+            <div class="text-h5">
+              Two-Factor Authentication
+            </div>
+            <div class="text-subtitle-2 text-medium-emphasis">
+              Protect your account with an extra verification step.
+            </div>
           </div>
-          <VBtn
-            size="small"
+          <VSwitch
+            v-if="status?.enabled"
+            v-model="enableSwitch"
+            :loading="statusLoading"
             color="primary"
-            variant="text"
-            @click="openRegenerateDialog"
+            label="Two-Factor Auth"
+            @update:model-value="handleSwitchChange"
+          />
+        </VCardTitle>
+
+        <VDivider />
+
+        <VCardText>
+          <div
+            v-if="status?.enabled && !isSetupVisible"
+            class="text-success text-subtitle-1 mb-4 d-flex flex-wrap align-center gap-4"
           >
-            Regenerate QR Code
-          </VBtn>
-        </div>
-
-        <div v-if="!status?.enabled" class="mb-6">
-          <p class="text-body-1 mb-4">Enable two-factor authentication to add an extra layer of security. You will scan a QR code with an authenticator app and confirm using a one-time code.</p>
-          <VBtn
-            color="primary"
-            :disabled="setupLoading || !!setupPayload"
-            :loading="setupLoading"
-            @click="startSetup"
-          >
-            {{ setupPayload ? 'QR Generated' : 'Enable 2 factor authentication' }}
-          </VBtn>
-        </div>
-
-        <VAlert
-          type="info"
-          variant="tonal"
-          class="mb-6"
-          v-if="!status?.enabled && !setupPayload"
-        >
-          You must scan the QR code and confirm with an authenticator app before two-factor authentication becomes active.
-        </VAlert>
-
-        <div v-if="isSetupVisible" class="mb-8">
-          <VRow>
-            <VCol cols="12" md="6">
-              <VCard variant="outlined">
-                <VCardTitle>Scan this QR Code</VCardTitle>
-                <VCardText>
-                  <p class="text-body-2 mb-4">Use Google Authenticator, Authy, or a compatible app.</p>
-                  <div v-if="setupPayload.qr" class="text-center" v-html="setupPayload.qr" />
-                  <div class="mt-4">
-                    <p class="text-caption text-medium-emphasis">Manual entry key:</p>
-                    <VChip color="primary" variant="tonal">{{ setupPayload.secret }}</VChip>
-                  </div>
-                </VCardText>
-              </VCard>
-            </VCol>
-
-            <VCol cols="12" md="6">
-              <VCard variant="outlined" class="h-100">
-                <VCardTitle class="d-flex align-center justify-space-between">
-                  <span>Recovery Codes</span>
-                  <div>
-                    <VBtn icon="tabler-copy" variant="text" @click="copyRecoveryCodes" />
-                    <VBtn icon="tabler-download" variant="text" @click="downloadRecoveryCodesImage" />
-                  </div>
-                </VCardTitle>
-                <VCardText>
-                  <p class="text-body-2">Store these codes safely — they will not be shown again once you leave this page.</p>
-                  <VList density="compact">
-                    <VListItem v-for="(code, index) in setupPayload.recoveryCodes" :key="code">
-                      <VListItemTitle>{{ index + 1 }}. {{ code }}</VListItemTitle>
-                    </VListItem>
-                  </VList>
-                </VCardText>
-              </VCard>
-            </VCol>
-          </VRow>
-
-          <VCard variant="outlined" class="mt-6">
-            <VCardTitle>Confirm OTP</VCardTitle>
-            <VCardText>
-              <p class="text-body-2">Enter the 6-digit code from your authenticator app to finish enabling 2FA.</p>
-              <VTextField
-                v-model="otpCode"
-                label="Authentication Code"
-                maxlength="6"
-                type="text"
-                inputmode="numeric"
-                class="mb-4"
+            <div>
+              <VIcon
+                icon="tabler-shield-check"
+                color="success"
+                class="me-2"
               />
-              <VBtn color="success" :loading="confirmLoading" @click="confirmSetup">
-                Confirm & Enable
-              </VBtn>
-            </VCardText>
-          </VCard>
-        </div>
-      </VCardText>
-    </VCard>
+              Two-factor authentication is currently enabled for this account.
+            </div>
+            <VBtn
+              size="small"
+              color="primary"
+              variant="text"
+              @click="openRegenerateDialog"
+            >
+              Regenerate QR Code
+            </VBtn>
+          </div>
+
+          <div
+            v-if="!status?.enabled"
+            class="mb-6"
+          >
+            <p class="text-body-1 mb-4">
+              Enable two-factor authentication to add an extra layer of security. You will scan a QR code with an authenticator app and confirm using a one-time code.
+            </p>
+            <VBtn
+              color="primary"
+              :disabled="setupLoading || !!setupPayload"
+              :loading="setupLoading"
+              @click="startSetup"
+            >
+              {{ setupPayload ? 'QR Generated' : 'Enable 2 factor authentication' }}
+            </VBtn>
+          </div>
+
+          <VAlert
+            v-if="!status?.enabled && !setupPayload"
+            type="info"
+            variant="tonal"
+            class="mb-6"
+          >
+            You must scan the QR code and confirm with an authenticator app before two-factor authentication becomes active.
+          </VAlert>
+
+          <div
+            v-if="isSetupVisible"
+            class="mb-8"
+          >
+            <VRow>
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <VCard variant="outlined">
+                  <VCardTitle>Scan this QR Code</VCardTitle>
+                  <VCardText>
+                    <p class="text-body-2 mb-4">
+                      Use Google Authenticator, Authy, or a compatible app.
+                    </p>
+                    <div
+                      v-if="setupPayload.qr"
+                      class="text-center"
+                      v-html="setupPayload.qr"
+                    />
+                    <div class="mt-4">
+                      <p class="text-caption text-medium-emphasis">
+                        Manual entry key:
+                      </p>
+                      <VChip
+                        color="primary"
+                        variant="tonal"
+                      >
+                        {{ setupPayload.secret }}
+                      </VChip>
+                    </div>
+                  </VCardText>
+                </VCard>
+              </VCol>
+
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <VCard
+                  variant="outlined"
+                  class="h-100"
+                >
+                  <VCardTitle class="d-flex align-center justify-space-between">
+                    <span>Recovery Codes</span>
+                    <div>
+                      <VBtn
+                        icon="tabler-copy"
+                        variant="text"
+                        @click="copyRecoveryCodes"
+                      />
+                      <VBtn
+                        icon="tabler-download"
+                        variant="text"
+                        @click="downloadRecoveryCodesImage"
+                      />
+                    </div>
+                  </VCardTitle>
+                  <VCardText>
+                    <p class="text-body-2">
+                      Store these codes safely — they will not be shown again once you leave this page.
+                    </p>
+                    <VList density="compact">
+                      <VListItem
+                        v-for="(code, index) in setupPayload.recoveryCodes"
+                        :key="code"
+                      >
+                        <VListItemTitle>{{ index + 1 }}. {{ code }}</VListItemTitle>
+                      </VListItem>
+                    </VList>
+                  </VCardText>
+                </VCard>
+              </VCol>
+            </VRow>
+
+            <VCard
+              variant="outlined"
+              class="mt-6"
+            >
+              <VCardTitle>Confirm OTP</VCardTitle>
+              <VCardText>
+                <p class="text-body-2">
+                  Enter the 6-digit code from your authenticator app to finish enabling 2FA.
+                </p>
+                <VTextField
+                  v-model="otpCode"
+                  label="Authentication Code"
+                  maxlength="6"
+                  type="text"
+                  inputmode="numeric"
+                  class="mb-4"
+                />
+                <VBtn
+                  color="success"
+                  :loading="confirmLoading"
+                  @click="confirmSetup"
+                >
+                  Confirm & Enable
+                </VBtn>
+              </VCardText>
+            </VCard>
+          </div>
+        </VCardText>
+      </VCard>
     </VContainer>
 
     <VDialog
@@ -311,9 +383,13 @@ onMounted(() => {
       max-width="420"
     >
       <VCard>
-        <VCardTitle class="text-h6">Disable Two-Factor Authentication</VCardTitle>
+        <VCardTitle class="text-h6">
+          Disable Two-Factor Authentication
+        </VCardTitle>
         <VCardText>
-          <p class="mb-4">Are you sure you want to disable two-factor authentication?</p>
+          <p class="mb-4">
+            Are you sure you want to disable two-factor authentication?
+          </p>
         </VCardText>
         <VCardActions class="justify-end">
           <VBtn
@@ -339,9 +415,13 @@ onMounted(() => {
       max-width="420"
     >
       <VCard>
-        <VCardTitle class="text-h6">Regenerate 2FA Secret</VCardTitle>
+        <VCardTitle class="text-h6">
+          Regenerate 2FA Secret
+        </VCardTitle>
         <VCardText>
-          <p class="mb-4">Are you sure you want to regenerate the QR code? This invalidates your existing setup until you confirm the new one.</p>
+          <p class="mb-4">
+            Are you sure you want to regenerate the QR code? This invalidates your existing setup until you confirm the new one.
+          </p>
         </VCardText>
         <VCardActions class="justify-end">
           <VBtn

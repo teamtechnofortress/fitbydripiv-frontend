@@ -30,7 +30,6 @@ const openParent   = () => emit('openParent')
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="dialog-card">
-
       <!-- Header -->
       <div class="dialog-header">
         <div class="dialog-header-left">
@@ -38,29 +37,51 @@ const openParent   = () => emit('openParent')
             <span class="mdi mdi-webhook" />
           </div>
           <div>
-            <h2 class="dialog-title">Webhook Payload</h2>
-            <p v-if="webhook" class="dialog-subtitle">{{ webhook.event_type || 'Event details' }}</p>
+            <h2 class="dialog-title">
+              Webhook Payload
+            </h2>
+            <p
+              v-if="webhook"
+              class="dialog-subtitle"
+            >
+              {{ webhook.event_type || 'Event details' }}
+            </p>
           </div>
         </div>
-        <button class="close-btn" @click="closeDialog">
+        <button
+          class="close-btn"
+          @click="closeDialog"
+        >
           <span class="mdi mdi-close" />
         </button>
       </div>
 
       <div class="dialog-body">
-
         <!-- Loading -->
-        <div v-if="loading" class="dialog-state">
-          <VProgressCircular indeterminate color="primary" :size="44" :width="4" />
+        <div
+          v-if="loading"
+          class="dialog-state"
+        >
+          <VProgressCircular
+            indeterminate
+            color="primary"
+            :size="44"
+            :width="4"
+          />
           <p>Loading webhook payload…</p>
         </div>
 
         <!-- Error -->
-        <VAlert v-else-if="error" type="error" variant="tonal">{{ error }}</VAlert>
+        <VAlert
+          v-else-if="error"
+          type="error"
+          variant="tonal"
+        >
+          {{ error }}
+        </VAlert>
 
         <!-- Content -->
         <template v-else-if="webhook">
-
           <!-- Meta grid -->
           <div class="meta-grid">
             <div class="meta-tile">
@@ -105,7 +126,6 @@ const openParent   = () => emit('openParent')
           <div class="payload-shell">
             <pre class="payload-code">{{ payloadText || 'No payload stored for this webhook.' }}</pre>
           </div>
-
         </template>
       </div>
 
@@ -120,11 +140,13 @@ const openParent   = () => emit('openParent')
           {{ parentLabel }}
         </button>
         <div class="footer-spacer" />
-        <button class="footer-close-btn" @click="closeDialog">
+        <button
+          class="footer-close-btn"
+          @click="closeDialog"
+        >
           Close
         </button>
       </div>
-
     </div>
   </VDialog>
 </template>

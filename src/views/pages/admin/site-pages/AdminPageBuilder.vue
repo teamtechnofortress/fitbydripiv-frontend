@@ -128,6 +128,7 @@ const moveSection = (index, direction) => {
 
   const updated = [...sections.value]
   const [moved] = updated.splice(index, 1)
+
   updated.splice(targetIndex, 0, moved)
   sections.value = updated
   syncSectionOrder()
@@ -277,7 +278,10 @@ onMounted(() => {
       v-if="loading"
       class="page-builder__loading"
     >
-      <VProgressCircular indeterminate color="primary" />
+      <VProgressCircular
+        indeterminate
+        color="primary"
+      />
       <span>Loading page builder...</span>
     </div>
 
@@ -286,7 +290,10 @@ onMounted(() => {
       class="page-builder__body"
     >
       <section class="page-builder__meta-wrap">
-        <VCard class="page-builder__meta-card" elevation="0">
+        <VCard
+          class="page-builder__meta-card"
+          elevation="0"
+        >
           <VCardText class="pa-5">
             <div class="page-builder__meta-title mb-3">
               Page Details
@@ -379,10 +386,17 @@ onMounted(() => {
         </VCardText>
         <VCardActions class="px-5 pb-4">
           <VSpacer />
-          <VBtn variant="text" @click="closeDeleteDialog">
+          <VBtn
+            variant="text"
+            @click="closeDeleteDialog"
+          >
             Cancel
           </VBtn>
-          <VBtn color="error" :loading="deletingSection" @click="deleteSection">
+          <VBtn
+            color="error"
+            :loading="deletingSection"
+            @click="deleteSection"
+          >
             Delete
           </VBtn>
         </VCardActions>

@@ -42,32 +42,34 @@ function deepClone(obj) {
 
 // Handle drag events
 const onDragStart = (event, employee) => {  
-  const index = employees.value.indexOf(employee);
-  draggedColor.value = colors[index % colors.length];
-  event.dataTransfer.setData('employee', JSON.stringify({name: employee, staffId: getStaffIdByName(employee), color: draggedColor.value}));
-};
+  const index = employees.value.indexOf(employee)
+
+  draggedColor.value = colors[index % colors.length]
+  event.dataTransfer.setData('employee', JSON.stringify({ name: employee, staffId: getStaffIdByName(employee), color: draggedColor.value }))
+}
 
 const onDrop = (event, slot) => {
-  const employee = event.dataTransfer.getData('employee');
+  const employee = event.dataTransfer.getData('employee')
   
   if(Array.isArray(schedule.value[slot])){
     
-    const checkRedundant = schedule.value[slot].find((emp) => {
-      const empObj = JSON.parse(emp);
-      return empObj.name === JSON.parse(employee).name;
-    });
+    const checkRedundant = schedule.value[slot].find(emp => {
+      const empObj = JSON.parse(emp)
+      
+      return empObj.name === JSON.parse(employee).name
+    })
 
     if(!checkRedundant){
-      schedule.value[slot].push(employee);
-      history.value.push(deepClone(schedule.value));
+      schedule.value[slot].push(employee)
+      history.value.push(deepClone(schedule.value))
     }
   }else{
-    schedule.value[slot] = [employee];
-    history.value.push(deepClone(schedule.value));
+    schedule.value[slot] = [employee]
+    history.value.push(deepClone(schedule.value))
   }  
   
-  draggedColor.value = '';
-};
+  draggedColor.value = ''
+}
 
 const allowDrop = event => {
   event.preventDefault() // Allow dropping
@@ -75,37 +77,39 @@ const allowDrop = event => {
 
 // Handle slot click to show popup
 const onSlotClick = (slot, name="") => {    
-  selectedSlot.value = slot;
-  fSelectedSlot.value = slot;
-  selectedEmployee.value = schedule.value[slot].find((emp) => {
-    const empObj = JSON.parse(emp);
-    return empObj.name === name;
-  }) || null;  
-  showPopup.value = true;
-};
+  selectedSlot.value = slot
+  fSelectedSlot.value = slot
+  selectedEmployee.value = schedule.value[slot].find(emp => {
+    const empObj = JSON.parse(emp)
+    
+    return empObj.name === name
+  }) || null  
+  showPopup.value = true
+}
 
 // Assign end time slot and autofill
-const assignEndTimeSlot = (endSlot) => {  
-  const startIndex = timeSlots.value.indexOf(fSelectedSlot.value);
-  const endIndex = timeSlots.value.indexOf(endSlot);
-  const employee = selectedEmployee.value;
+const assignEndTimeSlot = endSlot => {  
+  const startIndex = timeSlots.value.indexOf(fSelectedSlot.value)
+  const endIndex = timeSlots.value.indexOf(endSlot)
+  const employee = selectedEmployee.value
 
   // Save a deep copy of the current schedule to history
   history.value.push(deepClone(schedule.value))
 
   for (let i = startIndex; i <= endIndex; i++) {
-    const slot = timeSlots.value[i];    
+    const slot = timeSlots.value[i]    
     if(Array.isArray(schedule.value[slot])){
-      const checkRedundant = schedule.value[slot].find((emp) => {
-        const empObj = JSON.parse(emp);
-        return empObj.name === JSON.parse(employee).name;
-      });
+      const checkRedundant = schedule.value[slot].find(emp => {
+        const empObj = JSON.parse(emp)
+        
+        return empObj.name === JSON.parse(employee).name
+      })
 
       if(!checkRedundant){
-        schedule.value[slot].push(employee);
+        schedule.value[slot].push(employee)
       }
     }else{
-      schedule.value[slot] = [employee];
+      schedule.value[slot] = [employee]
     }
   }
   showPopup.value = false
@@ -257,86 +261,130 @@ const getObject = str => {
               
             <VDivider />                
 
-              <!-- First Shift Table -->
-              <h4 class="mt-2">[12:00 AM - 8:00 AM]</h4>
-              <VTable class="text-no-wrap pb-4">
-                <thead>
-                  <tr>
-                    <th v-for="(slot, index) in firstShift" :key="index" class="border">{{ slot }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>                    
-                    <td
-                      v-for="(slot, key) in firstShift"
-                      :key="key"
-                      class="border cursor-pointer"
-                      @dragover="allowDrop"
-                      @drop="onDrop($event, slot)"                      
-                    >                    
-                      <div v-for="(emp, index) in getObject(schedule[slot])" :key="index" class="align-center">                        
-                        <div :class="['ps-1', JSON.parse(emp).color || '']" @click="onSlotClick(slot, JSON.parse(emp)?.name)">
-                          <span class="font-weight-medium">{{ JSON.parse(emp)?.name }}</span>
-                        </div>
-                      </div>                      
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
+            <!-- First Shift Table -->
+            <h4 class="mt-2">
+              [12:00 AM - 8:00 AM]
+            </h4>
+            <VTable class="text-no-wrap pb-4">
+              <thead>
+                <tr>
+                  <th
+                    v-for="(slot, index) in firstShift"
+                    :key="index"
+                    class="border"
+                  >
+                    {{ slot }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>                    
+                  <td
+                    v-for="(slot, key) in firstShift"
+                    :key="key"
+                    class="border cursor-pointer"
+                    @dragover="allowDrop"
+                    @drop="onDrop($event, slot)"                      
+                  >                    
+                    <div
+                      v-for="(emp, index) in getObject(schedule[slot])"
+                      :key="index"
+                      class="align-center"
+                    >                        
+                      <div
+                        class="ps-1"
+                        :class="[JSON.parse(emp).color || '']"
+                        @click="onSlotClick(slot, JSON.parse(emp)?.name)"
+                      >
+                        <span class="font-weight-medium">{{ JSON.parse(emp)?.name }}</span>
+                      </div>
+                    </div>                      
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
 
-              <!-- Second Shift Table -->
-              <h4>[8:00 AM - 4:00 PM]</h4>
-              <VTable class="text-no-wrap pb-4">
-                <thead>
-                  <tr>
-                    <th v-for="(slot, index) in secondShift" :key="index" class="border">{{ slot }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>                    
-                    <td
-                      v-for="(slot, key) in secondShift"
-                      :key="key"
-                      class="border cursor-pointer"
-                      @dragover="allowDrop"
-                      @drop="onDrop($event, slot)"                      
-                    >                    
-                      <div v-for="(emp, index) in getObject(schedule[slot])" :key="index" class="align-center">                        
-                        <div :class="['ps-1', JSON.parse(emp).color || '']" @click="onSlotClick(slot, JSON.parse(emp)?.name)">
-                          <span class="font-weight-medium">{{ JSON.parse(emp)?.name }}</span>
-                        </div>
-                      </div>                      
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
+            <!-- Second Shift Table -->
+            <h4>[8:00 AM - 4:00 PM]</h4>
+            <VTable class="text-no-wrap pb-4">
+              <thead>
+                <tr>
+                  <th
+                    v-for="(slot, index) in secondShift"
+                    :key="index"
+                    class="border"
+                  >
+                    {{ slot }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>                    
+                  <td
+                    v-for="(slot, key) in secondShift"
+                    :key="key"
+                    class="border cursor-pointer"
+                    @dragover="allowDrop"
+                    @drop="onDrop($event, slot)"                      
+                  >                    
+                    <div
+                      v-for="(emp, index) in getObject(schedule[slot])"
+                      :key="index"
+                      class="align-center"
+                    >                        
+                      <div
+                        class="ps-1"
+                        :class="[JSON.parse(emp).color || '']"
+                        @click="onSlotClick(slot, JSON.parse(emp)?.name)"
+                      >
+                        <span class="font-weight-medium">{{ JSON.parse(emp)?.name }}</span>
+                      </div>
+                    </div>                      
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
 
-              <!-- Third Shift Table -->
-              <h4>[4:00 PM - 12:00 AM]</h4>              
-              <VTable class="text-no-wrap pb-4">
-                <thead>
-                  <tr>
-                    <th v-for="(slot, index) in thirdShift" :key="index" class="border">{{ slot }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>                    
-                    <td
-                      v-for="(slot, key) in thirdShift"
-                      :key="key"
-                      class="border cursor-pointer"
-                      @dragover="allowDrop"
-                      @drop="onDrop($event, slot)"                      
-                    >                    
-                      <div v-for="(emp, index) in getObject(schedule[slot])" :key="index" class="align-center">                        
-                        <div :class="['ps-1', JSON.parse(emp).color || '']" @click="onSlotClick(slot, JSON.parse(emp)?.name)">
-                          <span class="font-weight-medium">{{ JSON.parse(emp)?.name }}</span>
-                        </div>
-                      </div>                      
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
+            <!-- Third Shift Table -->
+            <h4>[4:00 PM - 12:00 AM]</h4>              
+            <VTable class="text-no-wrap pb-4">
+              <thead>
+                <tr>
+                  <th
+                    v-for="(slot, index) in thirdShift"
+                    :key="index"
+                    class="border"
+                  >
+                    {{ slot }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>                    
+                  <td
+                    v-for="(slot, key) in thirdShift"
+                    :key="key"
+                    class="border cursor-pointer"
+                    @dragover="allowDrop"
+                    @drop="onDrop($event, slot)"                      
+                  >                    
+                    <div
+                      v-for="(emp, index) in getObject(schedule[slot])"
+                      :key="index"
+                      class="align-center"
+                    >                        
+                      <div
+                        class="ps-1"
+                        :class="[JSON.parse(emp).color || '']"
+                        @click="onSlotClick(slot, JSON.parse(emp)?.name)"
+                      >
+                        <span class="font-weight-medium">{{ JSON.parse(emp)?.name }}</span>
+                      </div>
+                    </div>                      
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
 
             <!-- Popup -->
             <VDialog

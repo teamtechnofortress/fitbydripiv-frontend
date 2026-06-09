@@ -17,6 +17,7 @@ export const verifyEmailRequest = async signedUrl => {
   } catch (error) {
     const message = error?.response?.data?.message || error?.message || "Unable to verify email."
     const normalizedError = new Error(message)
+
     normalizedError.response = error?.response
     normalizedError.data = error?.response?.data
     throw normalizedError

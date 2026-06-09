@@ -18,9 +18,11 @@ const router = useRouter()
 
 const title = computed(() => props.section.headline || props.pageSlug)
 const words = computed(() => String(title.value || '').split(' ').filter(Boolean))
+
 const description = computed(() =>
-  props.section.description || 'Explore treatments tailored to this category.'
+  props.section.description || 'Explore treatments tailored to this category.',
 )
+
 const eyebrow = computed(() => String(props.section.subtitle || props.section.eyebrow || '').trim())
 
 const cta = computed(() => props.section.cta || props.section.content?.button || {})
@@ -51,7 +53,10 @@ const navigate = path => {
       playsinline
       class="absolute inset-0 w-full h-full object-cover opacity-75"
     >
-      <source :src="background.url" type="video/mp4">
+      <source
+        :src="background.url"
+        type="video/mp4"
+      >
     </video>
 
     <div
@@ -60,17 +65,25 @@ const navigate = path => {
       :style="backgroundImageStyle"
     />
 
-    <div v-else class="absolute inset-0 bg-gray-800" />
+    <div
+      v-else
+      class="absolute inset-0 bg-gray-800"
+    />
 
-    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(17,24,39,0.4), rgba(17,24,39,0.25), rgba(17,24,39,0.4));" />
+    <div
+      class="absolute inset-0"
+      style="background: linear-gradient(to bottom, rgba(17,24,39,0.4), rgba(17,24,39,0.25), rgba(17,24,39,0.4));"
+    />
 
     <div class="max-w-5xl mx-auto text-center relative z-10">
-      <!-- <div
+      <!--
+        <div
         v-if="eyebrow"
         class="inline-flex px-4 py-2 rounded-full border border-white/25 bg-white/10 text-xs font-semibold uppercase tracking-[0.14em] text-white mb-5"
-      >
+        >
         {{ eyebrow }}
-      </div> -->
+        </div> 
+      -->
 
       <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 min-h-[80px] flex flex-wrap justify-center items-center gap-x-3 gap-y-2 text-stroke">
         <span
@@ -85,7 +98,11 @@ const navigate = path => {
         {{ description }}
       </p>
 
-      <button v-if="cta.link" class="btn-primary" @click="navigate(cta.link)">
+      <button
+        v-if="cta.link"
+        class="btn-primary"
+        @click="navigate(cta.link)"
+      >
         {{ cta.label || 'Start my journey' }}
       </button>
     </div>

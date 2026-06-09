@@ -23,6 +23,7 @@ const researchSearch = ref("")
 const discountsSearch = ref("")
 
 const benefitsText = ref("")
+
 const treatmentDetailsForm = ref({
   how_it_works: "",
   ingredientsText: "",
@@ -98,12 +99,14 @@ const newProduct = () => ({
 
 const selectedProduct = computed(() => {
   if (!currentProduct.value?.id) return null
+  
   return products.value.find(p => p.id === currentProduct.value.id) || null
 })
 
 const filteredProducts = computed(() => {
   const q = productsSearch.value.trim().toLowerCase()
   if (!q) return products.value
+  
   return products.value.filter(item =>
     [item.name, item.slug, item.category?.name].some(v => String(v || "").toLowerCase().includes(q)))
 })
@@ -112,6 +115,7 @@ const filteredFaqs = computed(() => {
   const q = faqsSearch.value.trim().toLowerCase()
   const list = selectedProduct.value?.faqs || []
   if (!q) return list
+  
   return list.filter(item =>
     [item.question, item.answer, item.category].some(v => String(v || "").toLowerCase().includes(q)))
 })
@@ -120,6 +124,7 @@ const filteredPricing = computed(() => {
   const q = pricingSearch.value.trim().toLowerCase()
   const list = selectedProduct.value?.pricing_options || selectedProduct.value?.pricingOptions || []
   if (!q) return list
+  
   return list.filter(item =>
     [item.plan_name, item.billing_cycle, item.description].some(v => String(v || "").toLowerCase().includes(q)))
 })
@@ -128,6 +133,7 @@ const filteredResearch = computed(() => {
   const q = researchSearch.value.trim().toLowerCase()
   const list = selectedProduct.value?.research_links || selectedProduct.value?.researchLinks || []
   if (!q) return list
+  
   return list.filter(item =>
     [item.title, item.authors, item.journal, item.pubmed_id, item.doi].some(v => String(v || "").toLowerCase().includes(q)))
 })
@@ -136,6 +142,7 @@ const filteredDiscounts = computed(() => {
   const q = discountsSearch.value.trim().toLowerCase()
   const list = selectedProduct.value?.subscription_discounts || selectedProduct.value?.subscriptionDiscounts || []
   if (!q) return list
+  
   return list.filter(item =>
     [item.frequency_months, item.discount_percentage].some(v => String(v || "").toLowerCase().includes(q)))
 })
@@ -192,6 +199,7 @@ const loadCategories = () => {
   Network.getRequest(Const.CMS_ADMIN_CATEGORIES, {}, {}, response => {
     if (response.data?.success) {
       categories.value = response.data.data || []
+      
       return
     }
     toast.error(`Failed to load categories: ${response.data?.err_msg || "Unknown error"}`)
@@ -205,6 +213,7 @@ const loadProducts = afterLoad => {
     if (response.data?.success) {
       products.value = response.data.data || []
       if (afterLoad) afterLoad()
+      
       return
     }
     toast.error(`Failed to load products: ${response.data?.err_msg || "Unknown error"}`)
@@ -213,6 +222,7 @@ const loadProducts = afterLoad => {
 
 const refreshAndKeepSelected = () => {
   const currentId = currentProduct.value?.id
+
   loadProducts(() => {
     if (!currentId) return
     const latest = products.value.find(p => p.id === currentId)
@@ -227,7 +237,9 @@ const editProduct = item => {
   }
 
   benefitsText.value = Array.isArray(item.benefits) ? item.benefits.join("\n") : ""
+
   const details = item.treatment_details || {}
+
   treatmentDetailsForm.value = {
     how_it_works: details.how_it_works || "",
     ingredientsText: Array.isArray(details.ingredients) ? details.ingredients.join("\n") : "",
@@ -240,6 +252,7 @@ const saveProduct = () => {
   refVForm.value?.validate().then(({ valid: isValid }) => {
     if (!isValid) {
       toast.error("Please fill required fields.")
+      
       return
     }
 
@@ -278,15 +291,18 @@ const saveProduct = () => {
       isSaving.value = false
       if (response.data?.success) {
         const savedId = response.data?.data?.id
+
         toast.success(currentProduct.value.id ? "Product updated" : "Product created")
         loadProducts(() => {
           const latest = products.value.find(p => p.id === savedId)
           if (latest) {
             editProduct(latest)
+            
             return
           }
           resetForm()
         })
+        
         return
       }
       toast.error(`Failed to save product: ${response.data?.err_msg || "Unknown error"}`)
@@ -313,6 +329,7 @@ const doDelete = async value => {
     loadProducts()
   } catch (error) {
     const message = error?.response?.data?.message || error?.message || "Delete failed"
+
     toast.error(`Failed to delete product: ${message}`)
   } finally {
     deletingProductId.value = null
@@ -322,8 +339,10 @@ const doDelete = async value => {
 const withProductId = payload => {
   if (!currentProduct.value?.id) {
     toast.error("Please save/select a product first.")
+    
     return null
   }
+  
   return { ...payload, product_id: currentProduct.value.id }
 }
 
@@ -338,6 +357,7 @@ const getProductSlugForUpload = () => currentProduct.value.slug || makeSlug(curr
 const triggerImageUpload = () => {
   if (!currentProduct.value.id) {
     toast.error("Please save the product first, then upload images.")
+    
     return
   }
   productImageInputRef.value?.click()
@@ -349,12 +369,15 @@ const uploadImage = async event => {
   const slug = getProductSlugForUpload()
   if (!slug) {
     toast.error("Please enter product name or slug before upload.")
+    
     return
   }
 
   try {
     isUploadingImage.value = true
+
     const formData = new FormData()
+
     formData.append("image", file)
     formData.append("type", "featured")
     formData.append("product_slug", slug)
@@ -397,6 +420,7 @@ const editFaq = faq => {
 
 const saveFaq = () => {
   faqErrors.value = {}
+
   const payload = withProductId({
     id: faqDraft.value.id || undefined,
     question: faqDraft.value.question,
@@ -405,11 +429,13 @@ const saveFaq = () => {
     display_order: Number(faqDraft.value.display_order || 0),
     is_active: !!faqDraft.value.is_active,
   })
+
   if (!payload) return
   if (!payload.question) faqErrors.value.question = "Question is required."
   if (!payload.answer) faqErrors.value.answer = "Answer is required."
   if (Object.keys(faqErrors.value).length) {
     toast.error("Please fix FAQ form errors.")
+    
     return
   }
 
@@ -425,6 +451,7 @@ const saveFaq = () => {
         is_active: true,
       }
       refreshAndKeepSelected()
+      
       return
     }
     toast.error(`Failed to save FAQ: ${response.data?.err_msg || "Unknown error"}`)
@@ -461,6 +488,7 @@ const editPricingOption = option => {
 
 const savePricingOption = () => {
   pricingErrors.value = {}
+
   const features = pricingDraft.value.featuresText
     .split("\n")
     .map(v => v.trim())
@@ -477,11 +505,13 @@ const savePricingOption = () => {
     is_popular: !!pricingDraft.value.is_popular,
     display_order: Number(pricingDraft.value.display_order || 0),
   })
+
   if (!payload) return
   if (!payload.plan_name) pricingErrors.value.plan_name = "Plan name is required."
   if (!payload.price) pricingErrors.value.price = "Price is required."
   if (Object.keys(pricingErrors.value).length) {
     toast.error("Please fix pricing form errors.")
+    
     return
   }
 
@@ -500,6 +530,7 @@ const savePricingOption = () => {
         display_order: 0,
       }
       refreshAndKeepSelected()
+      
       return
     }
     toast.error(`Failed to save pricing option: ${response.data?.err_msg || "Unknown error"}`)
@@ -536,6 +567,7 @@ const editResearchLink = link => {
 
 const saveResearchLink = () => {
   researchErrors.value = {}
+
   const payload = withProductId({
     id: researchDraft.value.id || undefined,
     title: researchDraft.value.title,
@@ -549,10 +581,12 @@ const saveResearchLink = () => {
     article_url: researchDraft.value.article_url,
     display_order: Number(researchDraft.value.display_order || 0),
   })
+
   if (!payload) return
   if (!payload.title) researchErrors.value.title = "Title is required."
   if (Object.keys(researchErrors.value).length) {
     toast.error("Please fix research form errors.")
+    
     return
   }
 
@@ -571,6 +605,7 @@ const saveResearchLink = () => {
         display_order: 0,
       }
       refreshAndKeepSelected()
+      
       return
     }
     toast.error(`Failed to save research link: ${response.data?.err_msg || "Unknown error"}`)
@@ -601,17 +636,20 @@ const editDiscount = discount => {
 
 const saveDiscount = () => {
   discountErrors.value = {}
+
   const payload = withProductId({
     id: discountDraft.value.id || undefined,
     frequency_months: Number(discountDraft.value.frequency_months || 1),
     discount_percentage: Number(discountDraft.value.discount_percentage || 0),
   })
+
   if (!payload) return
   if (discountDraft.value.discount_percentage === "" || Number.isNaN(payload.discount_percentage)) {
     discountErrors.value.discount_percentage = "Discount percentage is required."
   }
   if (Object.keys(discountErrors.value).length) {
     toast.error("Please fix discount form errors.")
+    
     return
   }
 
@@ -624,6 +662,7 @@ const saveDiscount = () => {
         discount_percentage: "",
       }
       refreshAndKeepSelected()
+      
       return
     }
     toast.error(`Failed to save discount: ${response.data?.err_msg || "Unknown error"}`)
@@ -657,10 +696,19 @@ onMounted(() => {
         <VCard>
           <VCardText>
             <VRow>
-              <VCol cols="12" md="5">
+              <VCol
+                cols="12"
+                md="5"
+              >
                 <div class="d-flex align-center justify-space-between mb-3">
                   <h4>CMS PRODUCTS</h4>
-                  <VBtn color="primary" size="small" @click="resetForm">+ New</VBtn>
+                  <VBtn
+                    color="primary"
+                    size="small"
+                    @click="resetForm"
+                  >
+                    + New
+                  </VBtn>
                 </div>
                 <VTextField
                   v-model="productsSearch"
@@ -669,7 +717,11 @@ onMounted(() => {
                   class="mb-3"
                 />
 
-                <VProgressLinear v-if="isLoading" indeterminate class="mb-3" />
+                <VProgressLinear
+                  v-if="isLoading"
+                  indeterminate
+                  class="mb-3"
+                />
 
                 <VTable class="border rounded">
                   <thead>
@@ -677,7 +729,9 @@ onMounted(() => {
                       <th>Name</th>
                       <th>Category</th>
                       <th>Featured</th>
-                      <th class="text-right">Action</th>
+                      <th class="text-right">
+                        Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -698,22 +752,42 @@ onMounted(() => {
                           size="x-small"
                           @click.stop="askDelete(item.id)"
                         >
-                          <VIcon icon="tabler-trash" :size="20" color="error" />
+                          <VIcon
+                            icon="tabler-trash"
+                            :size="20"
+                            color="error"
+                          />
                         </VBtn>
                       </td>
                     </tr>
                     <tr v-if="!filteredProducts.length && !isLoading">
-                      <td colspan="4" class="text-center py-6">No products found.</td>
+                      <td
+                        colspan="4"
+                        class="text-center py-6"
+                      >
+                        No products found.
+                      </td>
                     </tr>
                   </tbody>
                 </VTable>
               </VCol>
 
-              <VCol cols="12" md="7">
-                <h4 class="mb-3">{{ currentProduct.id ? "EDIT PRODUCT" : "ADD PRODUCT" }}</h4>
-                <VForm ref="refVForm" @submit.prevent="saveProduct">
+              <VCol
+                cols="12"
+                md="7"
+              >
+                <h4 class="mb-3">
+                  {{ currentProduct.id ? "EDIT PRODUCT" : "ADD PRODUCT" }}
+                </h4>
+                <VForm
+                  ref="refVForm"
+                  @submit.prevent="saveProduct"
+                >
                   <VRow>
-                    <VCol cols="12" md="6">
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
                       <VSelect
                         v-model="currentProduct.category_id"
                         :items="categories"
@@ -723,7 +797,10 @@ onMounted(() => {
                         :rules="[requiredValidator]"
                       />
                     </VCol>
-                    <VCol cols="12" md="6">
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
                       <VTextField
                         v-model="currentProduct.name"
                         label="Name"
@@ -732,15 +809,26 @@ onMounted(() => {
                     </VCol>
 
                     <VCol cols="12">
-                      <VTextField v-model="currentProduct.slug" label="Slug (optional)" />
+                      <VTextField
+                        v-model="currentProduct.slug"
+                        label="Slug (optional)"
+                      />
                     </VCol>
 
                     <VCol cols="12">
-                      <VTextarea v-model="currentProduct.short_description" label="Short Description" rows="2" />
+                      <VTextarea
+                        v-model="currentProduct.short_description"
+                        label="Short Description"
+                        rows="2"
+                      />
                     </VCol>
 
                     <VCol cols="12">
-                      <VTextarea v-model="currentProduct.full_description" label="Full Description" rows="4" />
+                      <VTextarea
+                        v-model="currentProduct.full_description"
+                        label="Full Description"
+                        rows="4"
+                      />
                     </VCol>
 
                     <VCol cols="12">
@@ -771,24 +859,68 @@ onMounted(() => {
                       />
                     </VCol>
 
-                    <VCol cols="12" md="4">
-                      <VTextField v-model="currentProduct.base_price" label="Base Price" type="number" step="0.01" />
+                    <VCol
+                      cols="12"
+                      md="4"
+                    >
+                      <VTextField
+                        v-model="currentProduct.base_price"
+                        label="Base Price"
+                        type="number"
+                        step="0.01"
+                      />
                     </VCol>
-                    <VCol cols="12" md="4">
-                      <VTextField v-model="currentProduct.micro_dose_price" label="Micro Dose Price" type="number" step="0.01" />
+                    <VCol
+                      cols="12"
+                      md="4"
+                    >
+                      <VTextField
+                        v-model="currentProduct.micro_dose_price"
+                        label="Micro Dose Price"
+                        type="number"
+                        step="0.01"
+                      />
                     </VCol>
-                    <VCol cols="12" md="4">
-                      <VTextField v-model="currentProduct.sample_price" label="Sample Price" type="number" step="0.01" />
+                    <VCol
+                      cols="12"
+                      md="4"
+                    >
+                      <VTextField
+                        v-model="currentProduct.sample_price"
+                        label="Sample Price"
+                        type="number"
+                        step="0.01"
+                      />
                     </VCol>
 
-                    <VCol cols="12" md="4">
-                      <VTextField v-model="currentProduct.currency" label="Currency" />
+                    <VCol
+                      cols="12"
+                      md="4"
+                    >
+                      <VTextField
+                        v-model="currentProduct.currency"
+                        label="Currency"
+                      />
                     </VCol>
-                    <VCol cols="12" md="4">
-                      <VTextField v-model="currentProduct.display_order" label="Display Order" type="number" />
+                    <VCol
+                      cols="12"
+                      md="4"
+                    >
+                      <VTextField
+                        v-model="currentProduct.display_order"
+                        label="Display Order"
+                        type="number"
+                      />
                     </VCol>
-                    <VCol cols="12" md="4" class="d-flex align-center">
-                      <VCheckbox v-model="currentProduct.is_featured" label="Featured Product" />
+                    <VCol
+                      cols="12"
+                      md="4"
+                      class="d-flex align-center"
+                    >
+                      <VCheckbox
+                        v-model="currentProduct.is_featured"
+                        label="Featured Product"
+                      />
                     </VCol>
 
                     <VCol cols="12">
@@ -800,7 +932,9 @@ onMounted(() => {
                     </VCol>
 
                     <VCol cols="12">
-                      <h5 class="mb-2">Treatment Details</h5>
+                      <h5 class="mb-2">
+                        Treatment Details
+                      </h5>
                     </VCol>
                     <VCol cols="12">
                       <VTextarea
@@ -816,22 +950,41 @@ onMounted(() => {
                         rows="3"
                       />
                     </VCol>
-                    <VCol cols="12" md="6">
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
                       <VTextField
                         v-model="treatmentDetailsForm.duration"
                         label="Treatment Duration"
                       />
                     </VCol>
-                    <VCol cols="12" md="6">
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
                       <VTextField
                         v-model="treatmentDetailsForm.usage"
                         label="Usage Instructions"
                       />
                     </VCol>
 
-                    <VCol cols="12" class="d-flex justify-end gap-2">
-                      <VBtn color="secondary" variant="tonal" @click="resetForm">Cancel</VBtn>
-                      <VBtn color="primary" type="submit" :loading="isSaving">
+                    <VCol
+                      cols="12"
+                      class="d-flex justify-end gap-2"
+                    >
+                      <VBtn
+                        color="secondary"
+                        variant="tonal"
+                        @click="resetForm"
+                      >
+                        Cancel
+                      </VBtn>
+                      <VBtn
+                        color="primary"
+                        type="submit"
+                        :loading="isSaving"
+                      >
                         {{ currentProduct.id ? "Update" : "Save" }}
                       </VBtn>
                     </VCol>
@@ -840,19 +993,38 @@ onMounted(() => {
 
                 <template v-if="currentProduct.id">
                   <VDivider class="my-6" />
-                  <h4 class="mb-2">PRODUCT DETAILS MANAGEMENT</h4>
+                  <h4 class="mb-2">
+                    PRODUCT DETAILS MANAGEMENT
+                  </h4>
 
-                  <VTabs v-model="activeDetailTab" class="v-tabs-pill mb-4">
-                    <VTab value="faqs">FAQs</VTab>
-                    <VTab value="pricing">Pricing</VTab>
-                    <VTab value="research">Research</VTab>
-                    <VTab value="discounts">Discounts</VTab>
+                  <VTabs
+                    v-model="activeDetailTab"
+                    class="v-tabs-pill mb-4"
+                  >
+                    <VTab value="faqs">
+                      FAQs
+                    </VTab>
+                    <VTab value="pricing">
+                      Pricing
+                    </VTab>
+                    <VTab value="research">
+                      Research
+                    </VTab>
+                    <VTab value="discounts">
+                      Discounts
+                    </VTab>
                   </VTabs>
 
-                  <VWindow v-model="activeDetailTab" :touch="false">
+                  <VWindow
+                    v-model="activeDetailTab"
+                    :touch="false"
+                  >
                     <VWindowItem value="faqs">
                       <VRow>
-                        <VCol cols="12" md="7">
+                        <VCol
+                          cols="12"
+                          md="7"
+                        >
                           <VTextField
                             v-model="faqsSearch"
                             label="Search FAQs"
@@ -864,26 +1036,56 @@ onMounted(() => {
                               <tr>
                                 <th>Question</th>
                                 <th>Active</th>
-                                <th class="text-right">Action</th>
+                                <th class="text-right">
+                                  Action
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr v-for="item in filteredFaqs" :key="item.id">
-                                <td class="text-truncate" style="max-width: 260px;">{{ item.question }}</td>
+                              <tr
+                                v-for="item in filteredFaqs"
+                                :key="item.id"
+                              >
+                                <td
+                                  class="text-truncate"
+                                  style="max-width: 260px;"
+                                >
+                                  {{ item.question }}
+                                </td>
                                 <td>{{ item.is_active ? "Yes" : "No" }}</td>
                                 <td class="text-right">
-                                  <VBtn icon variant="text" size="x-small" @click="editFaq(item)">
-                                    <VIcon icon="tabler-edit" :size="18" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="editFaq(item)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-edit"
+                                      :size="18"
+                                    />
                                   </VBtn>
-                                  <VBtn icon variant="text" size="x-small" @click="deleteFaq(item.id)">
-                                    <VIcon icon="tabler-trash" :size="18" color="error" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="deleteFaq(item.id)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-trash"
+                                      :size="18"
+                                      color="error"
+                                    />
                                   </VBtn>
                                 </td>
                               </tr>
                             </tbody>
                           </VTable>
                         </VCol>
-                        <VCol cols="12" md="5">
+                        <VCol
+                          cols="12"
+                          md="5"
+                        >
                           <VTextField
                             v-model="faqDraft.question"
                             label="Question"
@@ -897,16 +1099,33 @@ onMounted(() => {
                             class="mb-3"
                             :error-messages="faqErrors.answer"
                           />
-                          <VTextField v-model="faqDraft.category" label="Category" class="mb-3" />
+                          <VTextField
+                            v-model="faqDraft.category"
+                            label="Category"
+                            class="mb-3"
+                          />
                           <VRow>
                             <VCol cols="6">
-                              <VTextField v-model="faqDraft.display_order" type="number" label="Order" />
+                              <VTextField
+                                v-model="faqDraft.display_order"
+                                type="number"
+                                label="Order"
+                              />
                             </VCol>
-                            <VCol cols="6" class="d-flex align-center">
-                              <VCheckbox v-model="faqDraft.is_active" label="Active" />
+                            <VCol
+                              cols="6"
+                              class="d-flex align-center"
+                            >
+                              <VCheckbox
+                                v-model="faqDraft.is_active"
+                                label="Active"
+                              />
                             </VCol>
                           </VRow>
-                          <VBtn color="primary" @click="saveFaq">
+                          <VBtn
+                            color="primary"
+                            @click="saveFaq"
+                          >
                             {{ faqDraft.id ? "Update FAQ" : "Add FAQ" }}
                           </VBtn>
                         </VCol>
@@ -915,7 +1134,10 @@ onMounted(() => {
 
                     <VWindowItem value="pricing">
                       <VRow>
-                        <VCol cols="12" md="7">
+                        <VCol
+                          cols="12"
+                          md="7"
+                        >
                           <VTextField
                             v-model="pricingSearch"
                             label="Search pricing options"
@@ -927,26 +1149,51 @@ onMounted(() => {
                               <tr>
                                 <th>Plan</th>
                                 <th>Price</th>
-                                <th class="text-right">Action</th>
+                                <th class="text-right">
+                                  Action
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr v-for="item in filteredPricing" :key="item.id">
+                              <tr
+                                v-for="item in filteredPricing"
+                                :key="item.id"
+                              >
                                 <td>{{ item.plan_name }}</td>
                                 <td>{{ item.price }}</td>
                                 <td class="text-right">
-                                  <VBtn icon variant="text" size="x-small" @click="editPricingOption(item)">
-                                    <VIcon icon="tabler-edit" :size="18" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="editPricingOption(item)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-edit"
+                                      :size="18"
+                                    />
                                   </VBtn>
-                                  <VBtn icon variant="text" size="x-small" @click="deletePricingOption(item.id)">
-                                    <VIcon icon="tabler-trash" :size="18" color="error" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="deletePricingOption(item.id)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-trash"
+                                      :size="18"
+                                      color="error"
+                                    />
                                   </VBtn>
                                 </td>
                               </tr>
                             </tbody>
                           </VTable>
                         </VCol>
-                        <VCol cols="12" md="5">
+                        <VCol
+                          cols="12"
+                          md="5"
+                        >
                           <VTextField
                             v-model="pricingDraft.plan_name"
                             label="Plan Name"
@@ -961,19 +1208,50 @@ onMounted(() => {
                             class="mb-3"
                             :error-messages="pricingErrors.price"
                           />
-                          <VTextField v-model="pricingDraft.billing_cycle" label="Billing Cycle" class="mb-3" />
-                          <VTextField v-model="pricingDraft.supply_duration" label="Supply Duration" class="mb-3" />
-                          <VTextarea v-model="pricingDraft.description" label="Description" rows="2" class="mb-3" />
-                          <VTextarea v-model="pricingDraft.featuresText" label="Features (one per line)" rows="3" class="mb-3" />
+                          <VTextField
+                            v-model="pricingDraft.billing_cycle"
+                            label="Billing Cycle"
+                            class="mb-3"
+                          />
+                          <VTextField
+                            v-model="pricingDraft.supply_duration"
+                            label="Supply Duration"
+                            class="mb-3"
+                          />
+                          <VTextarea
+                            v-model="pricingDraft.description"
+                            label="Description"
+                            rows="2"
+                            class="mb-3"
+                          />
+                          <VTextarea
+                            v-model="pricingDraft.featuresText"
+                            label="Features (one per line)"
+                            rows="3"
+                            class="mb-3"
+                          />
                           <VRow>
                             <VCol cols="6">
-                              <VTextField v-model="pricingDraft.display_order" type="number" label="Order" />
+                              <VTextField
+                                v-model="pricingDraft.display_order"
+                                type="number"
+                                label="Order"
+                              />
                             </VCol>
-                            <VCol cols="6" class="d-flex align-center">
-                              <VCheckbox v-model="pricingDraft.is_popular" label="Popular" />
+                            <VCol
+                              cols="6"
+                              class="d-flex align-center"
+                            >
+                              <VCheckbox
+                                v-model="pricingDraft.is_popular"
+                                label="Popular"
+                              />
                             </VCol>
                           </VRow>
-                          <VBtn color="primary" @click="savePricingOption">
+                          <VBtn
+                            color="primary"
+                            @click="savePricingOption"
+                          >
                             {{ pricingDraft.id ? "Update Pricing" : "Add Pricing" }}
                           </VBtn>
                         </VCol>
@@ -982,7 +1260,10 @@ onMounted(() => {
 
                     <VWindowItem value="research">
                       <VRow>
-                        <VCol cols="12" md="7">
+                        <VCol
+                          cols="12"
+                          md="7"
+                        >
                           <VTextField
                             v-model="researchSearch"
                             label="Search research links"
@@ -994,40 +1275,103 @@ onMounted(() => {
                               <tr>
                                 <th>Title</th>
                                 <th>Year</th>
-                                <th class="text-right">Action</th>
+                                <th class="text-right">
+                                  Action
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr v-for="item in filteredResearch" :key="item.id">
-                                <td class="text-truncate" style="max-width: 260px;">{{ item.title }}</td>
+                              <tr
+                                v-for="item in filteredResearch"
+                                :key="item.id"
+                              >
+                                <td
+                                  class="text-truncate"
+                                  style="max-width: 260px;"
+                                >
+                                  {{ item.title }}
+                                </td>
                                 <td>{{ item.publication_year || "-" }}</td>
                                 <td class="text-right">
-                                  <VBtn icon variant="text" size="x-small" @click="editResearchLink(item)">
-                                    <VIcon icon="tabler-edit" :size="18" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="editResearchLink(item)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-edit"
+                                      :size="18"
+                                    />
                                   </VBtn>
-                                  <VBtn icon variant="text" size="x-small" @click="deleteResearchLink(item.id)">
-                                    <VIcon icon="tabler-trash" :size="18" color="error" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="deleteResearchLink(item.id)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-trash"
+                                      :size="18"
+                                      color="error"
+                                    />
                                   </VBtn>
                                 </td>
                               </tr>
                             </tbody>
                           </VTable>
                         </VCol>
-                        <VCol cols="12" md="5">
+                        <VCol
+                          cols="12"
+                          md="5"
+                        >
                           <VTextField
                             v-model="researchDraft.title"
                             label="Title"
                             class="mb-3"
                             :error-messages="researchErrors.title"
                           />
-                          <VTextField v-model="researchDraft.authors" label="Authors" class="mb-3" />
-                          <VTextField v-model="researchDraft.journal" label="Journal" class="mb-3" />
-                          <VTextField v-model="researchDraft.publication_year" type="number" label="Publication Year" class="mb-3" />
-                          <VTextField v-model="researchDraft.pubmed_id" label="PubMed ID" class="mb-3" />
-                          <VTextField v-model="researchDraft.doi" label="DOI" class="mb-3" />
-                          <VTextField v-model="researchDraft.article_url" label="Article URL" class="mb-3" />
-                          <VTextField v-model="researchDraft.display_order" type="number" label="Order" class="mb-3" />
-                          <VBtn color="primary" @click="saveResearchLink">
+                          <VTextField
+                            v-model="researchDraft.authors"
+                            label="Authors"
+                            class="mb-3"
+                          />
+                          <VTextField
+                            v-model="researchDraft.journal"
+                            label="Journal"
+                            class="mb-3"
+                          />
+                          <VTextField
+                            v-model="researchDraft.publication_year"
+                            type="number"
+                            label="Publication Year"
+                            class="mb-3"
+                          />
+                          <VTextField
+                            v-model="researchDraft.pubmed_id"
+                            label="PubMed ID"
+                            class="mb-3"
+                          />
+                          <VTextField
+                            v-model="researchDraft.doi"
+                            label="DOI"
+                            class="mb-3"
+                          />
+                          <VTextField
+                            v-model="researchDraft.article_url"
+                            label="Article URL"
+                            class="mb-3"
+                          />
+                          <VTextField
+                            v-model="researchDraft.display_order"
+                            type="number"
+                            label="Order"
+                            class="mb-3"
+                          />
+                          <VBtn
+                            color="primary"
+                            @click="saveResearchLink"
+                          >
                             {{ researchDraft.id ? "Update Research" : "Add Research" }}
                           </VBtn>
                         </VCol>
@@ -1036,7 +1380,10 @@ onMounted(() => {
 
                     <VWindowItem value="discounts">
                       <VRow>
-                        <VCol cols="12" md="7">
+                        <VCol
+                          cols="12"
+                          md="7"
+                        >
                           <VTextField
                             v-model="discountsSearch"
                             label="Search discounts"
@@ -1048,26 +1395,51 @@ onMounted(() => {
                               <tr>
                                 <th>Months</th>
                                 <th>Discount %</th>
-                                <th class="text-right">Action</th>
+                                <th class="text-right">
+                                  Action
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr v-for="item in filteredDiscounts" :key="item.id">
+                              <tr
+                                v-for="item in filteredDiscounts"
+                                :key="item.id"
+                              >
                                 <td>{{ item.frequency_months }}</td>
                                 <td>{{ item.discount_percentage }}</td>
                                 <td class="text-right">
-                                  <VBtn icon variant="text" size="x-small" @click="editDiscount(item)">
-                                    <VIcon icon="tabler-edit" :size="18" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="editDiscount(item)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-edit"
+                                      :size="18"
+                                    />
                                   </VBtn>
-                                  <VBtn icon variant="text" size="x-small" @click="deleteDiscount(item.id)">
-                                    <VIcon icon="tabler-trash" :size="18" color="error" />
+                                  <VBtn
+                                    icon
+                                    variant="text"
+                                    size="x-small"
+                                    @click="deleteDiscount(item.id)"
+                                  >
+                                    <VIcon
+                                      icon="tabler-trash"
+                                      :size="18"
+                                      color="error"
+                                    />
                                   </VBtn>
                                 </td>
                               </tr>
                             </tbody>
                           </VTable>
                         </VCol>
-                        <VCol cols="12" md="5">
+                        <VCol
+                          cols="12"
+                          md="5"
+                        >
                           <VSelect
                             v-model="discountDraft.frequency_months"
                             :items="[1, 2, 3]"
@@ -1082,7 +1454,10 @@ onMounted(() => {
                             class="mb-3"
                             :error-messages="discountErrors.discount_percentage"
                           />
-                          <VBtn color="primary" @click="saveDiscount">
+                          <VBtn
+                            color="primary"
+                            @click="saveDiscount"
+                          >
                             {{ discountDraft.id ? "Update Discount" : "Add Discount" }}
                           </VBtn>
                         </VCol>

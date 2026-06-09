@@ -94,8 +94,6 @@ watch(
 
 <template>
   <section class="products-module">
-    
-
     <div class="module-section-grid">
       <button
         v-for="section in moduleSections"
@@ -105,11 +103,20 @@ watch(
         :class="{ 'module-section-card--active': activeSection === section.key }"
         @click="router.push(buildProductsRoute(section.key))"
       >
-        <div class="module-section-card__icon" :style="{ backgroundColor: `rgba(var(--v-theme-${section.color}), 0.14)` }">
-          <VIcon :icon="section.icon" :color="section.color" size="22" />
+        <div
+          class="module-section-card__icon"
+          :style="{ backgroundColor: `rgba(var(--v-theme-${section.color}), 0.14)` }"
+        >
+          <VIcon
+            :icon="section.icon"
+            :color="section.color"
+            size="22"
+          />
         </div>
         <div>
-          <div class="text-subtitle-1 font-weight-bold">{{ section.title }}</div>
+          <div class="text-subtitle-1 font-weight-bold">
+            {{ section.title }}
+          </div>
         </div>
       </button>
     </div>

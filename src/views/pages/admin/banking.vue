@@ -21,23 +21,24 @@ const refForm = ref()
 async function saveSettings() {
   refForm.value?.validate().then(({ valid }) => {
     if (valid) { 
-        try {
-            //await axios.post('/api/text-campaigns', form.value) 
-            let params = {
-            ...form.value,
-            sales_tax_rate: form.value.taxRate
-            }
-            store.saveBankingData(params)
-            toast.success('Banking info saved successfully!')
-        } catch (error) {
-            toast.error('Error saving Bank Data.')
+      try {
+        //await axios.post('/api/text-campaigns', form.value) 
+        let params = {
+          ...form.value,
+          sales_tax_rate: form.value.taxRate,
         }
+        store.saveBankingData(params)
+        toast.success('Banking info saved successfully!')
+      } catch (error) {
+        toast.error('Error saving Bank Data.')
+      }
     }
-    })
+  })
 }
 
 onMounted(async () => {
   await store.getBankingData()
+
   const data = store.bankingData
   if (data) {
     form.value = {
@@ -47,7 +48,7 @@ onMounted(async () => {
       taxRate: data.sales_tax_rate || '',
     }
   }
-});
+})
 </script>
 
 <template>
@@ -56,12 +57,12 @@ onMounted(async () => {
       <VCol cols="12">
         <VCard>
           <VCardTitle class="text-h6 mt-4 text-center">
-              BANKING INFORMATION
+            BANKING INFORMATION
           </VCardTitle>
             
           <VCardText>  
             <VRow class="mt-4">
-              <VCol cols="3"></VCol>
+              <VCol cols="3" />
               <VCol cols="6">
                 <VForm
                   ref="refForm"
@@ -73,10 +74,10 @@ onMounted(async () => {
                     </VCol>
                     <VCol class="ps-0">
                       <VTextField
-                          v-model="form.institution"
-                          :rules="[requiredValidator]"
-                          class="mx-4"
-                          variant="underlined"
+                        v-model="form.institution"
+                        :rules="[requiredValidator]"
+                        class="mx-4"
+                        variant="underlined"
                       />
                     </VCol>
                   </VRow>
@@ -86,10 +87,10 @@ onMounted(async () => {
                     </VCol>
                     <VCol class="ps-0">
                       <VTextField
-                          v-model="form.account"
-                          :rules="[requiredValidator]"
-                          class="mx-4"
-                          variant="underlined"
+                        v-model="form.account"
+                        :rules="[requiredValidator]"
+                        class="mx-4"
+                        variant="underlined"
                       />
                     </VCol>
                   </VRow>
@@ -99,10 +100,10 @@ onMounted(async () => {
                     </VCol>
                     <VCol class="ps-0">
                       <VTextField
-                          v-model="form.routing"
-                          :rules="[requiredValidator]"
-                          class="mx-4"
-                          variant="underlined"
+                        v-model="form.routing"
+                        :rules="[requiredValidator]"
+                        class="mx-4"
+                        variant="underlined"
                       />
                     </VCol>
                   </VRow>
@@ -122,16 +123,21 @@ onMounted(async () => {
                     </VCol>
                   </VRow>
                   <VRow class="mt-4 pt-4 align-center justify-center">
-                    <VBtn variant="flat" color="primary" type="submit" width="100">Save</VBtn>
+                    <VBtn
+                      variant="flat"
+                      color="primary"
+                      type="submit"
+                      width="100"
+                    >
+                      Save
+                    </VBtn>
                   </VRow>                
                 </VForm> 
               </VCol>
             </VRow>                 
           </VCardText>
 
-          <VCardActions class="justify-center me-4 mb-4">
-              
-          </VCardActions>
+          <VCardActions class="justify-center me-4 mb-4" />
         </VCard>
       </VCol>
     </VRow>

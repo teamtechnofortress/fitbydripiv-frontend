@@ -93,21 +93,27 @@ const resolveAssetUrl = value => {
   if (!value) return ''
   if (/^https?:\/\//.test(value)) return value
   if (value.startsWith('/')) return `${SERVER_DOMAIN}${value}`
+  
   return `${SERVER_DOMAIN}/storage/${value.replace(/^\/+/, '')}`
 }
 
 const headerConfig = computed(() => layoutData.value?.header?.data || fallbackLayout.header.data)
 const footerConfig = computed(() => layoutData.value?.footer?.data || fallbackLayout.footer.data)
+
 const footerConfigColumns = computed(() => (
   Array.isArray(layoutData.value?.footer?.config?.columns)
     ? layoutData.value.footer.config.columns
     : []
 ))
+
 const siteSettingsByKey = computed(() => Object.fromEntries(siteSettingsRows.value.map(item => [item.key, item])))
+
 const siteLogo = computed(() => {
   const value = siteSettingsByKey.value.logo?.value
+  
   return typeof value === 'string' ? value.trim() : ''
 })
+
 const brandConfig = computed(() => {
   const brand = headerConfig.value?.brand || fallbackLayout.header.data.brand
 
@@ -116,8 +122,10 @@ const brandConfig = computed(() => {
     logo: siteLogo.value || brand?.logo || fallbackLayout.header.data.brand.logo,
   }
 })
+
 const headerMenu = computed(() => headerConfig.value?.menu || [])
-const toStartNewRowFlag = (value) => {
+
+const toStartNewRowFlag = value => {
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value === 1
 
@@ -140,6 +148,7 @@ const footerColumns = computed(() => {
       String(item?.id || '').trim()
       && String(item?.id || '').trim() === String(column?.id || '').trim()
     ))
+
     const metaColumnBySort = metaColumns.find(item => Number(item?.sort_order) === Number(column?.sort_order))
     const metaColumn = metaColumnById || metaColumnBySort || metaColumns[index] || {}
 
@@ -159,12 +168,14 @@ const footerColumns = computed(() => {
 
   return normalized
 })
+
 const footerRows = computed(() => {
   const rows = []
 
   footerColumns.value.forEach((column, index) => {
     if (index === 0 || column.start_new_row || rows.length === 0) {
       rows.push([column])
+      
       return
     }
 
@@ -173,18 +184,27 @@ const footerRows = computed(() => {
 
   return rows
 })
+
 const getFooterRowStyle = row => ({
   '--footer-row-cols': Math.max(1, Number(row?.length) || 1),
 })
+
 const footerBottom = computed(() => footerConfig.value?.bottom || {})
 const centeredBrand = computed(() => headerConfig.value?.layout?.show_brand_centered !== false)
 
 const normalizePath = value => {
   if (!value) return ''
-  const path = String(value).trim()
+
+  const rawValue = typeof value === 'object'
+    ? value.href || value.url || value.value || value.slug || value.path || ''
+    : value
+
+  const path = String(rawValue || '').trim()
   if (!path) return ''
+  if (/^\[object object\]$/i.test(path)) return ''
   if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(path)) return path
   if (path === 'home' || path === '/home') return '/'
+  
   return path.startsWith('/') ? path : `/${path}`
 }
 
@@ -194,22 +214,39 @@ const resolveLinkHref = link => {
   if (link.href) return normalizePath(link.href)
   if (link.slug === 'home') return '/'
   if (link.slug) return normalizePath(link.slug)
+  
   return ''
 }
 
 const isAbsoluteLink = href => /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(String(href || '').trim())
 const isAnchorLink = link => isAbsoluteLink(resolveLinkHref(link))
-const getFooterLinkLabel = (link) => {
+
+const getFooterLinkLabel = link => {
   if (typeof link === 'string') {
     const href = resolveLinkHref(link)
     if (href === '/') return 'Home'
+    
     return href.replace(/^\/+/, '').replace(/[-_]/g, ' ') || link
   }
 
-  return link?.label || link?.title || link?.slug || link?.href || ''
+  const label = typeof link?.label === 'string' ? link.label.trim() : ''
+  if (label) return label
+
+  const title = typeof link?.title === 'string' ? link.title.trim() : ''
+  if (title) return title
+
+  const slug = normalizePath(link?.slug)
+  if (slug && slug !== '/') return slug.replace(/^\/+/, '')
+  if (slug === '/') return 'Home'
+
+  const href = normalizePath(link?.href)
+  if (href && href !== '/') return href.replace(/^\/+/, '')
+  if (href === '/') return 'Home'
+
+  return ''
 }
 
-const navigate = (path) => {
+const navigate = path => {
   if (!path) return
   router.push(path)
   mobileMenuOpen.value = false
@@ -225,24 +262,29 @@ const isActive = path => {
 
   return normalizedRoute === normalizedTarget
 }
+
 const openLink = link => {
   const href = resolveLinkHref(link)
   if (!href) return
   if (/^(?:mailto:|tel:|sms:)/i.test(href)) {
     window.location.href = href
+    
     return
   }
   if (isAbsoluteLink(href)) {
     if (link.external) {
       window.open(href, '_blank', 'noopener,noreferrer')
+      
       return
     }
 
     window.location.href = href
+    
     return
   }
   if (link.external) {
     window.open(href, '_blank', 'noopener,noreferrer')
+    
     return
   }
 
@@ -275,6 +317,7 @@ const getSocialIcon = icon => {
 const normalizeRows = body => {
   if (Array.isArray(body?.data)) return body.data
   if (Array.isArray(body?.data?.data)) return body.data.data
+  
   return []
 }
 
@@ -282,6 +325,7 @@ const loadLayout = async () => {
   layoutLoading.value = true
   try {
     const response = await axios.get(PUBLIC_LAYOUT_URL)
+
     devLog('Global sections fetch response (public)', response?.data)
     devLog('Global sections payload (public)', response?.data?.data || null)
     layoutData.value = response?.data?.data || null
@@ -296,6 +340,7 @@ const loadLayout = async () => {
 const loadSiteSettings = async () => {
   try {
     const response = await axios.get(CMS_GET_SITE_SETTINGS)
+
     siteSettingsRows.value = normalizeRows(response?.data)
   } catch {
     siteSettingsRows.value = []
@@ -310,7 +355,10 @@ onMounted(() => {
 
 <template>
   <div class="public-site">
-    <div class="min-h-screen bg-white" style="display: flex; flex-direction: column;">
+    <div
+      class="min-h-screen bg-white"
+      style="display: flex; flex-direction: column;"
+    >
       <!-- Header -->
       <header class="public-header">
         <nav class="public-header__nav">
@@ -323,8 +371,55 @@ onMounted(() => {
                 aria-label="Toggle navigation menu"
                 @click="mobileMenuOpen = !mobileMenuOpen"
               >
-                <svg v-if="!mobileMenuOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg
+                  v-if="!mobileMenuOpen"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ><line
+                  x1="3"
+                  y1="12"
+                  x2="21"
+                  y2="12"
+                /><line
+                  x1="3"
+                  y1="6"
+                  x2="21"
+                  y2="6"
+                /><line
+                  x1="3"
+                  y1="18"
+                  x2="21"
+                  y2="18"
+                /></svg>
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ><line
+                  x1="18"
+                  y1="6"
+                  x2="6"
+                  y2="18"
+                /><line
+                  x1="6"
+                  y1="6"
+                  x2="18"
+                  y2="18"
+                /></svg>
               </button>
             </div>
 
@@ -336,7 +431,10 @@ onMounted(() => {
                 class="public-layout__brand public-layout__brand--header cursor-pointer hover:opacity-80 transition-opacity duration-200 pointer-events-auto"
                 @click="navigate(brandConfig.home_url || '/')"
               >
-                <span v-if="brandConfig.logo" class="public-layout__brand-mark">
+                <span
+                  v-if="brandConfig.logo"
+                  class="public-layout__brand-mark"
+                >
                   <img
                     :src="resolveAssetUrl(brandConfig.logo)"
                     :alt="brandConfig.name"
@@ -367,7 +465,9 @@ onMounted(() => {
                 v-if="item.type === 'group'"
                 class="public-mobile-menu__group"
               >
-                <div class="public-mobile-menu__label">{{ item.label }}</div>
+                <div class="public-mobile-menu__label">
+                  {{ item.label }}
+                </div>
                 <button
                   v-for="entry in item.items || []"
                   :key="resolveLinkHref(entry) || entry.label"
@@ -394,11 +494,14 @@ onMounted(() => {
 
       <!-- Main Content -->
       <main class="public-main">
-        <router-view />
+        <RouterView />
       </main>
 
       <!-- Footer -->
-      <footer class="border-t border-gray-200" style="background: linear-gradient(to bottom right, rgba(236,253,245,0.3), rgba(240,253,250,0.2), rgba(236,254,255,0.3));">
+      <footer
+        class="border-t border-gray-200"
+        style="background: linear-gradient(to bottom right, rgba(236,253,245,0.3), rgba(240,253,250,0.2), rgba(236,254,255,0.3));"
+      >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div class="flex flex-col gap-8">
             <div
@@ -420,14 +523,22 @@ onMounted(() => {
                     :class="{ 'cursor-pointer': column.home_url }"
                     @click="column.home_url ? navigate(column.home_url) : undefined"
                   >
-                    <span v-if="column.logo" class="public-layout__brand-mark public-layout__brand-mark--footer">
+                    <span
+                      v-if="column.logo"
+                      class="public-layout__brand-mark public-layout__brand-mark--footer"
+                    >
                       <img
                         :src="resolveAssetUrl(column.logo)"
                         :alt="column.title"
                         class="public-layout__brand-logo public-layout__brand-logo--header"
                       >
                     </span>
-                    <h3 v-else class="text-xl font-bold text-gray-900">{{ column.title }}</h3>
+                    <h3
+                      v-else
+                      class="text-xl font-bold text-gray-900"
+                    >
+                      {{ column.title }}
+                    </h3>
                   </div>
                   <p class="text-sm text-gray-600 leading-relaxed">
                     {{ column.content }}
@@ -438,7 +549,9 @@ onMounted(() => {
                   v-else-if="column.type === 'certification' || column.source === 'certification'"
                   class="public-footer-column"
                 >
-                  <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
+                  <h4 class="font-semibold text-gray-900 mb-3">
+                    {{ column.title }}
+                  </h4>
                   <div
                     v-if="column.items?.[0]?.image || column.items?.[0]?.description"
                     class="public-footer-certification"
@@ -466,7 +579,9 @@ onMounted(() => {
                   v-else-if="column.type === 'social_links' || column.source === 'social_links'"
                   class="public-footer-column"
                 >
-                  <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
+                  <h4 class="font-semibold text-gray-900 mb-3">
+                    {{ column.title }}
+                  </h4>
                   <div class="flex justify-center space-x-4 mb-4">
                     <a
                       v-for="item in column.items || []"
@@ -478,22 +593,32 @@ onMounted(() => {
                       :aria-label="item.label"
                       @click.prevent="openLink(item)"
                     >
-                      <VIcon :icon="getSocialIcon(item.icon || item.label)" size="20" />
+                      <VIcon
+                        :icon="getSocialIcon(item.icon || item.label)"
+                        size="20"
+                      />
                     </a>
                   </div>
                 </div>
 
-                <div v-else class="public-footer-column">
-                  <h4 class="font-semibold text-gray-900 mb-3">{{ column.title }}</h4>
+                <div
+                  v-else
+                  class="public-footer-column"
+                >
+                  <h4 class="font-semibold text-gray-900 mb-3">
+                    {{ column.title }}
+                  </h4>
                   <ul class="public-footer-links">
                     <li
                       v-for="item in column.items || []"
                       :key="resolveLinkHref(item) || getFooterLinkLabel(item)"
                       class="public-footer-links__item"
                     >
-                      <!-- <span class="public-footer-links__tick" aria-hidden="true">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    </span> -->
+                      <!--
+                        <span class="public-footer-links__tick" aria-hidden="true">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span> 
+                      -->
                       <a
                         v-if="isAnchorLink(item)"
                         :href="resolveLinkHref(item)"
@@ -520,7 +645,9 @@ onMounted(() => {
 
           <!-- Bottom bar -->
           <div class="border-t border-gray-200 mt-8 pt-6 text-center text-sm text-gray-600">
-            <p class="mb-1">{{ footerBottom.copyright || fallbackLayout.footer.data.bottom.copyright }}</p>
+            <p class="mb-1">
+              {{ footerBottom.copyright || fallbackLayout.footer.data.bottom.copyright }}
+            </p>
             <p>{{ footerBottom.credit || fallbackLayout.footer.data.bottom.credit }}</p>
           </div>
         </div>
@@ -859,5 +986,4 @@ onMounted(() => {
   font-weight: 600;
   background: linear-gradient(to bottom right, #ecfdf5, #eff6ff);
 }
-
 </style>

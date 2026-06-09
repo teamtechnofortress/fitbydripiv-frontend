@@ -1,49 +1,105 @@
 <template>
-  <transition name="modal-fade">
-    <div v-if="open" class="modal-overlay" @click="$emit('reject')">
-      <div class="modal-content" @click.stop>
-
+  <Transition name="modal-fade">
+    <div
+      v-if="open"
+      class="modal-overlay"
+      @click="$emit('reject')"
+    >
+      <div
+        class="modal-content"
+        @click.stop
+      >
         <!-- Decorative gradient wash -->
-        <div class="modal-wash" aria-hidden="true"></div>
+        <div
+          class="modal-wash"
+          aria-hidden="true"
+        />
 
         <!-- ── Header ─────────────────────────────────── -->
         <div class="modal-header">
           <div class="header-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 11l3 3L22 4"/>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
           </div>
           <div class="header-text">
-            <p class="header-eyebrow">Record Located</p>
-            <h2 class="modal-title">Patient Record Found</h2>
+            <p class="header-eyebrow">
+              Record Located
+            </p>
+            <h2 class="modal-title">
+              Patient Record Found
+            </h2>
           </div>
-          <button class="close-btn" type="button" aria-label="Close" @click="$emit('reject')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <button
+            class="close-btn"
+            type="button"
+            aria-label="Close"
+            @click="$emit('reject')"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <!-- ── Body ───────────────────────────────────── -->
         <div class="modal-body">
-
           <div class="info-badge">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 16v-4m0-4h.01"/>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path d="M12 16v-4m0-4h.01" />
             </svg>
             Please verify this is your information
           </div>
 
           <div class="details-grid">
-
             <!-- Full Name -->
             <div class="detail-card">
               <div class="detail-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle
+                    cx="12"
+                    cy="7"
+                    r="4"
+                  />
                 </svg>
               </div>
               <div class="detail-content">
@@ -55,9 +111,16 @@
             <!-- Email -->
             <div class="detail-card">
               <div class="detail-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <polyline points="22,6 12,13 2,6"/>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
                 </svg>
               </div>
               <div class="detail-content">
@@ -67,10 +130,20 @@
             </div>
 
             <!-- Phone (conditional) -->
-            <div v-if="patient?.phone" class="detail-card">
+            <div
+              v-if="patient?.phone"
+              class="detail-card"
+            >
               <div class="detail-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
               </div>
               <div class="detail-content">
@@ -82,11 +155,40 @@
             <!-- Date of Birth -->
             <div class="detail-card">
               <div class="detail-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect
+                    x="3"
+                    y="4"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="2"
+                    x2="16"
+                    y2="6"
+                  />
+                  <line
+                    x1="8"
+                    y1="2"
+                    x2="8"
+                    y2="6"
+                  />
+                  <line
+                    x1="3"
+                    y1="10"
+                    x2="21"
+                    y2="10"
+                  />
                 </svg>
               </div>
               <div class="detail-content">
@@ -96,11 +198,25 @@
             </div>
 
             <!-- Location (conditional, full-width) -->
-            <div v-if="patient?.city && patient?.state" class="detail-card span-2">
+            <div
+              v-if="patient?.city && patient?.state"
+              class="detail-card span-2"
+            >
               <div class="detail-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle
+                    cx="12"
+                    cy="10"
+                    r="3"
+                  />
                 </svg>
               </div>
               <div class="detail-content">
@@ -108,29 +224,57 @@
                 <span class="detail-value">{{ patient.city }}, {{ patient.state }}</span>
               </div>
             </div>
-
           </div>
         </div>
 
         <!-- ── Footer ─────────────────────────────────── -->
         <div class="modal-footer">
-          <button type="button" class="btn secondary" @click="$emit('reject')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <button
+            type="button"
+            class="btn secondary"
+            @click="$emit('reject')"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
             This isn't me
           </button>
-          <button type="button" class="btn primary" @click="$emit('confirm')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          <button
+            type="button"
+            class="btn primary"
+            @click="$emit('confirm')"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M5 13l4 4L19 7"
+              />
             </svg>
             Confirm & Continue
           </button>
         </div>
-
       </div>
     </div>
-  </transition>
+  </Transition>
 </template>
 
 <script setup>
@@ -141,9 +285,10 @@ defineProps({
 
 defineEmits(['confirm', 'reject'])
 
-const formatDate = (dateString) => {
+const formatDate = dateString => {
   if (!dateString) return null
   const date = new Date(dateString)
+  
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 </script>

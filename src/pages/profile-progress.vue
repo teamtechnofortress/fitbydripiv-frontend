@@ -103,6 +103,7 @@ const isCompleted = computed(() => !!progress.value?.is_completed)
 // Safe completed steps handling
 const completedSteps = computed(() => {
   const steps = progress.value?.completed_steps
+  
   return Array.isArray(steps) ? steps : []
 })
 
@@ -119,12 +120,14 @@ const completionPercentage = computed(() => {
 
   const completedCount = completedSteps.value.length
   const percent = (completedCount / totalSteps) * 100
+  
   return Math.round(percent)
 })
 
 const unlockedMaxStep = computed(() => {
   if (isCompleted.value) return lastStepId
   const current = activeStep.value || firstStepId
+  
   return Math.min(Math.max(current, firstStepId), lastStepId)
 })
 
@@ -145,13 +148,14 @@ const stepDataLoading = ref(false)
 const initialLoading = ref(true)
 
 // Safe step locking check
-const isStepLocked = (stepId) => {
+const isStepLocked = stepId => {
   if (isCompleted.value) return false
+  
   return stepId > unlockedMaxStep.value
 }
 
 // Safe step completion check
-const isStepCompleted = (stepId) => {
+const isStepCompleted = stepId => {
   return completedSteps.value.includes(stepId)
 }
 
@@ -159,22 +163,22 @@ const buildStepPayload = step => {
   const formData = stepForms[step]
   if (!formData) return {}
   switch (step) {
-    case 4:
-      return {
-        emergency: formData.emergency,
-        contact: formData.contact,
-      }
-    case 5:
-      return {
-        title: formData.title,
-        hiring_date: formData.hiring_date,
-        hourly_rate: formData.hourly_rate,
-        payment_method: formData.payment_method,
-        bank: formData.bank,
-        routing: formData.routing,
-      }
-    default:
-      return { ...formData }
+  case 4:
+    return {
+      emergency: formData.emergency,
+      contact: formData.contact,
+    }
+  case 5:
+    return {
+      title: formData.title,
+      hiring_date: formData.hiring_date,
+      hourly_rate: formData.hourly_rate,
+      payment_method: formData.payment_method,
+      bank: formData.bank,
+      routing: formData.routing,
+    }
+  default:
+    return { ...formData }
   }
 }
 
@@ -190,6 +194,7 @@ const loadStepData = async (step, { silent = false } = {}) => {
     const response = await profileProgressStore.fetchStepData(step)
     const responseData = response?.data ?? response?.data?.data ?? response
     const fields = responseData?.fields ?? responseData?.data?.fields ?? {}
+
     applyStepFields(step, fields || {})
   } catch (err) {
     if (!silent) toast.error(err?.message || `Unable to load step ${step} data`)
@@ -204,8 +209,10 @@ const ensureSelectedStep = () => {
   
   if (!previous || isStepLocked(previous)) {
     selectedStep.value = fallback
+    
     return { changed: previous !== selectedStep.value, value: selectedStep.value }
   }
+  
   return { changed: false, value: previous }
 }
 
@@ -219,6 +226,7 @@ const loadProgress = async ({ reset = false } = {}) => {
       profileProgressStore.$reset()
     }
     await profileProgressStore.fetchProgress()
+
     const { changed, value } = ensureSelectedStep()
     if (!changed && value) {
       await loadStepData(value, { silent: true })
@@ -241,8 +249,10 @@ const handleStepSubmission = () => {
       const payload = buildStepPayload(step)
       const response = await profileProgressStore.completeStep(step, payload)
       const message = response?.message || `${selectedStepTitle.value} saved successfully.`
+
       toast.success(message)
       await loadStepData(step, { silent: true })
+
       const nextStepId = progress.value?.current_step ?? step
       if (!isCompleted.value && nextStepId !== step) {
         selectedStep.value = nextStepId
@@ -276,7 +286,7 @@ watch(unlockedMaxStep, () => {
   ensureSelectedStep()
 })
 
-watch(error, (value) => {
+watch(error, value => {
   if (value) toast.error(value)
 })
 </script>
@@ -295,7 +305,9 @@ watch(error, (value) => {
           size="56"
           width="4"
         />
-        <p class="text-body-1 text-medium-emphasis mt-4">Loading your profile...</p>
+        <p class="text-body-1 text-medium-emphasis mt-4">
+          Loading your profile...
+        </p>
       </div>
 
       <template v-else>
@@ -307,10 +319,12 @@ watch(error, (value) => {
               color="secondary"
               icon="tabler-arrow-left"
               size="small"
-              @click="goBack"
               class="back-btn"
+              @click="goBack"
             />
-            <h5 class="text-h5 font-weight-bold mb-0">Profile Setup</h5>
+            <h5 class="text-h5 font-weight-bold mb-0">
+              Profile Setup
+            </h5>
           </div>
           <VChip
             :color="isCompleted ? 'success' : 'primary'"
@@ -325,12 +339,22 @@ watch(error, (value) => {
         <!-- Main Content Grid -->
         <VRow>
           <!-- Left Column - Steps Navigation -->
-          <VCol cols="12" md="4">
-            <VCard class="steps-card" elevation="0">
+          <VCol
+            cols="12"
+            md="4"
+          >
+            <VCard
+              class="steps-card"
+              elevation="0"
+            >
               <VCardText>
                 <div class="steps-header mb-4">
-                  <h6 class="text-subtitle-1 font-weight-bold mb-1">Setup Progress</h6>
-                  <p class="text-body-2 text-medium-emphasis mb-0">{{ headerSubtitle }}</p>
+                  <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                    Setup Progress
+                  </h6>
+                  <p class="text-body-2 text-medium-emphasis mb-0">
+                    {{ headerSubtitle }}
+                  </p>
                 </div>
 
                 <!-- Progress Bar -->
@@ -400,7 +424,9 @@ watch(error, (value) => {
                           color="success"
                         />
                       </div>
-                      <p class="step-item__description">{{ stepDef.description }}</p>
+                      <p class="step-item__description">
+                        {{ stepDef.description }}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -409,8 +435,14 @@ watch(error, (value) => {
           </VCol>
 
           <!-- Right Column - Form Section -->
-          <VCol cols="12" md="8">
-            <VCard class="form-card" elevation="0">
+          <VCol
+            cols="12"
+            md="8"
+          >
+            <VCard
+              class="form-card"
+              elevation="0"
+            >
               <VCardText>
                 <!-- Section Header -->
                 <div class="form-header mb-6">
@@ -426,22 +458,31 @@ watch(error, (value) => {
                       />
                     </div>
                     <div>
-                      <h5 class="text-h6 font-weight-bold mb-1">{{ selectedStepTitle }}</h5>
-                      <p class="text-body-2 text-medium-emphasis mb-0">{{ selectedStepDescription }}</p>
+                      <h5 class="text-h6 font-weight-bold mb-1">
+                        {{ selectedStepTitle }}
+                      </h5>
+                      <p class="text-body-2 text-medium-emphasis mb-0">
+                        {{ selectedStepDescription }}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <!-- Loading State -->
                 <VFadeTransition mode="out-in">
-                  <div v-if="stepDataLoading" class="text-center py-8">
+                  <div
+                    v-if="stepDataLoading"
+                    class="text-center py-8"
+                  >
                     <VProgressCircular
                       :color="selectedStepColor"
                       indeterminate
                       size="40"
                       width="3"
                     />
-                    <p class="text-body-2 text-medium-emphasis mt-3">Loading section...</p>
+                    <p class="text-body-2 text-medium-emphasis mt-3">
+                      Loading section...
+                    </p>
                   </div>
 
                   <!-- Forms -->
@@ -453,7 +494,10 @@ watch(error, (value) => {
                       @submit.prevent="handleStepSubmission"
                     >
                       <VRow>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[2].birthday"
                             label="Birthday"
@@ -465,7 +509,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[2].ssn"
                             label="Social Security Number"
@@ -478,7 +525,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VSelect
                             v-model="stepForms[2].gender"
                             :items="genderOptions"
@@ -492,7 +542,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[2].phone"
                             label="Phone Number"
@@ -525,7 +578,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[3].city"
                             label="City"
@@ -536,7 +592,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="3">
+                        <VCol
+                          cols="12"
+                          md="3"
+                        >
                           <VTextField
                             v-model="stepForms[3].state"
                             label="State"
@@ -547,7 +606,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="3">
+                        <VCol
+                          cols="12"
+                          md="3"
+                        >
                           <VTextField
                             v-model="stepForms[3].zip"
                             label="ZIP Code"
@@ -568,7 +630,10 @@ watch(error, (value) => {
                       @submit.prevent="handleStepSubmission"
                     >
                       <VRow>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[4].emergency"
                             label="Emergency Contact Name"
@@ -579,7 +644,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[4].contact"
                             label="Emergency Contact Phone"
@@ -601,7 +669,10 @@ watch(error, (value) => {
                       @submit.prevent="handleStepSubmission"
                     >
                       <VRow>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[5].title"
                             label="Job Title"
@@ -612,7 +683,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[5].hiring_date"
                             label="Hiring Date"
@@ -624,7 +698,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="4">
+                        <VCol
+                          cols="12"
+                          md="4"
+                        >
                           <VTextField
                             v-model="stepForms[5].hourly_rate"
                             label="Hourly Rate"
@@ -637,7 +714,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="4">
+                        <VCol
+                          cols="12"
+                          md="4"
+                        >
                           <VSelect
                             v-model="stepForms[5].payment_method"
                             :items="paymentMethodOptions"
@@ -651,7 +731,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[5].bank"
                             label="Bank"
@@ -662,7 +745,10 @@ watch(error, (value) => {
                             class="mb-4"
                           />
                         </VCol>
-                        <VCol cols="12" md="6">
+                        <VCol
+                          cols="12"
+                          md="6"
+                        >
                           <VTextField
                             v-model="stepForms[5].routing"
                             label="Routing Number"
@@ -681,8 +767,8 @@ watch(error, (value) => {
                       <VBtn
                         color="primary"
                         :loading="loading"
-                        @click="handleStepSubmission"
                         class="save-btn"
+                        @click="handleStepSubmission"
                       >
                         {{ isStepCompleted(selectedStep) ? 'Update Section' : 'Save & Continue' }}
                       </VBtn>

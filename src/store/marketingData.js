@@ -75,7 +75,7 @@ export const useMarketingStore = defineStore('marketingData', {
           this.emailCampaigns = data.emailCampaigns//email campaigns
           this.error = null
           this.loading = false
-          this.isAddedNewCampaign = true;
+          this.isAddedNewCampaign = true
           toast.success('Email Campaign scheduled successfully!')
         } else {
           let err_msg = response.data.err_msg
@@ -116,6 +116,7 @@ export const useMarketingStore = defineStore('marketingData', {
             message: err_msg,
           }
           toast.error("New Special Promo is Failed!")
+
           //
           this.error = error
           this.loading = false
@@ -138,6 +139,7 @@ export const useMarketingStore = defineStore('marketingData', {
         })
     
         const data = response.data.data
+
         this.specialPromos = data.specialPromos
         this.error = null
       } catch (err) {
@@ -165,6 +167,7 @@ export const useMarketingStore = defineStore('marketingData', {
         })
     
         const data = response.data.data
+
         this.textCampaigns = data.textCampaigns
         this.error = null
       } catch (err) {
@@ -191,7 +194,8 @@ export const useMarketingStore = defineStore('marketingData', {
           })
         })
     
-        const data = response.data.data;
+        const data = response.data.data
+
         this.emailCampaigns = data.emailCampaigns
         this.error = null
       } catch (err) {

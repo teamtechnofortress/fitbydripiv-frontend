@@ -51,6 +51,7 @@ const decodeQueryParam = param => {
   if (Array.isArray(value)) {
     return value[0] ? String(value[0]) : ''
   }
+  
   return value ? String(value) : ''
 }
 
@@ -104,6 +105,7 @@ const resetPassword = async () => {
   errorMessage.value = ''
   try {
     devLog('Reset password request start', { email: email.value })
+
     const { data } = await axios.post(
       RESET_PASSWORD_URL,
       {
@@ -114,14 +116,17 @@ const resetPassword = async () => {
       },
       { headers: { Accept: 'application/json' } },
     )
+
     devLog('Reset password request success', data)
     success.value = true
     toast.success(data?.message || 'Password reset successful.')
     startRedirectCountdown()
   } catch (error) {
     const message = error?.response?.data?.message || 'Unable to reset password.'
+
     errorMessage.value = message
     toast.error(message)
+
     const normalized = message.toLowerCase()
     if (normalized.includes('invalid') || normalized.includes('expired')) {
       tokenInvalid.value = true
@@ -144,9 +149,18 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="reset-password-page">
-    <VCard class="reset-card" elevation="4">
+    <VCard
+      class="reset-card"
+      elevation="4"
+    >
       <VCardText class="text-center">
-        <VIcon size="48" color="primary" class="mb-3">tabler-key</VIcon>
+        <VIcon
+          size="48"
+          color="primary"
+          class="mb-3"
+        >
+          tabler-key
+        </VIcon>
         <h2 class="text-h4 font-weight-semibold mb-2">
           Reset your password
         </h2>
@@ -156,8 +170,14 @@ onBeforeUnmount(() => {
       </VCardText>
 
       <VCardText v-if="success">
-        <VAlert type="success" variant="tonal" class="mb-4">
-          <h4 class="text-h6 mb-2">Password reset successful</h4>
+        <VAlert
+          type="success"
+          variant="tonal"
+          class="mb-4"
+        >
+          <h4 class="text-h6 mb-2">
+            Password reset successful
+          </h4>
           <p class="mb-2">
             Your password has been updated successfully. You can now log in using your new password.
           </p>
@@ -165,13 +185,21 @@ onBeforeUnmount(() => {
             Redirecting to login in {{ countdown }}s...
           </p>
         </VAlert>
-        <VBtn color="primary" block @click="goToLogin">
+        <VBtn
+          color="primary"
+          block
+          @click="goToLogin"
+        >
           Back to login
         </VBtn>
       </VCardText>
 
       <VCardText v-else-if="tokenInvalid">
-        <VAlert type="error" variant="tonal" class="mb-4">
+        <VAlert
+          type="error"
+          variant="tonal"
+          class="mb-4"
+        >
           <h4 class="text-h6 mb-2">
             Reset link expired or invalid
           </h4>
@@ -182,21 +210,32 @@ onBeforeUnmount(() => {
             Invalid password reset request. Please request a new reset link.
           </p>
         </VAlert>
-        <VBtn color="primary" block variant="tonal" @click="goToForgotPassword">
+        <VBtn
+          color="primary"
+          block
+          variant="tonal"
+          @click="goToForgotPassword"
+        >
           Request new reset link
         </VBtn>
       </VCardText>
 
       <VCardText v-else>
-        <VForm ref="formRef" @submit.prevent="onSubmit">
-          <p class="text-body-2 text-medium-emphasis mb-4" v-if="email">
+        <VForm
+          ref="formRef"
+          @submit.prevent="onSubmit"
+        >
+          <p
+            v-if="email"
+            class="text-body-2 text-medium-emphasis mb-4"
+          >
             Resetting password for <strong>{{ email }}</strong>
           </p>
 
           <VTextField
             v-model="password"
             label="New password"
-            :type="'password'"
+            type="password"
             :rules="passwordRules"
             :disabled="loading"
             autocomplete="new-password"
@@ -205,24 +244,38 @@ onBeforeUnmount(() => {
           <VTextField
             v-model="passwordConfirmation"
             label="Confirm new password"
-            :type="'password'"
+            type="password"
             :rules="confirmPasswordRules"
             :disabled="loading"
             autocomplete="new-password"
           />
 
-          <VAlert v-if="errorMessage" type="error" variant="tonal" class="mb-4">
+          <VAlert
+            v-if="errorMessage"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
             {{ errorMessage }}
           </VAlert>
 
-          <VBtn block type="submit" class="mt-2" :loading="loading" :disabled="loading">
+          <VBtn
+            block
+            type="submit"
+            class="mt-2"
+            :loading="loading"
+            :disabled="loading"
+          >
             <template #default>
               {{ loading ? 'Resetting password...' : 'Reset password' }}
             </template>
           </VBtn>
         </VForm>
 
-        <RouterLink class="text-primary d-block text-center mt-4" :to="{ name: 'login' }">
+        <RouterLink
+          class="text-primary d-block text-center mt-4"
+          :to="{ name: 'login' }"
+        >
           Back to login
         </RouterLink>
       </VCardText>

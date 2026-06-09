@@ -17,15 +17,16 @@ const devLoggerPlugin = {
     server.ws.on('custom:debug-log', data => {
       const timestamp = new Date().toISOString()
       const payload = data?.payload ?? ''
+
       const payloadText = typeof payload === 'string'
         ? payload
         : inspect(payload, {
-            depth: null,
-            colors: false,
-            compact: false,
-            maxArrayLength: null,
-            maxStringLength: null,
-          })
+          depth: null,
+          colors: false,
+          compact: false,
+          maxArrayLength: null,
+          maxStringLength: null,
+        })
 
       console.log(`【${timestamp}】[DEV LOG] ${data?.message || ''}\n${payloadText}`)
     })
@@ -58,6 +59,7 @@ export default defineConfig({
               meta: Object.assign({}, r.meta || {}, { public: true }),
             }
           }
+          
           return r
         })
 

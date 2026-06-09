@@ -1,8 +1,8 @@
 <script setup>
-import ChartView from '@/views/pages/patient-chart-view/chart-view.vue';
-import LocatePatient from '@/views/pages/patient-chart-view/locate-patient.vue';
-import ReviewView from '@/views/pages/patient-chart-view/review-view.vue';
-import { useRoute } from 'vue-router';
+import ChartView from '@/views/pages/patient-chart-view/chart-view.vue'
+import LocatePatient from '@/views/pages/patient-chart-view/locate-patient.vue'
+import ReviewView from '@/views/pages/patient-chart-view/review-view.vue'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const activeTab = ref(route.params.tab)
@@ -39,7 +39,11 @@ const tabs = [
         :value="item.tab"
         :to="{ name: 'patient-chart-tab', params: { tab: item.tab } }"
       >
-        <VIcon size="20" start :icon="item.icon"/>
+        <VIcon
+          size="20"
+          start
+          :icon="item.icon"
+        />
         {{ item.title }}
       </VTab>
     </VTabs>

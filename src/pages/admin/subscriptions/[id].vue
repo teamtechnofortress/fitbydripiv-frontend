@@ -47,17 +47,21 @@ const stripeDate = ts => ts
 const cyclePercent = computed(() => {
   if (!subscription.value) return 0
   const { current_cycle_number, total_cycles } = subscription.value
+  
   return total_cycles ? Math.round((current_cycle_number / total_cycles) * 100) : 0
 })
 
 // ── Data ─────────────────────────────────────────────────
 const loadSubscription = async () => {
-  if (!subscriptionId.value) { error.value = 'Missing subscription ID.'; return }
+  if (!subscriptionId.value) { error.value = 'Missing subscription ID.' 
+
+    return }
   loading.value      = true
   error.value        = ''
   subscription.value = null
   try {
     const { data } = await axios.get(getAdminSubscriptionDetailUrl(subscriptionId.value), { headers: authHeaders.value })
+
     subscription.value = data
   } catch (err) {
     error.value = err?.response?.data?.message || 'Failed to load subscription details.'
@@ -74,6 +78,7 @@ const doCancel = async confirmed => {
   error.value      = ''
   try {
     const { data } = await axios.post(cancelSubscriptionUrl(subscriptionId.value), {}, { headers: authHeaders.value })
+
     successMsg.value = data?.message || 'Subscription cancelled successfully.'
     await loadSubscription()
   } catch (err) {
@@ -97,6 +102,7 @@ const viewWebhookPayload = async (webhookId, parentLabel = 'View subscription') 
   webhookParentLabel.value = parentLabel
   try {
     const { data } = await axios.get(getAdminWebhookDetailUrl(webhookId), { headers: authHeaders.value })
+
     selectedWebhook.value = data
   } catch (err) {
     webhookError.value = err?.response?.data?.message || 'Failed to load webhook payload.'
@@ -119,56 +125,106 @@ watch(() => route.params.id, loadSubscription)
 <template>
   <div class="detail-page">
     <div class="detail-shell">
-
       <!-- Back bar -->
       <div class="hero-bar">
-        <button class="back-btn" @click="goBack">
+        <button
+          class="back-btn"
+          @click="goBack"
+        >
           <span class="mdi mdi-arrow-left" />
           Back to Payments
         </button>
       </div>
 
       <!-- Loading -->
-      <div v-if="loading" class="state-card">
-        <VProgressCircular indeterminate color="primary" :size="52" :width="5" />
+      <div
+        v-if="loading"
+        class="state-card"
+      >
+        <VProgressCircular
+          indeterminate
+          color="primary"
+          :size="52"
+          :width="5"
+        />
         <h2>Loading subscription…</h2>
         <p>Fetching subscription, billing, and webhook details.</p>
       </div>
 
       <!-- Error -->
-      <div v-else-if="error && !subscription" class="state-card">
-        <VAlert type="error" variant="tonal">{{ error }}</VAlert>
-        <VBtn color="primary" @click="loadSubscription">Retry</VBtn>
+      <div
+        v-else-if="error && !subscription"
+        class="state-card"
+      >
+        <VAlert
+          type="error"
+          variant="tonal"
+        >
+          {{ error }}
+        </VAlert>
+        <VBtn
+          color="primary"
+          @click="loadSubscription"
+        >
+          Retry
+        </VBtn>
       </div>
 
       <!-- Content -->
       <template v-else-if="subscription">
-
         <!-- Alerts -->
-        <VAlert v-if="successMsg" type="success" variant="tonal" closable @click:close="successMsg = ''">
+        <VAlert
+          v-if="successMsg"
+          type="success"
+          variant="tonal"
+          closable
+          @click:close="successMsg = ''"
+        >
           {{ successMsg }}
         </VAlert>
-        <VAlert v-if="error" type="error" variant="tonal" closable @click:close="error = ''">
+        <VAlert
+          v-if="error"
+          type="error"
+          variant="tonal"
+          closable
+          @click:close="error = ''"
+        >
           {{ error }}
         </VAlert>
 
         <!-- Hero card -->
         <div class="hero-card">
           <div class="hero-copy">
-            <p class="eyebrow">Admin · Subscription</p>
-            <h1 class="hero-id">#{{ subscription.id }}</h1>
+            <p class="eyebrow">
+              Admin · Subscription
+            </p>
+            <h1 class="hero-id">
+              #{{ subscription.id }}
+            </h1>
             <p class="hero-sub">
               {{ subscription.order?.product?.name || 'Unknown product' }}
               for {{ subscription.patient?.name || 'Unknown patient' }}
             </p>
             <div class="chip-row">
-              <VChip :color="statusColor(subscription.status)" variant="flat" size="small">
+              <VChip
+                :color="statusColor(subscription.status)"
+                variant="flat"
+                size="small"
+              >
                 {{ prettyLabel(subscription.status) }}
               </VChip>
-              <VChip variant="tonal" size="small">
+              <VChip
+                variant="tonal"
+                size="small"
+              >
                 Every {{ subscription.billing_frequency_months || '—' }} months
               </VChip>
-              <VChip v-if="subscription.discount_percentage" color="success" variant="tonal" size="small">
+              <VChip
+                v-if="subscription.discount_percentage"
+                color="success"
+                variant="tonal"
+                size="small"
+              >
                 {{ subscription.discount_percentage }}% off
               </VChip>
             </div>
@@ -188,7 +244,10 @@ watch(() => route.params.id, loadSubscription)
             </div>
             <div class="cycle-progress-wrap">
               <div class="cycle-track">
-                <div class="cycle-fill" :style="{ width: `${cyclePercent}%` }" />
+                <div
+                  class="cycle-fill"
+                  :style="{ width: `${cyclePercent}%` }"
+                />
               </div>
               <span class="cycle-pct">{{ cyclePercent }}%</span>
             </div>
@@ -203,7 +262,10 @@ watch(() => route.params.id, loadSubscription)
               <span :class="cancelling ? 'mdi mdi-loading mdi-spin' : 'mdi mdi-cancel'" />
               {{ cancelling ? 'Cancelling…' : 'Cancel subscription' }}
             </button>
-            <span v-else class="cancelled-note">
+            <span
+              v-else
+              class="cancelled-note"
+            >
               <span class="mdi mdi-check-circle-outline" /> Subscription is cancelled
             </span>
           </div>
@@ -262,7 +324,10 @@ watch(() => route.params.id, loadSubscription)
                 <span class="mdi mdi-receipt-outline card-icon" />
                 <h3>Linked Order</h3>
               </div>
-              <button class="outline-btn" @click="openOrder(subscription.order?.id)">
+              <button
+                class="outline-btn"
+                @click="openOrder(subscription.order?.id)"
+              >
                 <span class="mdi mdi-open-in-new" />
                 View order
               </button>
@@ -274,7 +339,11 @@ watch(() => route.params.id, loadSubscription)
               </div>
               <div class="info-item">
                 <span class="info-label">Status</span>
-                <VChip :color="statusColor(subscription.order?.status)" variant="tonal" size="small">
+                <VChip
+                  :color="statusColor(subscription.order?.status)"
+                  variant="tonal"
+                  size="small"
+                >
                   {{ prettyLabel(subscription.order?.status) }}
                 </VChip>
               </div>
@@ -284,7 +353,11 @@ watch(() => route.params.id, loadSubscription)
               </div>
               <div class="info-item">
                 <span class="info-label">Payment</span>
-                <VChip :color="statusColor(subscription.order?.payment_status)" variant="tonal" size="small">
+                <VChip
+                  :color="statusColor(subscription.order?.payment_status)"
+                  variant="tonal"
+                  size="small"
+                >
                   {{ prettyLabel(subscription.order?.payment_status) }}
                 </VChip>
               </div>
@@ -297,7 +370,10 @@ watch(() => route.params.id, loadSubscription)
         </div>
 
         <!-- Stripe data -->
-        <div v-if="subscription.stripe" class="detail-card accent-card">
+        <div
+          v-if="subscription.stripe"
+          class="detail-card accent-card"
+        >
           <div class="card-head">
             <span class="mdi mdi-credit-card-outline card-icon" />
             <h3>Stripe Subscription</h3>
@@ -305,7 +381,11 @@ watch(() => route.params.id, loadSubscription)
           <div class="info-grid four-col">
             <div class="info-item">
               <span class="info-label">Stripe status</span>
-              <VChip :color="subscription.stripe.status === 'active' ? 'success' : 'warning'" variant="tonal" size="small">
+              <VChip
+                :color="subscription.stripe.status === 'active' ? 'success' : 'warning'"
+                variant="tonal"
+                size="small"
+              >
                 {{ subscription.stripe.status || '—' }}
               </VChip>
             </div>
@@ -325,7 +405,10 @@ watch(() => route.params.id, loadSubscription)
         </div>
 
         <!-- Order payments -->
-        <div v-if="subscription.order?.payments?.length" class="detail-card">
+        <div
+          v-if="subscription.order?.payments?.length"
+          class="detail-card"
+        >
           <div class="card-head">
             <div class="card-head-left">
               <span class="mdi mdi-cash-multiple card-icon" />
@@ -349,7 +432,11 @@ watch(() => route.params.id, loadSubscription)
                   </div>
                 </div>
                 <div class="timeline-actions">
-                  <VChip :color="statusColor(payment.status)" variant="flat" size="small">
+                  <VChip
+                    :color="statusColor(payment.status)"
+                    variant="flat"
+                    size="small"
+                  >
                     {{ prettyLabel(payment.status) }}
                   </VChip>
                   <button
@@ -365,7 +452,10 @@ watch(() => route.params.id, loadSubscription)
               </div>
 
               <!-- Inline webhook summary (status only, click to open modal) -->
-              <div v-if="payment.webhooks?.length" class="webhook-summary">
+              <div
+                v-if="payment.webhooks?.length"
+                class="webhook-summary"
+              >
                 <div
                   v-for="hook in payment.webhooks"
                   :key="hook.id"
@@ -394,7 +484,10 @@ watch(() => route.params.id, loadSubscription)
               <span class="count-badge">{{ subscription.webhooks?.length || 0 }}</span>
             </div>
           </div>
-          <div v-if="subscription.webhooks?.length" class="webhook-table">
+          <div
+            v-if="subscription.webhooks?.length"
+            class="webhook-table"
+          >
             <div
               v-for="hook in subscription.webhooks"
               :key="hook.id"
@@ -406,24 +499,38 @@ watch(() => route.params.id, loadSubscription)
                   <strong>{{ hook.event_type }}</strong>
                   <span class="webhook-stripe-id">{{ hook.stripe_event_id || '—' }}</span>
                   <span class="webhook-meta">Created {{ formatDateTime(hook.created_at) }}</span>
-                  <span v-if="hook.processed_at" class="webhook-meta">
+                  <span
+                    v-if="hook.processed_at"
+                    class="webhook-meta"
+                  >
                     Processed {{ formatDateTime(hook.processed_at) }}
                   </span>
                 </div>
               </div>
               <div class="webhook-actions">
-                <VChip :color="hook.processed ? 'success' : 'warning'" variant="tonal" size="x-small">
+                <VChip
+                  :color="hook.processed ? 'success' : 'warning'"
+                  variant="tonal"
+                  size="x-small"
+                >
                   {{ hook.processed ? 'Processed' : 'Pending' }}
                 </VChip>
-                <button class="payload-btn" @click="viewWebhookPayload(hook.id, 'View subscription')">
+                <button
+                  class="payload-btn"
+                  @click="viewWebhookPayload(hook.id, 'View subscription')"
+                >
                   <span class="mdi mdi-code-json" /> View payload
                 </button>
               </div>
             </div>
           </div>
-          <p v-else class="empty-msg">No subscription-level webhooks available.</p>
+          <p
+            v-else
+            class="empty-msg"
+          >
+            No subscription-level webhooks available.
+          </p>
         </div>
-
       </template>
     </div>
 

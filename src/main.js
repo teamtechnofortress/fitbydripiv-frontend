@@ -32,8 +32,8 @@ app.use(layoutsPlugin)
 app.use(abilitiesPlugin, ability, {
   useGlobalProperties: true,
 })
-app.use(Toast);
-app.component('v-select', VSelect);
+app.use(Toast)
+app.component('VSelect', VSelect)
 
 // Mount vue app
 app.mount('#app')

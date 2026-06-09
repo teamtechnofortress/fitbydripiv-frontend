@@ -174,6 +174,7 @@ const createInitialProductState = productId => ({
 })
 
 const productState = reactive(createInitialProductState(routeProductId.value))
+
 const publishState = reactive({
   is_published: false,
   can_publish: false,
@@ -183,29 +184,39 @@ const publishState = reactive({
 const uploadingCount = computed(() => productState.images.filter(image => image.isUploading).length)
 const uploadedImages = computed(() => productState.images.filter(image => !image.isUploading && !image.uploadError))
 const hasUploadedImages = computed(() => uploadedImages.value.length > 0)
+
 const completionPercentage = computed(() => {
   const value = Number(productState.completion_percentage || 0)
+  
   return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0
 })
+
 const completionLabel = computed(() => {
   if (productState.completion_status === 'complete') return 'Complete'
   if (completionPercentage.value > 0) return 'In Progress'
+  
   return 'Not Started'
 })
+
 const canPreviewProduct = computed(() => !!productState.id && isStepCompleted(1))
 const selectedStepDefinition = computed(() => STEP_DEFINITIONS.find(step => step.id === selectedStep.value) || STEP_DEFINITIONS[0])
+
 const unlockedMaxStep = computed(() => {
   const step = Number(productState.completion_step || 1)
+  
   return Math.max(1, Math.min(STEP_DEFINITIONS.length, step))
 })
+
 const showStatusLoader = computed(() => !!routeProductId.value && statusLoading.value)
 const showStepLoader = computed(() => !!routeProductId.value && (statusLoading.value || stepDataLoading.value))
 const publishStatusTone = computed(() => (publishState.is_published ? 'success' : 'warning'))
 const publishStatusLabel = computed(() => (publishState.is_published ? 'Published' : 'Not Published'))
 const publishHeroIcon = computed(() => (publishState.is_published ? 'tabler-world-check' : 'tabler-eye-off'))
+
 const selectedIngredientSuggestion = computed(() => (
   ingredientSearchResults.value.find(item => item.id === selectedIngredientSuggestionId.value) || null
 ))
+
 const pricingGroups = computed(() => ([
   {
     key: 'subscription',
@@ -276,16 +287,20 @@ const buildErrorMessage = error => {
     const firstKey = Object.keys(responseData.errors)[0]
     if (firstKey) {
       const entry = responseData.errors[firstKey]
+      
       return Array.isArray(entry) ? entry[0] : entry
     }
   }
+  
   return error?.message || 'Request failed. Please try again.'
 }
 
 const isStepCompleted = stepId => {
   if (completedStepLookup.value[stepId] !== undefined) return !!completedStepLookup.value[stepId]
+  
   return stepId < unlockedMaxStep.value
 }
+
 const isStepLocked = stepId => stepId > unlockedMaxStep.value
 
 const selectStep = stepId => {
@@ -310,6 +325,7 @@ const syncImageMeta = () => {
     }))
 
   const coverImage = productState.images.find(image => image.image_type === 'cover' && image.image_url)
+
   productState.cover_image_id = coverImage?.id || coverImage?.local_id || ''
 }
 
@@ -323,6 +339,7 @@ const setCoverImage = localId => {
 
 const removeImage = localId => {
   const target = productState.images.find(image => image.local_id === localId)
+
   productState.images = productState.images.filter(image => image.local_id !== localId)
   syncImageMeta()
 
@@ -333,6 +350,7 @@ const removeImage = localId => {
 
 const appendUploadingImage = file => {
   const localId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
   productState.images.push({
     local_id: localId,
     id: null,
@@ -345,12 +363,14 @@ const appendUploadingImage = file => {
     isUploading: true,
     uploadError: '',
   })
+  
   return localId
 }
 
 const uploadSingleFile = async file => {
   const localId = appendUploadingImage(file)
   const formData = new FormData()
+
   formData.append('file', file)
   formData.append('type', 'product')
 
@@ -360,8 +380,10 @@ const uploadSingleFile = async file => {
     })
 
     const payload = response?.data?.data || {}
+
     productState.images = productState.images.map(image => {
       if (image.local_id !== localId) return image
+      
       return {
         ...image,
         image_url: payload.url || '',
@@ -377,6 +399,7 @@ const uploadSingleFile = async file => {
   } catch (error) {
     productState.images = productState.images.map(image => {
       if (image.local_id !== localId) return image
+      
       return {
         ...image,
         isUploading: false,
@@ -418,6 +441,7 @@ const openFilePicker = () => {
 const openPreviewDrawer = () => {
   if (!canPreviewProduct.value) {
     toast.error('Save Product Basics first to preview the product.')
+    
     return
   }
 
@@ -428,6 +452,7 @@ const addBenefit = () => {
   const value = benefitDraft.value.trim()
   if (!value) {
     toast.error('Enter a key benefit first.')
+    
     return
   }
 
@@ -447,6 +472,7 @@ const moveBenefit = (index, direction) => {
   if (targetIndex < 0 || targetIndex >= productState.benefits.length) return
   const items = [...productState.benefits]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   productState.benefits = items
 }
@@ -457,6 +483,7 @@ const addFaq = () => {
 
   if (!question || !answer) {
     toast.error('Enter both question and answer before adding an FAQ.')
+    
     return
   }
 
@@ -479,6 +506,7 @@ const moveFaq = (index, direction) => {
   if (targetIndex < 0 || targetIndex >= productState.faqs.length) return
   const items = [...productState.faqs]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   productState.faqs = items
 }
@@ -490,6 +518,7 @@ const addIngredient = () => {
 
   if (!name) {
     toast.error('Enter or select an ingredient name first.')
+    
     return
   }
 
@@ -500,6 +529,7 @@ const addIngredient = () => {
 
   if (alreadyExists) {
     toast.error('This ingredient is already in the list.')
+    
     return
   }
 
@@ -527,6 +557,7 @@ const moveIngredient = (index, direction) => {
   if (targetIndex < 0 || targetIndex >= productState.ingredients.length) return
   const items = [...productState.ingredients]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   productState.ingredients = items
 }
@@ -537,6 +568,7 @@ const addResearchLink = () => {
 
   if (!title || !articleUrl) {
     toast.error('Research title and article URL are required.')
+    
     return
   }
 
@@ -573,12 +605,14 @@ const moveResearchLink = (index, direction) => {
   if (targetIndex < 0 || targetIndex >= productState.research_links.length) return
   const items = [...productState.research_links]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   productState.research_links = items
 }
 
 const normalizePricingNumbers = value => {
   const parsed = Number(value)
+  
   return Number.isFinite(parsed) ? parsed : 0
 }
 
@@ -588,11 +622,13 @@ const addPricingOption = groupKey => {
 
   if (!group.is_active) {
     toast.error(`Enable ${groupKey === 'subscription' ? 'subscription' : 'one-time'} pricing first.`)
+    
     return
   }
 
   if (!draft.label.trim()) {
     toast.error('Pricing option label is required.')
+    
     return
   }
 
@@ -600,6 +636,7 @@ const addPricingOption = groupKey => {
   const finalPrice = normalizePricingNumbers(draft.final_price)
   if (!price || !finalPrice) {
     toast.error('Price and final price are required.')
+    
     return
   }
 
@@ -632,6 +669,7 @@ const addPricingOption = groupKey => {
 const removePricingOption = (groupKey, localId) => {
   const group = productState.pricing[groupKey]
   const removed = group.options.find(item => item.local_id === localId)
+
   group.options = group.options.filter(item => item.local_id !== localId)
 
   if (removed?.is_default && group.options.length) {
@@ -645,12 +683,14 @@ const movePricingOption = (groupKey, index, direction) => {
   if (targetIndex < 0 || targetIndex >= group.options.length) return
   const items = [...group.options]
   const [current] = items.splice(index, 1)
+
   items.splice(targetIndex, 0, current)
   group.options = items
 }
 
 const setDefaultPricingOption = (groupKey, localId) => {
   const group = productState.pricing[groupKey]
+
   group.options = group.options.map(item => ({
     ...item,
     is_default: item.local_id === localId,
@@ -695,9 +735,9 @@ const buildStep3Payload = () => ({
     ...(item.id
       ? { ingredient_id: item.id }
       : {
-          name: item.name,
-          description: item.description || undefined,
-        }),
+        name: item.name,
+        description: item.description || undefined,
+      }),
     sort_order: index,
   })),
 })
@@ -763,9 +803,10 @@ const applyStepStatus = payload => {
   selectedStep.value = payload.current_step ?? selectedStep.value
   completedStepLookup.value = Array.isArray(payload.steps)
     ? payload.steps.reduce((acc, item) => {
-        acc[item.step] = !!item.is_completed
-        return acc
-      }, {})
+      acc[item.step] = !!item.is_completed
+      
+      return acc
+    }, {})
     : {}
 }
 
@@ -776,7 +817,9 @@ const hydrateStep1 = payload => {
   productState.category = payload.category || ''
   productState.description = payload.description || ''
   productState.cover_image_id = payload.cover_image_id || ''
+
   const images = Array.isArray(payload.images) ? payload.images : []
+
   productState.images = images.map((image, index) => ({
     local_id: image.id || image.local_id || `${Date.now()}-${index}`,
     id: image.id || null,
@@ -835,6 +878,7 @@ const hydrateStep4 = payload => {
 const normalizeFetchedPricingGroup = (group, groupKey) => {
   if (!group) {
     productState.pricing[groupKey] = createPricingGroup()
+    
     return
   }
 
@@ -858,6 +902,7 @@ const normalizeFetchedPricingGroup = (group, groupKey) => {
 
 const hydrateStep5 = payload => {
   const pricing = payload.pricing || {}
+
   normalizeFetchedPricingGroup(pricing.subscription, 'subscription')
   normalizeFetchedPricingGroup(pricing.one_time, 'one_time')
   resetPricingDraft('subscription')
@@ -872,21 +917,21 @@ const applyFetchedStepData = (step, payload) => {
   productState.completion_step = payload.completion_step ?? productState.completion_step
 
   switch (step) {
-    case 1:
-      hydrateStep1(payload)
-      break
-    case 2:
-      hydrateStep2(payload)
-      break
-    case 3:
-      hydrateStep3(payload)
-      break
-    case 4:
-      hydrateStep4(payload)
-      break
-    case 5:
-      hydrateStep5(payload)
-      break
+  case 1:
+    hydrateStep1(payload)
+    break
+  case 2:
+    hydrateStep2(payload)
+    break
+  case 3:
+    hydrateStep3(payload)
+    break
+  case 4:
+    hydrateStep4(payload)
+    break
+  case 5:
+    hydrateStep5(payload)
+    break
   }
 }
 
@@ -897,6 +942,7 @@ const loadStepStatus = async productId => {
     const response = await axios.get(getAdminProductStepStatusUrl(productId), {
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     })
+
     applyStepStatus(response?.data?.data || {})
   } catch (error) {
     toast.error(buildErrorMessage(error))
@@ -938,6 +984,7 @@ const loadStepData = async (productId, step) => {
     const response = await axios.get(getAdminProductStepUrl(productId, step), {
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     })
+
     applyFetchedStepData(step, response?.data?.data || {})
   } catch (error) {
     toast.error(buildErrorMessage(error))
@@ -951,21 +998,25 @@ const saveStepOne = () => {
     if (!valid) return
     if (!hasUploadedImages.value) {
       toast.error('Upload at least one product image before saving.')
+      
       return
     }
     if (uploadingCount.value > 0) {
       toast.error('Wait for current image uploads to finish before saving.')
+      
       return
     }
 
     isSavingStep1.value = true
     try {
       syncImageMeta()
+
       const response = await axios.post(ADMIN_PRODUCTS_STEP1_URL, buildStep1Payload(), {
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       })
 
       const payload = response?.data?.data || {}
+
       productState.id = payload.product_id || productState.id
       productState.name = payload.name || productState.name
       productState.slug = payload.slug || productState.slug
@@ -992,14 +1043,17 @@ const saveStepOne = () => {
 const saveStepTwo = async () => {
   if (!productState.id) {
     toast.error('Save the Product Basics step first.')
+    
     return
   }
   if (productState.benefits.length === 0) {
     toast.error('Add at least one key benefit before saving this step.')
+    
     return
   }
   if (productState.faqs.length === 0) {
     toast.error('Add at least one FAQ before saving this step.')
+    
     return
   }
 
@@ -1010,6 +1064,7 @@ const saveStepTwo = async () => {
     })
 
     const payload = response?.data?.data || {}
+
     productState.id = payload.product_id || productState.id
     productState.completion_status = payload.completion_status || productState.completion_status
     productState.completion_percentage = payload.completion_percentage ?? productState.completion_percentage
@@ -1027,26 +1082,32 @@ const saveStepTwo = async () => {
 const saveStepThree = async () => {
   if (!productState.id) {
     toast.error('Save the previous steps first.')
+    
     return
   }
   if (!productState.about_treatment.trim()) {
     toast.error('Add the treatment overview before saving this step.')
+    
     return
   }
   if (!productState.how_it_works.trim()) {
     toast.error('Add how the treatment works before saving this step.')
+    
     return
   }
   if (!productState.treatment_duration.trim()) {
     toast.error('Add the treatment duration before saving this step.')
+    
     return
   }
   if (!productState.usage_instructions.trim()) {
     toast.error('Add the usage instructions before saving this step.')
+    
     return
   }
   if (productState.ingredients.length === 0) {
     toast.error('Add at least one ingredient before saving this step.')
+    
     return
   }
 
@@ -1057,6 +1118,7 @@ const saveStepThree = async () => {
     })
 
     const payload = response?.data?.data || {}
+
     productState.id = payload.product_id || productState.id
     productState.completion_status = payload.completion_status || productState.completion_status
     productState.completion_percentage = payload.completion_percentage ?? productState.completion_percentage
@@ -1074,14 +1136,17 @@ const saveStepThree = async () => {
 const saveStepFour = async () => {
   if (!productState.id) {
     toast.error('Save the previous steps first.')
+    
     return
   }
   if (!productState.clinical_research_description.trim()) {
     toast.error('Add the main clinical research description before saving this step.')
+    
     return
   }
   if (productState.research_links.length === 0) {
     toast.error('Add at least one research link before saving this step.')
+    
     return
   }
 
@@ -1092,6 +1157,7 @@ const saveStepFour = async () => {
     })
 
     const payload = response?.data?.data || {}
+
     productState.id = payload.product_id || productState.id
     productState.completion_status = payload.completion_status || productState.completion_status
     productState.completion_percentage = payload.completion_percentage ?? productState.completion_percentage
@@ -1110,6 +1176,7 @@ const saveStepFour = async () => {
 const saveStepFive = async () => {
   if (!productState.id) {
     toast.error('Save the previous steps first.')
+    
     return
   }
 
@@ -1119,6 +1186,7 @@ const saveStepFive = async () => {
 
   if (!hasActiveGroup) {
     toast.error('Enable at least one pricing section before saving.')
+    
     return
   }
 
@@ -1127,12 +1195,14 @@ const saveStepFive = async () => {
     if (!group.title.trim()) return `${label} title is required.`
     if (!group.description.trim()) return `${label} description is required.`
     if (!group.options.length) return `Add at least one option in ${label}.`
+    
     return null
   }
 
   const groupError = validateGroup(subscription, 'Subscription pricing') || validateGroup(oneTime, 'One-time pricing')
   if (groupError) {
     toast.error(groupError)
+    
     return
   }
 
@@ -1143,6 +1213,7 @@ const saveStepFive = async () => {
     })
 
     const payload = response?.data?.data || {}
+
     productState.id = payload.product_id || productState.id
     productState.completion_status = payload.completion_status || productState.completion_status
     productState.completion_percentage = payload.completion_percentage ?? productState.completion_percentage
@@ -1184,6 +1255,7 @@ const searchIngredients = async search => {
   if (!search.trim()) {
     ingredientSearchResults.value = []
     ingredientSearchLoading.value = false
+    
     return
   }
 
@@ -1196,6 +1268,7 @@ const searchIngredients = async search => {
         limit: 10,
       },
     })
+
     ingredientSearchResults.value = response?.data?.data || []
     ingredientSearchOpen.value = true
   } catch (error) {
@@ -1215,6 +1288,7 @@ watch(ingredientSearch, value => {
   if (!value.trim()) {
     ingredientSearchResults.value = []
     ingredientSearchOpen.value = false
+    
     return
   }
 
@@ -1244,6 +1318,7 @@ watch(selectedStep, step => {
 
   if (step <= 5) {
     loadStepData(productState.id, step)
+    
     return
   }
 
@@ -1254,6 +1329,7 @@ watch(selectedStep, step => {
 watch(routeProductId, nextId => {
   if (!nextId) {
     resetWizardState()
+    
     return
   }
 
@@ -1269,18 +1345,28 @@ watch(routeProductId, nextId => {
   <div class="add-product-page">
     <VRow>
       <VCol cols="12">
-        <VCard class="setup-header-card" elevation="0">
+        <VCard
+          class="setup-header-card"
+          elevation="0"
+        >
           <VCardText class="d-flex flex-column flex-lg-row justify-space-between align-start align-lg-center gap-4">
             <div>
-              <div class="text-overline text-primary mb-1">Product Admin</div>
-              <h4 class="text-h4 mb-2">Add Product</h4>
+              <div class="text-overline text-primary mb-1">
+                Product Admin
+              </div>
+              <h4 class="text-h4 mb-2">
+                Add Product
+              </h4>
               <p class="text-body-1 text-medium-emphasis mb-0">
                 Create a product with a guided draft flow, immediate media upload, and progressive completion tracking.
               </p>
             </div>
 
             <div class="setup-header-card__status d-flex flex-column align-start align-lg-end">
-              <div v-if="canPreviewProduct" class="setup-header-card__actions mb-3">
+              <div
+                v-if="canPreviewProduct"
+                class="setup-header-card__actions mb-3"
+              >
                 <VBtn
                   color="secondary"
                   variant="flat"
@@ -1292,16 +1378,26 @@ watch(routeProductId, nextId => {
               </div>
 
               <div class="setup-header-card__meta">
-                <VChip color="primary" variant="flat" size="small">
+                <VChip
+                  color="primary"
+                  variant="flat"
+                  size="small"
+                >
                   {{ completionPercentage }}% Complete
                 </VChip>
                 <div class="text-caption text-medium-emphasis mt-2">
                   Status: {{ completionLabel }}
                 </div>
-                <div v-if="productState.id" class="text-caption text-medium-emphasis mt-1">
+                <div
+                  v-if="productState.id"
+                  class="text-caption text-medium-emphasis mt-1"
+                >
                   Product ID: {{ productState.id }}
                 </div>
-                <div v-if="productState.slug" class="text-caption text-medium-emphasis mt-1">
+                <div
+                  v-if="productState.slug"
+                  class="text-caption text-medium-emphasis mt-1"
+                >
                   Slug: {{ productState.slug }}
                 </div>
               </div>
@@ -1310,11 +1406,19 @@ watch(routeProductId, nextId => {
         </VCard>
       </VCol>
 
-      <VCol cols="12" md="4">
-        <VCard class="steps-card" elevation="0">
+      <VCol
+        cols="12"
+        md="4"
+      >
+        <VCard
+          class="steps-card"
+          elevation="0"
+        >
           <VCardText>
             <div class="steps-header mb-4">
-              <h6 class="text-subtitle-1 font-weight-bold mb-1">Add Product Flow</h6>
+              <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                Add Product Flow
+              </h6>
               <p class="text-body-2 text-medium-emphasis mb-0">
                 Each successful save unlocks the next step. Pricing uses separate subscription and one-time sections controlled by switches.
               </p>
@@ -1334,12 +1438,25 @@ watch(routeProductId, nextId => {
               />
             </div>
 
-            <div v-if="showStatusLoader" class="steps-loader">
-              <VProgressCircular indeterminate color="primary" size="34" width="3" />
-              <div class="text-body-2 text-medium-emphasis mt-3">Loading product progress...</div>
+            <div
+              v-if="showStatusLoader"
+              class="steps-loader"
+            >
+              <VProgressCircular
+                indeterminate
+                color="primary"
+                size="34"
+                width="3"
+              />
+              <div class="text-body-2 text-medium-emphasis mt-3">
+                Loading product progress...
+              </div>
             </div>
 
-            <div v-else class="steps-list">
+            <div
+              v-else
+              class="steps-list"
+            >
               <div
                 v-for="(stepDef, index) in STEP_DEFINITIONS"
                 :key="stepDef.id"
@@ -1369,7 +1486,10 @@ watch(routeProductId, nextId => {
                       size="18"
                     />
                   </div>
-                  <div v-if="index < STEP_DEFINITIONS.length - 1" class="step-item__line" />
+                  <div
+                    v-if="index < STEP_DEFINITIONS.length - 1"
+                    class="step-item__line"
+                  />
                 </div>
 
                 <div class="step-item__content">
@@ -1390,7 +1510,9 @@ watch(routeProductId, nextId => {
                       Locked
                     </VChip>
                   </div>
-                  <p class="step-item__description">{{ stepDef.description }}</p>
+                  <p class="step-item__description">
+                    {{ stepDef.description }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1398,8 +1520,14 @@ watch(routeProductId, nextId => {
         </VCard>
       </VCol>
 
-      <VCol cols="12" md="8">
-        <VCard class="form-card" elevation="0">
+      <VCol
+        cols="12"
+        md="8"
+      >
+        <VCard
+          class="form-card"
+          elevation="0"
+        >
           <VCardText>
             <div class="form-header mb-6">
               <div class="d-flex align-center gap-3">
@@ -1414,22 +1542,41 @@ watch(routeProductId, nextId => {
                   />
                 </div>
                 <div>
-                  <h5 class="text-h6 font-weight-bold mb-1">{{ selectedStepDefinition.title }}</h5>
-                  <p class="text-body-2 text-medium-emphasis mb-0">{{ selectedStepDefinition.description }}</p>
+                  <h5 class="text-h6 font-weight-bold mb-1">
+                    {{ selectedStepDefinition.title }}
+                  </h5>
+                  <p class="text-body-2 text-medium-emphasis mb-0">
+                    {{ selectedStepDefinition.description }}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div v-if="showStepLoader" class="step-loader">
-              <VProgressCircular indeterminate color="primary" size="38" width="3" />
+            <div
+              v-if="showStepLoader"
+              class="step-loader"
+            >
+              <VProgressCircular
+                indeterminate
+                color="primary"
+                size="38"
+                width="3"
+              />
               <div class="text-body-2 text-medium-emphasis mt-3">
                 {{ statusLoading ? 'Loading product setup...' : `Loading ${selectedStepDefinition.title}...` }}
               </div>
             </div>
 
-            <VForm v-else-if="selectedStep === 1" ref="basicsFormRef" @submit.prevent="saveStepOne">
+            <VForm
+              v-else-if="selectedStep === 1"
+              ref="basicsFormRef"
+              @submit.prevent="saveStepOne"
+            >
               <VRow>
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     v-model="productState.name"
                     label="Product Name"
@@ -1441,7 +1588,10 @@ watch(routeProductId, nextId => {
                   />
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     :model-value="productState.slug"
                     label="Slug"
@@ -1453,7 +1603,10 @@ watch(routeProductId, nextId => {
                   />
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VSelect
                     v-model="productState.category"
                     label="Category"
@@ -1484,17 +1637,28 @@ watch(routeProductId, nextId => {
                   <div class="panel-card">
                     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                       <div>
-                        <h6 class="text-subtitle-1 font-weight-bold mb-1">Product Images</h6>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                          Product Images
+                        </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
                           Upload images immediately. Each uploaded file stores its final URL and path in the draft.
                         </p>
                       </div>
 
                       <div class="d-flex align-center gap-2 flex-wrap">
-                        <VChip color="primary" variant="tonal" size="small">
+                        <VChip
+                          color="primary"
+                          variant="tonal"
+                          size="small"
+                        >
                           {{ uploadedImages.length }} Uploaded
                         </VChip>
-                        <VChip v-if="uploadingCount" color="warning" variant="tonal" size="small">
+                        <VChip
+                          v-if="uploadingCount"
+                          color="warning"
+                          variant="tonal"
+                          size="small"
+                        >
                           {{ uploadingCount }} Uploading
                         </VChip>
                       </div>
@@ -1525,13 +1689,18 @@ watch(routeProductId, nextId => {
                         color="primary"
                         class="mb-3"
                       />
-                      <h6 class="text-h6 mb-2">Drop images here or click to upload</h6>
+                      <h6 class="text-h6 mb-2">
+                        Drop images here or click to upload
+                      </h6>
                       <p class="text-body-2 text-medium-emphasis mb-0">
                         Accepted: JPG, PNG, WEBP up to 5MB. Recommended: 1200 x 1200 px and under 500 KB (light or transparent background). The first uploaded image becomes the cover by default.
                       </p>
                     </div>
 
-                    <div v-if="productState.images.length" class="image-grid mt-4">
+                    <div
+                      v-if="productState.images.length"
+                      class="image-grid mt-4"
+                    >
                       <div
                         v-for="image in productState.images"
                         :key="image.local_id"
@@ -1539,13 +1708,28 @@ watch(routeProductId, nextId => {
                         :class="{ 'image-card--cover': image.image_type === 'cover' }"
                       >
                         <div class="image-card__media">
-                          <div v-if="image.isUploading" class="image-card__loading">
-                            <VProgressCircular indeterminate color="primary" size="28" width="3" />
+                          <div
+                            v-if="image.isUploading"
+                            class="image-card__loading"
+                          >
+                            <VProgressCircular
+                              indeterminate
+                              color="primary"
+                              size="28"
+                              width="3"
+                            />
                             <span class="text-caption mt-2">Uploading...</span>
                           </div>
 
-                          <div v-else-if="image.uploadError" class="image-card__error">
-                            <VIcon icon="tabler-alert-circle" color="error" size="24" />
+                          <div
+                            v-else-if="image.uploadError"
+                            class="image-card__error"
+                          >
+                            <VIcon
+                              icon="tabler-alert-circle"
+                              color="error"
+                              size="24"
+                            />
                             <span class="text-caption text-error text-center mt-2">{{ image.uploadError }}</span>
                           </div>
 
@@ -1574,7 +1758,10 @@ watch(routeProductId, nextId => {
                               :disabled="image.isUploading"
                               @click.stop="removeImage(image.local_id)"
                             >
-                              <VIcon icon="tabler-trash" size="18" />
+                              <VIcon
+                                icon="tabler-trash"
+                                size="18"
+                              />
                             </VBtn>
                           </div>
 
@@ -1622,18 +1809,27 @@ watch(routeProductId, nextId => {
               </div>
             </VForm>
 
-            <div v-else-if="selectedStep === 2" class="step-two-layout">
+            <div
+              v-else-if="selectedStep === 2"
+              class="step-two-layout"
+            >
               <VRow>
                 <VCol cols="12">
                   <div class="panel-card">
                     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                       <div>
-                        <h6 class="text-subtitle-1 font-weight-bold mb-1">Key Benefits</h6>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                          Key Benefits
+                        </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
                           Add as many benefits as you need. The list can be reordered before saving.
                         </p>
                       </div>
-                      <VChip color="success" variant="tonal" size="small">
+                      <VChip
+                        color="success"
+                        variant="tonal"
+                        size="small"
+                      >
                         {{ productState.benefits.length }} Benefits
                       </VChip>
                     </div>
@@ -1648,12 +1844,19 @@ watch(routeProductId, nextId => {
                         hide-details="auto"
                         @keyup.enter="addBenefit"
                       />
-                      <VBtn color="primary" size="large" @click="addBenefit">
+                      <VBtn
+                        color="primary"
+                        size="large"
+                        @click="addBenefit"
+                      >
                         Add Benefit
                       </VBtn>
                     </div>
 
-                    <div v-if="productState.benefits.length" class="stack-list">
+                    <div
+                      v-if="productState.benefits.length"
+                      class="stack-list"
+                    >
                       <div
                         v-for="(benefit, index) in productState.benefits"
                         :key="benefit.local_id"
@@ -1671,22 +1874,59 @@ watch(routeProductId, nextId => {
                           </div>
                         </div>
                         <div class="stack-item__actions">
-                          <VBtn icon variant="text" size="x-small" :disabled="index === 0" @click="moveBenefit(index, -1)">
-                            <VIcon icon="tabler-arrow-up" size="18" />
+                          <VBtn
+                            icon
+                            variant="text"
+                            size="x-small"
+                            :disabled="index === 0"
+                            @click="moveBenefit(index, -1)"
+                          >
+                            <VIcon
+                              icon="tabler-arrow-up"
+                              size="18"
+                            />
                           </VBtn>
-                          <VBtn icon variant="text" size="x-small" :disabled="index === productState.benefits.length - 1" @click="moveBenefit(index, 1)">
-                            <VIcon icon="tabler-arrow-down" size="18" />
+                          <VBtn
+                            icon
+                            variant="text"
+                            size="x-small"
+                            :disabled="index === productState.benefits.length - 1"
+                            @click="moveBenefit(index, 1)"
+                          >
+                            <VIcon
+                              icon="tabler-arrow-down"
+                              size="18"
+                            />
                           </VBtn>
-                          <VBtn icon variant="text" color="error" size="x-small" @click="removeBenefit(benefit.local_id)">
-                            <VIcon icon="tabler-trash" size="18" />
+                          <VBtn
+                            icon
+                            variant="text"
+                            color="error"
+                            size="x-small"
+                            @click="removeBenefit(benefit.local_id)"
+                          >
+                            <VIcon
+                              icon="tabler-trash"
+                              size="18"
+                            />
                           </VBtn>
                         </div>
                       </div>
                     </div>
 
-                    <div v-else class="empty-panel">
-                      <VIcon icon="tabler-sparkles" color="secondary" size="28" class="mb-2" />
-                      <div class="text-body-2 text-medium-emphasis">No benefits added yet.</div>
+                    <div
+                      v-else
+                      class="empty-panel"
+                    >
+                      <VIcon
+                        icon="tabler-sparkles"
+                        color="secondary"
+                        size="28"
+                        class="mb-2"
+                      />
+                      <div class="text-body-2 text-medium-emphasis">
+                        No benefits added yet.
+                      </div>
                     </div>
                   </div>
                 </VCol>
@@ -1695,12 +1935,18 @@ watch(routeProductId, nextId => {
                   <div class="panel-card">
                     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                       <div>
-                        <h6 class="text-subtitle-1 font-weight-bold mb-1">FAQs</h6>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                          FAQs
+                        </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
                           Create the question list exactly how you want it displayed. Reorder, remove, and save the full set in one request.
                         </p>
                       </div>
-                      <VChip color="info" variant="tonal" size="small">
+                      <VChip
+                        color="info"
+                        variant="tonal"
+                        size="small"
+                      >
                         {{ productState.faqs.length }} FAQs
                       </VChip>
                     </div>
@@ -1727,43 +1973,99 @@ watch(routeProductId, nextId => {
                           hide-details="auto"
                         />
                       </VCol>
-                      <VCol cols="12" class="d-flex justify-end">
-                        <VBtn color="primary" size="large" class="ingredient-add-btn" @click="addFaq">
+                      <VCol
+                        cols="12"
+                        class="d-flex justify-end"
+                      >
+                        <VBtn
+                          color="primary"
+                          size="large"
+                          class="ingredient-add-btn"
+                          @click="addFaq"
+                        >
                           Add FAQ
                         </VBtn>
                       </VCol>
                     </VRow>
 
-                    <div v-if="productState.faqs.length" class="faq-grid">
+                    <div
+                      v-if="productState.faqs.length"
+                      class="faq-grid"
+                    >
                       <div
                         v-for="(faq, index) in productState.faqs"
                         :key="faq.local_id"
                         class="faq-card"
                       >
                         <div class="faq-card__top">
-                          <VChip size="x-small" color="primary" variant="tonal">
+                          <VChip
+                            size="x-small"
+                            color="primary"
+                            variant="tonal"
+                          >
                             FAQ {{ index + 1 }}
                           </VChip>
                           <div class="stack-item__actions">
-                            <VBtn icon variant="text" size="x-small" :disabled="index === 0" @click="moveFaq(index, -1)">
-                              <VIcon icon="tabler-arrow-up" size="18" />
+                            <VBtn
+                              icon
+                              variant="text"
+                              size="x-small"
+                              :disabled="index === 0"
+                              @click="moveFaq(index, -1)"
+                            >
+                              <VIcon
+                                icon="tabler-arrow-up"
+                                size="18"
+                              />
                             </VBtn>
-                            <VBtn icon variant="text" size="x-small" :disabled="index === productState.faqs.length - 1" @click="moveFaq(index, 1)">
-                              <VIcon icon="tabler-arrow-down" size="18" />
+                            <VBtn
+                              icon
+                              variant="text"
+                              size="x-small"
+                              :disabled="index === productState.faqs.length - 1"
+                              @click="moveFaq(index, 1)"
+                            >
+                              <VIcon
+                                icon="tabler-arrow-down"
+                                size="18"
+                              />
                             </VBtn>
-                            <VBtn icon variant="text" color="error" size="x-small" @click="removeFaq(faq.local_id)">
-                              <VIcon icon="tabler-trash" size="18" />
+                            <VBtn
+                              icon
+                              variant="text"
+                              color="error"
+                              size="x-small"
+                              @click="removeFaq(faq.local_id)"
+                            >
+                              <VIcon
+                                icon="tabler-trash"
+                                size="18"
+                              />
                             </VBtn>
                           </div>
                         </div>
-                        <h6 class="text-subtitle-1 font-weight-bold mb-2">{{ faq.question }}</h6>
-                        <p class="text-body-2 text-medium-emphasis mb-0">{{ faq.answer }}</p>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-2">
+                          {{ faq.question }}
+                        </h6>
+                        <p class="text-body-2 text-medium-emphasis mb-0">
+                          {{ faq.answer }}
+                        </p>
                       </div>
                     </div>
 
-                    <div v-else class="empty-panel">
-                      <VIcon icon="tabler-help-circle" color="secondary" size="28" class="mb-2" />
-                      <div class="text-body-2 text-medium-emphasis">No FAQs added yet.</div>
+                    <div
+                      v-else
+                      class="empty-panel"
+                    >
+                      <VIcon
+                        icon="tabler-help-circle"
+                        color="secondary"
+                        size="28"
+                        class="mb-2"
+                      />
+                      <div class="text-body-2 text-medium-emphasis">
+                        No FAQs added yet.
+                      </div>
                     </div>
                   </div>
                 </VCol>
@@ -1787,11 +2089,16 @@ watch(routeProductId, nextId => {
               </div>
             </div>
 
-            <div v-else-if="selectedStep === 3" class="step-three-layout">
+            <div
+              v-else-if="selectedStep === 3"
+              class="step-three-layout"
+            >
               <VRow>
                 <VCol cols="12">
                   <div class="panel-card">
-                    <h6 class="text-subtitle-1 font-weight-bold mb-3">Additional Details</h6>
+                    <h6 class="text-subtitle-1 font-weight-bold mb-3">
+                      Additional Details
+                    </h6>
                     <p class="text-body-2 text-medium-emphasis mb-4">
                       Capture the treatment explanation, usage guidance, and key ingredients in one structured step.
                     </p>
@@ -1825,18 +2132,27 @@ watch(routeProductId, nextId => {
                         <div class="ingredient-panel">
                           <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                             <div>
-                              <h6 class="text-subtitle-1 font-weight-bold mb-1">Key Ingredients</h6>
+                              <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                                Key Ingredients
+                              </h6>
                               <p class="text-body-2 text-medium-emphasis mb-0">
                                 Search existing ingredients while typing, or type a new ingredient name and description to create it inline.
                               </p>
                             </div>
-                            <VChip color="warning" variant="tonal" size="small">
+                            <VChip
+                              color="warning"
+                              variant="tonal"
+                              size="small"
+                            >
                               {{ productState.ingredients.length }} Ingredients
                             </VChip>
                           </div>
 
                           <VRow>
-                            <VCol cols="12" md="5">
+                            <VCol
+                              cols="12"
+                              md="5"
+                            >
                               <VTextField
                                 v-model="ingredientSearch"
                                 label="Ingredient Name"
@@ -1873,13 +2189,20 @@ watch(routeProductId, nextId => {
                                   v-if="ingredientSearch.trim() && !ingredientSearchResults.length && !ingredientSearchLoading"
                                   class="ingredient-option ingredient-option--new"
                                 >
-                                  <VIcon icon="tabler-plus" size="16" class="me-2" />
+                                  <VIcon
+                                    icon="tabler-plus"
+                                    size="16"
+                                    class="me-2"
+                                  />
                                   <span class="text-body-2">Use new ingredient: {{ ingredientSearch }}</span>
                                 </div>
                               </div>
                             </VCol>
 
-                            <VCol cols="12" md="5">
+                            <VCol
+                              cols="12"
+                              md="5"
+                            >
                               <VTextarea
                                 v-model="ingredientDraft.description"
                                 label="Ingredient Description"
@@ -1891,7 +2214,10 @@ watch(routeProductId, nextId => {
                               />
                             </VCol>
 
-                            <VCol cols="12" class="d-flex justify-end">
+                            <VCol
+                              cols="12"
+                              class="d-flex justify-end"
+                            >
                               <VBtn
                                 color="primary"
                                 size="large"
@@ -1903,7 +2229,10 @@ watch(routeProductId, nextId => {
                             </VCol>
                           </VRow>
 
-                          <div v-if="productState.ingredients.length" class="stack-list mt-4">
+                          <div
+                            v-if="productState.ingredients.length"
+                            class="stack-list mt-4"
+                          >
                             <div
                               v-for="(ingredient, index) in productState.ingredients"
                               :key="ingredient.local_id"
@@ -1914,7 +2243,9 @@ watch(routeProductId, nextId => {
                               </div>
                               <div class="stack-item__content">
                                 <div class="d-flex align-center gap-2 mb-1">
-                                  <div class="text-body-1 font-weight-medium">{{ ingredient.name }}</div>
+                                  <div class="text-body-1 font-weight-medium">
+                                    {{ ingredient.name }}
+                                  </div>
                                   <VChip
                                     size="x-small"
                                     :color="ingredient.id ? 'success' : 'secondary'"
@@ -1931,27 +2262,67 @@ watch(routeProductId, nextId => {
                                 </div>
                               </div>
                               <div class="stack-item__actions">
-                                <VBtn icon variant="text" size="x-small" :disabled="index === 0" @click="moveIngredient(index, -1)">
-                                  <VIcon icon="tabler-arrow-up" size="18" />
+                                <VBtn
+                                  icon
+                                  variant="text"
+                                  size="x-small"
+                                  :disabled="index === 0"
+                                  @click="moveIngredient(index, -1)"
+                                >
+                                  <VIcon
+                                    icon="tabler-arrow-up"
+                                    size="18"
+                                  />
                                 </VBtn>
-                                <VBtn icon variant="text" size="x-small" :disabled="index === productState.ingredients.length - 1" @click="moveIngredient(index, 1)">
-                                  <VIcon icon="tabler-arrow-down" size="18" />
+                                <VBtn
+                                  icon
+                                  variant="text"
+                                  size="x-small"
+                                  :disabled="index === productState.ingredients.length - 1"
+                                  @click="moveIngredient(index, 1)"
+                                >
+                                  <VIcon
+                                    icon="tabler-arrow-down"
+                                    size="18"
+                                  />
                                 </VBtn>
-                                <VBtn icon variant="text" color="error" size="x-small" @click="removeIngredient(ingredient.local_id)">
-                                  <VIcon icon="tabler-trash" size="18" />
+                                <VBtn
+                                  icon
+                                  variant="text"
+                                  color="error"
+                                  size="x-small"
+                                  @click="removeIngredient(ingredient.local_id)"
+                                >
+                                  <VIcon
+                                    icon="tabler-trash"
+                                    size="18"
+                                  />
                                 </VBtn>
                               </div>
                             </div>
                           </div>
 
-                          <div v-else class="empty-panel mt-4">
-                            <VIcon icon="tabler-flask" color="secondary" size="28" class="mb-2" />
-                            <div class="text-body-2 text-medium-emphasis">No ingredients added yet.</div>
+                          <div
+                            v-else
+                            class="empty-panel mt-4"
+                          >
+                            <VIcon
+                              icon="tabler-flask"
+                              color="secondary"
+                              size="28"
+                              class="mb-2"
+                            />
+                            <div class="text-body-2 text-medium-emphasis">
+                              No ingredients added yet.
+                            </div>
                           </div>
                         </div>
                       </VCol>
 
-                      <VCol cols="12" md="6">
+                      <VCol
+                        cols="12"
+                        md="6"
+                      >
                         <VTextarea
                           v-model="productState.treatment_duration"
                           label="Treatment Duration"
@@ -1963,7 +2334,10 @@ watch(routeProductId, nextId => {
                         />
                       </VCol>
 
-                      <VCol cols="12" md="6">
+                      <VCol
+                        cols="12"
+                        md="6"
+                      >
                         <VTextarea
                           v-model="productState.usage_instructions"
                           label="Usage Instructions"
@@ -1997,18 +2371,27 @@ watch(routeProductId, nextId => {
               </div>
             </div>
 
-            <div v-else-if="selectedStep === 4" class="step-four-layout">
+            <div
+              v-else-if="selectedStep === 4"
+              class="step-four-layout"
+            >
               <VRow>
                 <VCol cols="12">
                   <div class="panel-card panel-card--research mb-6">
                     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                       <div>
-                        <h6 class="text-subtitle-1 font-weight-bold mb-1">Main Research Description</h6>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                          Main Research Description
+                        </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
                           This is the main scientific summary for the product. Keep it separate and clear from the individual research references below.
                         </p>
                       </div>
-                      <VChip color="info" variant="tonal" size="small">
+                      <VChip
+                        color="info"
+                        variant="tonal"
+                        size="small"
+                      >
                         Main Summary
                       </VChip>
                     </div>
@@ -2029,18 +2412,27 @@ watch(routeProductId, nextId => {
                   <div class="research-composer">
                     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                       <div class="research-composer__header mb-4">
-                        <h6 class="text-subtitle-1 font-weight-bold mb-1">Add New Research Link</h6>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                          Add New Research Link
+                        </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
                           Add one research article at a time. Only title and article URL are required, but the other fields make the section more professional.
                         </p>
                       </div>
-                      <VChip color="primary" variant="tonal" size="small">
+                      <VChip
+                        color="primary"
+                        variant="tonal"
+                        size="small"
+                      >
                         Link Composer
                       </VChip>
                     </div>
 
                     <VRow>
-                      <VCol cols="12" md="6">
+                      <VCol
+                        cols="12"
+                        md="6"
+                      >
                         <VTextField
                           v-model="researchLinkDraft.title"
                           label="Title"
@@ -2050,7 +2442,10 @@ watch(routeProductId, nextId => {
                           hide-details="auto"
                         />
                       </VCol>
-                      <VCol cols="12" md="6">
+                      <VCol
+                        cols="12"
+                        md="6"
+                      >
                         <VTextField
                           v-model="researchLinkDraft.article_url"
                           label="Article URL"
@@ -2060,7 +2455,10 @@ watch(routeProductId, nextId => {
                           hide-details="auto"
                         />
                       </VCol>
-                      <VCol cols="12" md="6">
+                      <VCol
+                        cols="12"
+                        md="6"
+                      >
                         <VTextField
                           v-model="researchLinkDraft.authors"
                           label="Authors"
@@ -2070,7 +2468,10 @@ watch(routeProductId, nextId => {
                           hide-details="auto"
                         />
                       </VCol>
-                      <VCol cols="12" md="6">
+                      <VCol
+                        cols="12"
+                        md="6"
+                      >
                         <VTextField
                           v-model="researchLinkDraft.journal"
                           label="Journal"
@@ -2080,7 +2481,10 @@ watch(routeProductId, nextId => {
                           hide-details="auto"
                         />
                       </VCol>
-                      <VCol cols="12" md="4">
+                      <VCol
+                        cols="12"
+                        md="4"
+                      >
                         <VTextField
                           v-model="researchLinkDraft.publication_year"
                           label="Publication Year"
@@ -2091,7 +2495,10 @@ watch(routeProductId, nextId => {
                           hide-details="auto"
                         />
                       </VCol>
-                      <VCol cols="12" md="4">
+                      <VCol
+                        cols="12"
+                        md="4"
+                      >
                         <VTextField
                           v-model="researchLinkDraft.pubmed_id"
                           label="PubMed ID"
@@ -2101,7 +2508,10 @@ watch(routeProductId, nextId => {
                           hide-details="auto"
                         />
                       </VCol>
-                      <VCol cols="12" md="4">
+                      <VCol
+                        cols="12"
+                        md="4"
+                      >
                         <VTextField
                           v-model="researchLinkDraft.doi"
                           label="DOI"
@@ -2125,7 +2535,11 @@ watch(routeProductId, nextId => {
                     </VRow>
 
                     <div class="d-flex justify-end mt-4">
-                      <VBtn color="primary" size="large" @click="addResearchLink">
+                      <VBtn
+                        color="primary"
+                        size="large"
+                        @click="addResearchLink"
+                      >
                         Add Research Link
                       </VBtn>
                     </div>
@@ -2136,17 +2550,26 @@ watch(routeProductId, nextId => {
                   <div class="panel-card">
                     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                       <div>
-                        <h6 class="text-subtitle-1 font-weight-bold mb-1">Saved Research Links</h6>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                          Saved Research Links
+                        </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
                           Review the references you have added, change their order, or remove them before saving the step.
                         </p>
                       </div>
-                      <VChip color="info" variant="tonal" size="small">
+                      <VChip
+                        color="info"
+                        variant="tonal"
+                        size="small"
+                      >
                         {{ productState.research_links.length }} Added
                       </VChip>
                     </div>
 
-                    <div v-if="productState.research_links.length" class="research-list">
+                    <div
+                      v-if="productState.research_links.length"
+                      class="research-list"
+                    >
                       <div
                         v-for="(link, index) in productState.research_links"
                         :key="link.local_id"
@@ -2155,46 +2578,122 @@ watch(routeProductId, nextId => {
                         <div class="research-card__header">
                           <div>
                             <div class="d-flex align-center gap-2 mb-1">
-                              <VChip size="x-small" color="info" variant="tonal">
+                              <VChip
+                                size="x-small"
+                                color="info"
+                                variant="tonal"
+                              >
                                 Research {{ index + 1 }}
                               </VChip>
                               <span class="text-caption text-medium-emphasis">Sort order: {{ index }}</span>
                             </div>
-                            <h6 class="text-subtitle-1 font-weight-bold mb-1">{{ link.title }}</h6>
-                            <a :href="link.article_url" target="_blank" rel="noopener noreferrer" class="research-card__link">
+                            <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                              {{ link.title }}
+                            </h6>
+                            <a
+                              :href="link.article_url"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="research-card__link"
+                            >
                               {{ link.article_url }}
                             </a>
                           </div>
                           <div class="stack-item__actions">
-                            <VBtn icon variant="text" size="x-small" :disabled="index === 0" @click="moveResearchLink(index, -1)">
-                              <VIcon icon="tabler-arrow-up" size="18" />
+                            <VBtn
+                              icon
+                              variant="text"
+                              size="x-small"
+                              :disabled="index === 0"
+                              @click="moveResearchLink(index, -1)"
+                            >
+                              <VIcon
+                                icon="tabler-arrow-up"
+                                size="18"
+                              />
                             </VBtn>
-                            <VBtn icon variant="text" size="x-small" :disabled="index === productState.research_links.length - 1" @click="moveResearchLink(index, 1)">
-                              <VIcon icon="tabler-arrow-down" size="18" />
+                            <VBtn
+                              icon
+                              variant="text"
+                              size="x-small"
+                              :disabled="index === productState.research_links.length - 1"
+                              @click="moveResearchLink(index, 1)"
+                            >
+                              <VIcon
+                                icon="tabler-arrow-down"
+                                size="18"
+                              />
                             </VBtn>
-                            <VBtn icon variant="text" color="error" size="x-small" @click="removeResearchLink(link.local_id)">
-                              <VIcon icon="tabler-trash" size="18" />
+                            <VBtn
+                              icon
+                              variant="text"
+                              color="error"
+                              size="x-small"
+                              @click="removeResearchLink(link.local_id)"
+                            >
+                              <VIcon
+                                icon="tabler-trash"
+                                size="18"
+                              />
                             </VBtn>
                           </div>
                         </div>
 
                         <div class="research-meta">
-                          <div v-if="link.authors" class="research-meta__item"><strong>Authors:</strong> {{ link.authors }}</div>
-                          <div v-if="link.journal" class="research-meta__item"><strong>Journal:</strong> {{ link.journal }}</div>
-                          <div v-if="link.publication_year" class="research-meta__item"><strong>Year:</strong> {{ link.publication_year }}</div>
-                          <div v-if="link.pubmed_id" class="research-meta__item"><strong>PubMed:</strong> {{ link.pubmed_id }}</div>
-                          <div v-if="link.doi" class="research-meta__item"><strong>DOI:</strong> {{ link.doi }}</div>
+                          <div
+                            v-if="link.authors"
+                            class="research-meta__item"
+                          >
+                            <strong>Authors:</strong> {{ link.authors }}
+                          </div>
+                          <div
+                            v-if="link.journal"
+                            class="research-meta__item"
+                          >
+                            <strong>Journal:</strong> {{ link.journal }}
+                          </div>
+                          <div
+                            v-if="link.publication_year"
+                            class="research-meta__item"
+                          >
+                            <strong>Year:</strong> {{ link.publication_year }}
+                          </div>
+                          <div
+                            v-if="link.pubmed_id"
+                            class="research-meta__item"
+                          >
+                            <strong>PubMed:</strong> {{ link.pubmed_id }}
+                          </div>
+                          <div
+                            v-if="link.doi"
+                            class="research-meta__item"
+                          >
+                            <strong>DOI:</strong> {{ link.doi }}
+                          </div>
                         </div>
 
-                        <p v-if="link.description" class="text-body-2 text-medium-emphasis mb-0">
+                        <p
+                          v-if="link.description"
+                          class="text-body-2 text-medium-emphasis mb-0"
+                        >
                           {{ link.description }}
                         </p>
                       </div>
                     </div>
 
-                    <div v-else class="empty-panel">
-                      <VIcon icon="tabler-microscope" color="secondary" size="28" class="mb-2" />
-                      <div class="text-body-2 text-medium-emphasis">No research links added yet.</div>
+                    <div
+                      v-else
+                      class="empty-panel"
+                    >
+                      <VIcon
+                        icon="tabler-microscope"
+                        color="secondary"
+                        size="28"
+                        class="mb-2"
+                      />
+                      <div class="text-body-2 text-medium-emphasis">
+                        No research links added yet.
+                      </div>
                     </div>
                   </div>
                 </VCol>
@@ -2218,18 +2717,27 @@ watch(routeProductId, nextId => {
               </div>
             </div>
 
-            <div v-else-if="selectedStep === 5" class="step-five-layout">
+            <div
+              v-else-if="selectedStep === 5"
+              class="step-five-layout"
+            >
               <VRow>
                 <VCol cols="12">
                   <div class="panel-card panel-card--pricing">
                     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
                       <div>
-                        <h6 class="text-subtitle-1 font-weight-bold mb-1">Pricing Plans</h6>
+                        <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                          Pricing Plans
+                        </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
                           Configure one-time and subscription pricing separately. Use the switches to enable or disable each pricing section.
                         </p>
                       </div>
-                      <VChip color="secondary" variant="tonal" size="small">
+                      <VChip
+                        color="secondary"
+                        variant="tonal"
+                        size="small"
+                      >
                         2 Pricing Sections
                       </VChip>
                     </div>
@@ -2243,7 +2751,9 @@ watch(routeProductId, nextId => {
                       >
                         <div class="pricing-panel__header">
                           <div>
-                            <h6 class="text-subtitle-1 font-weight-bold mb-1">{{ groupInfo.title }}</h6>
+                            <h6 class="text-subtitle-1 font-weight-bold mb-1">
+                              {{ groupInfo.title }}
+                            </h6>
                             <p class="text-body-2 text-medium-emphasis mb-0">
                               {{ groupInfo.description }}
                             </p>
@@ -2260,7 +2770,10 @@ watch(routeProductId, nextId => {
                         </div>
 
                         <VRow>
-                          <VCol cols="12" md="6">
+                          <VCol
+                            cols="12"
+                            md="6"
+                          >
                             <VTextField
                               v-model="productState.pricing[groupInfo.key].title"
                               label="Section Title"
@@ -2271,7 +2784,10 @@ watch(routeProductId, nextId => {
                               :disabled="!productState.pricing[groupInfo.key].is_active"
                             />
                           </VCol>
-                          <VCol cols="12" md="6">
+                          <VCol
+                            cols="12"
+                            md="6"
+                          >
                             <VTextarea
                               v-model="productState.pricing[groupInfo.key].description"
                               label="Section Description"
@@ -2286,10 +2802,15 @@ watch(routeProductId, nextId => {
                         </VRow>
 
                         <div class="pricing-composer mt-4">
-                          <div class="text-subtitle-2 font-weight-bold mb-3">Add Pricing Option</div>
+                          <div class="text-subtitle-2 font-weight-bold mb-3">
+                            Add Pricing Option
+                          </div>
 
                           <VRow>
-                            <VCol cols="12" md="4">
+                            <VCol
+                              cols="12"
+                              md="4"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].label"
                                 label="Label"
@@ -2300,7 +2821,10 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="4">
+                            <VCol
+                              cols="12"
+                              md="4"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].interval_count"
                                 label="Interval Count"
@@ -2311,7 +2835,10 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="4">
+                            <VCol
+                              cols="12"
+                              md="4"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].billing_interval"
                                 label="Billing Interval"
@@ -2322,7 +2849,10 @@ watch(routeProductId, nextId => {
                                 hide-details="auto"
                               />
                             </VCol>
-                            <VCol cols="12" md="3">
+                            <VCol
+                              cols="12"
+                              md="3"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].price"
                                 label="Price"
@@ -2334,7 +2864,10 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="3">
+                            <VCol
+                              cols="12"
+                              md="3"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].discount_percent"
                                 label="Discount %"
@@ -2346,7 +2879,10 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="3">
+                            <VCol
+                              cols="12"
+                              md="3"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].final_price"
                                 label="Final Price"
@@ -2358,7 +2894,11 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="3" class="d-flex align-center">
+                            <VCol
+                              cols="12"
+                              md="3"
+                              class="d-flex align-center"
+                            >
                               <VCheckbox
                                 v-model="pricingDrafts[groupInfo.key].is_default"
                                 label="Default Option"
@@ -2367,7 +2907,10 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="4">
+                            <VCol
+                              cols="12"
+                              md="4"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].mg"
                                 label="MG"
@@ -2378,7 +2921,10 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="4">
+                            <VCol
+                              cols="12"
+                              md="4"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].tagline"
                                 label="Tagline"
@@ -2389,7 +2935,10 @@ watch(routeProductId, nextId => {
                                 :disabled="!productState.pricing[groupInfo.key].is_active"
                               />
                             </VCol>
-                            <VCol cols="12" md="4">
+                            <VCol
+                              cols="12"
+                              md="4"
+                            >
                               <VTextField
                                 v-model="pricingDrafts[groupInfo.key].savings_label"
                                 label="Savings Label"
@@ -2416,13 +2965,22 @@ watch(routeProductId, nextId => {
 
                         <div class="pricing-list mt-5">
                           <div class="d-flex align-center justify-space-between mb-3">
-                            <div class="text-subtitle-2 font-weight-bold">Saved Options</div>
-                            <VChip size="x-small" color="secondary" variant="tonal">
+                            <div class="text-subtitle-2 font-weight-bold">
+                              Saved Options
+                            </div>
+                            <VChip
+                              size="x-small"
+                              color="secondary"
+                              variant="tonal"
+                            >
                               {{ productState.pricing[groupInfo.key].options.length }} Options
                             </VChip>
                           </div>
 
-                          <div v-if="productState.pricing[groupInfo.key].options.length" class="stack-list">
+                          <div
+                            v-if="productState.pricing[groupInfo.key].options.length"
+                            class="stack-list"
+                          >
                             <div
                               v-for="(option, index) in productState.pricing[groupInfo.key].options"
                               :key="option.local_id"
@@ -2432,10 +2990,19 @@ watch(routeProductId, nextId => {
                               <div class="pricing-option-card__top">
                                 <div>
                                   <div class="d-flex align-center gap-2 mb-1">
-                                    <VChip size="x-small" :color="groupInfo.color" variant="tonal">
+                                    <VChip
+                                      size="x-small"
+                                      :color="groupInfo.color"
+                                      variant="tonal"
+                                    >
                                       {{ option.label }}
                                     </VChip>
-                                    <VChip v-if="option.is_default" size="x-small" color="success" variant="tonal">
+                                    <VChip
+                                      v-if="option.is_default"
+                                      size="x-small"
+                                      color="success"
+                                      variant="tonal"
+                                    >
                                       Default
                                     </VChip>
                                   </div>
@@ -2451,7 +3018,10 @@ watch(routeProductId, nextId => {
                                     :disabled="index === 0 || !productState.pricing[groupInfo.key].is_active"
                                     @click="movePricingOption(groupInfo.key, index, -1)"
                                   >
-                                    <VIcon icon="tabler-arrow-up" size="18" />
+                                    <VIcon
+                                      icon="tabler-arrow-up"
+                                      size="18"
+                                    />
                                   </VBtn>
                                   <VBtn
                                     icon
@@ -2460,7 +3030,10 @@ watch(routeProductId, nextId => {
                                     :disabled="index === productState.pricing[groupInfo.key].options.length - 1 || !productState.pricing[groupInfo.key].is_active"
                                     @click="movePricingOption(groupInfo.key, index, 1)"
                                   >
-                                    <VIcon icon="tabler-arrow-down" size="18" />
+                                    <VIcon
+                                      icon="tabler-arrow-down"
+                                      size="18"
+                                    />
                                   </VBtn>
                                   <VBtn
                                     icon
@@ -2470,7 +3043,10 @@ watch(routeProductId, nextId => {
                                     :disabled="!productState.pricing[groupInfo.key].is_active"
                                     @click="setDefaultPricingOption(groupInfo.key, option.local_id)"
                                   >
-                                    <VIcon icon="tabler-star" size="18" />
+                                    <VIcon
+                                      icon="tabler-star"
+                                      size="18"
+                                    />
                                   </VBtn>
                                   <VBtn
                                     icon
@@ -2480,7 +3056,10 @@ watch(routeProductId, nextId => {
                                     :disabled="!productState.pricing[groupInfo.key].is_active"
                                     @click="removePricingOption(groupInfo.key, option.local_id)"
                                   >
-                                    <VIcon icon="tabler-trash" size="18" />
+                                    <VIcon
+                                      icon="tabler-trash"
+                                      size="18"
+                                    />
                                   </VBtn>
                                 </div>
                               </div>
@@ -2491,16 +3070,33 @@ watch(routeProductId, nextId => {
                                 <div><strong>Final:</strong> ${{ option.final_price }}</div>
                               </div>
 
-                              <div v-if="Object.keys(option.metadata || {}).length" class="pricing-option-card__meta">
-                                <div v-if="option.metadata.mg"><strong>MG:</strong> {{ option.metadata.mg }}</div>
-                                <div v-if="option.metadata.tagline"><strong>Tagline:</strong> {{ option.metadata.tagline }}</div>
-                                <div v-if="option.metadata.savings_label"><strong>Savings:</strong> {{ option.metadata.savings_label }}</div>
+                              <div
+                                v-if="Object.keys(option.metadata || {}).length"
+                                class="pricing-option-card__meta"
+                              >
+                                <div v-if="option.metadata.mg">
+                                  <strong>MG:</strong> {{ option.metadata.mg }}
+                                </div>
+                                <div v-if="option.metadata.tagline">
+                                  <strong>Tagline:</strong> {{ option.metadata.tagline }}
+                                </div>
+                                <div v-if="option.metadata.savings_label">
+                                  <strong>Savings:</strong> {{ option.metadata.savings_label }}
+                                </div>
                               </div>
                             </div>
                           </div>
 
-                          <div v-else class="empty-panel">
-                            <VIcon icon="tabler-credit-card" color="secondary" size="28" class="mb-2" />
+                          <div
+                            v-else
+                            class="empty-panel"
+                          >
+                            <VIcon
+                              icon="tabler-credit-card"
+                              color="secondary"
+                              size="28"
+                              class="mb-2"
+                            />
                             <div class="text-body-2 text-medium-emphasis">
                               {{ productState.pricing[groupInfo.key].is_active ? 'No pricing options added yet.' : 'Section is disabled.' }}
                             </div>
@@ -2530,25 +3126,42 @@ watch(routeProductId, nextId => {
               </div>
             </div>
 
-            <div v-else class="complete-step">
+            <div
+              v-else
+              class="complete-step"
+            >
               <div
                 class="complete-step__hero"
                 :class="publishState.is_published ? 'complete-step__hero--published' : 'complete-step__hero--unpublished'"
               >
                 <div class="complete-step__eyebrow">
-                  <VChip color="success" variant="flat" size="small">
+                  <VChip
+                    color="success"
+                    variant="flat"
+                    size="small"
+                  >
                     Setup Complete
                   </VChip>
-                  <VChip :color="publishStatusTone" variant="tonal" size="small">
+                  <VChip
+                    :color="publishStatusTone"
+                    variant="tonal"
+                    size="small"
+                  >
                     {{ publishStatusLabel }}
                   </VChip>
                 </div>
 
                 <div class="complete-step__hero-icon">
-                  <VIcon :icon="publishHeroIcon" :color="publishStatusTone" size="34" />
+                  <VIcon
+                    :icon="publishHeroIcon"
+                    :color="publishStatusTone"
+                    size="34"
+                  />
                 </div>
 
-                <h6 class="text-h5 mb-2">Product Ready For Release</h6>
+                <h6 class="text-h5 mb-2">
+                  Product Ready For Release
+                </h6>
                 <p class="text-body-2 text-medium-emphasis mb-0 complete-step__hero-copy">
                   {{ publishState.is_published
                     ? 'This product is complete and currently live. You can keep it published or pull it back out of visibility at any time.'
@@ -2556,9 +3169,19 @@ watch(routeProductId, nextId => {
                 </p>
               </div>
 
-              <div v-if="publishStatusLoading" class="step-loader mt-6">
-                <VProgressCircular indeterminate color="primary" size="38" width="3" />
-                <div class="text-body-2 text-medium-emphasis mt-3">Loading publish status...</div>
+              <div
+                v-if="publishStatusLoading"
+                class="step-loader mt-6"
+              >
+                <VProgressCircular
+                  indeterminate
+                  color="primary"
+                  size="38"
+                  width="3"
+                />
+                <div class="text-body-2 text-medium-emphasis mt-3">
+                  Loading publish status...
+                </div>
               </div>
 
               <div
@@ -2568,8 +3191,15 @@ watch(routeProductId, nextId => {
               >
                 <div class="publish-panel__header">
                   <div>
-                    <div class="text-overline mb-2" :class="publishState.is_published ? 'text-success' : 'text-warning'">Publish Status</div>
-                    <h6 class="text-h6 mb-2">Product is {{ publishState.is_published ? 'published' : 'not published' }}</h6>
+                    <div
+                      class="text-overline mb-2"
+                      :class="publishState.is_published ? 'text-success' : 'text-warning'"
+                    >
+                      Publish Status
+                    </div>
+                    <h6 class="text-h6 mb-2">
+                      Product is {{ publishState.is_published ? 'published' : 'not published' }}
+                    </h6>
                     <p class="text-body-2 text-medium-emphasis mb-0">
                       {{ publishState.is_published
                         ? 'This product is currently live. You can unpublish it any time if you need to hide it again.'
@@ -2577,7 +3207,11 @@ watch(routeProductId, nextId => {
                     </p>
                   </div>
 
-                  <VChip :color="publishStatusTone" variant="tonal" size="small">
+                  <VChip
+                    :color="publishStatusTone"
+                    variant="tonal"
+                    size="small"
+                  >
                     {{ publishStatusLabel }}
                   </VChip>
                 </div>

@@ -1,7 +1,8 @@
 <script setup>
-import BusinessHours from './business/business-hours.vue';
-import InstructionManage from './business/instruction-manage.vue';
-import LogoManage from './business/logo-manage.vue';
+import BusinessHours from './business/business-hours.vue'
+import InstructionManage from './business/instruction-manage.vue'
+import LogoManage from './business/logo-manage.vue'
+
 const currentTab = ref(0)
 </script>
 

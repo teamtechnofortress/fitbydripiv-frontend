@@ -22,8 +22,10 @@ const pendingDeleteCouponId = ref('')
 const togglingCouponId = ref('')
 
 const editingCouponId = computed(() => typeof route.query.coupon_id === 'string' ? route.query.coupon_id : '')
+
 const isCouponEditor = computed(() => {
   const section = String(route.query.section || '')
+  
   return section === 'add-coupon' || (section === 'edit-coupon' && !!editingCouponId.value)
 })
 
@@ -53,6 +55,7 @@ const authHeaders = computed(() => ({
 const normalizeRows = body => {
   if (Array.isArray(body?.data)) return body.data
   if (Array.isArray(body?.data?.data)) return body.data.data
+  
   return []
 }
 
@@ -73,11 +76,13 @@ const formatMoney = (amount, currency = 'USD') => {
   if (amount == null || amount === '') return '—'
   const value = Number(amount)
   if (Number.isNaN(value)) return amount
+  
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value)
 }
 
 const formatDate = dateStr => {
   if (!dateStr) return '—'
+  
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(dateStr))
 }
 
@@ -97,15 +102,18 @@ const statusConfig = status => {
 }
 
 const getCouponScopeLabel = coupon => coupon?.scope === 'product_specific' ? 'Product Specific' : 'Global'
+
 const getCouponAppliesToLabel = coupon => {
   const value = coupon?.applies_to
   if (value === 'subscription') return 'Subscriptions'
   if (value === 'one_time') return 'One-Time Orders'
+  
   return 'All Orders'
 }
 
 const getCouponValueLabel = coupon => {
   if (!coupon) return '—'
+  
   return coupon.type === 'percent' ? `${coupon.value}%` : formatMoney(coupon.value)
 }
 
@@ -116,6 +124,7 @@ const getCouponProductSummary = coupon => {
   const names = Array.isArray(coupon?.products) ? coupon.products.map(product => product?.name).filter(Boolean) : []
   if (names.length) return names.join(', ')
   if (coupon?.products_count) return `${coupon.products_count} selected products`
+  
   return 'Product-specific'
 }
 
@@ -140,6 +149,7 @@ const orderRangeText = computed(() => {
   if (!total) return 'No results'
   const start = (ordersMeta.value.current_page - 1) * ordersMeta.value.per_page + 1
   const end = Math.min(ordersMeta.value.current_page * ordersMeta.value.per_page, total)
+  
   return `${start}–${end} of ${total}`
 })
 
@@ -152,7 +162,9 @@ const fetchOrders = async () => {
     const params = Object.fromEntries(
       Object.entries({ ...orderFilters }).filter(([, value]) => value !== null && value !== ''),
     )
+
     const { data } = await axios.get(ADMIN_ORDERS_URL, { params, headers: authHeaders.value })
+
     orders.value = data?.data || []
     ordersMeta.value = data?.meta || ordersMeta.value
   } catch (err) {
@@ -199,6 +211,7 @@ const subscriptionRangeText = computed(() => {
   if (!total) return 'No results'
   const start = (subscriptionsMeta.value.current_page - 1) * subscriptionsMeta.value.per_page + 1
   const end = Math.min(subscriptionsMeta.value.current_page * subscriptionsMeta.value.per_page, total)
+  
   return `${start}–${end} of ${total}`
 })
 
@@ -211,7 +224,9 @@ const fetchSubscriptions = async () => {
     const params = Object.fromEntries(
       Object.entries({ ...subscriptionFilters }).filter(([, value]) => value !== null && value !== '' && value !== false),
     )
+
     const { data } = await axios.get(ADMIN_SUBSCRIPTIONS_URL, { params, headers: authHeaders.value })
+
     subscriptions.value = data?.data || []
     subscriptionsMeta.value = data?.meta || subscriptionsMeta.value
   } catch (err) {
@@ -244,11 +259,13 @@ const cancelSubscription = async confirmed => {
   if (!confirmed || !targetSubscriptionId.value) return
 
   const id = targetSubscriptionId.value
+
   cancellingSubscriptions[id] = true
   subscriptionsError.value = ''
   subscriptionsMessage.value = ''
   try {
     const { data } = await axios.post(cancelSubscriptionUrl(id), {}, { headers: authHeaders.value })
+
     subscriptionsMessage.value = data?.message || 'Subscription cancelled successfully'
     await fetchSubscriptions()
   } catch (err) {
@@ -282,6 +299,7 @@ const couponRangeText = computed(() => {
   if (!total) return 'No results'
   const start = (couponsMeta.value.current_page - 1) * couponsMeta.value.per_page + 1
   const end = Math.min(couponsMeta.value.current_page * couponsMeta.value.per_page, total)
+  
   return `${start}–${end} of ${total}`
 })
 
@@ -309,6 +327,7 @@ const fetchCoupons = async () => {
     })
 
     const body = response?.data || {}
+
     coupons.value = normalizeRows(body)
     couponsMeta.value = {
       ...couponsMeta.value,
@@ -455,8 +474,12 @@ onMounted(() => {
           <span class="mdi mdi-credit-card-outline" />
         </div>
         <div>
-          <h1 class="page-title">Payments & Billing</h1>
-          <p class="page-subtitle">Manage orders, subscriptions, coupons, and billing records</p>
+          <h1 class="page-title">
+            Payments & Billing
+          </h1>
+          <p class="page-subtitle">
+            Manage orders, subscriptions, coupons, and billing records
+          </p>
         </div>
       </div>
       <div class="header-actions">
@@ -494,28 +517,40 @@ onMounted(() => {
 
     <div class="tab-nav">
       <button
-        :class="['tab-btn', { 'tab-btn--active': tab === 'orders' }]"
+        class="tab-btn"
+        :class="[{ 'tab-btn--active': tab === 'orders' }]"
         @click="setTab('orders')"
       >
         <span class="mdi mdi-receipt-outline tab-icon" />
         Orders
-        <span v-if="ordersMeta.total" class="tab-badge">{{ ordersMeta.total }}</span>
+        <span
+          v-if="ordersMeta.total"
+          class="tab-badge"
+        >{{ ordersMeta.total }}</span>
       </button>
       <button
-        :class="['tab-btn', { 'tab-btn--active': tab === 'subscriptions' }]"
+        class="tab-btn"
+        :class="[{ 'tab-btn--active': tab === 'subscriptions' }]"
         @click="setTab('subscriptions')"
       >
         <span class="mdi mdi-calendar-sync-outline tab-icon" />
         Subscriptions
-        <span v-if="subscriptionsMeta.total" class="tab-badge">{{ subscriptionsMeta.total }}</span>
+        <span
+          v-if="subscriptionsMeta.total"
+          class="tab-badge"
+        >{{ subscriptionsMeta.total }}</span>
       </button>
       <button
-        :class="['tab-btn', { 'tab-btn--active': tab === 'coupons' }]"
+        class="tab-btn"
+        :class="[{ 'tab-btn--active': tab === 'coupons' }]"
         @click="setTab('coupons')"
       >
         <span class="mdi mdi-ticket-percent-outline tab-icon" />
         Coupons
-        <span v-if="couponsMeta.total" class="tab-badge">{{ couponsMeta.total }}</span>
+        <span
+          v-if="couponsMeta.total"
+          class="tab-badge"
+        >{{ couponsMeta.total }}</span>
       </button>
     </div>
 
@@ -527,7 +562,10 @@ onMounted(() => {
     />
 
     <template v-else>
-      <div v-show="tab === 'orders'" class="tab-content">
+      <div
+        v-show="tab === 'orders'"
+        class="tab-content"
+      >
         <div class="filter-bar">
           <div class="filter-search">
             <span class="mdi mdi-magnify search-icon" />
@@ -573,16 +611,35 @@ onMounted(() => {
             />
           </div>
           <div class="filter-actions">
-            <button class="btn-apply" @click="applyOrderSearch">Apply</button>
-            <button class="btn-reset" @click="resetOrderFilters">Reset</button>
+            <button
+              class="btn-apply"
+              @click="applyOrderSearch"
+            >
+              Apply
+            </button>
+            <button
+              class="btn-reset"
+              @click="resetOrderFilters"
+            >
+              Reset
+            </button>
           </div>
         </div>
 
-        <VAlert v-if="ordersError" type="error" variant="tonal" class="mb-4" closable>
+        <VAlert
+          v-if="ordersError"
+          type="error"
+          variant="tonal"
+          class="mb-4"
+          closable
+        >
           {{ ordersError }}
         </VAlert>
 
-        <div v-if="ordersLoading" class="loading-bar">
+        <div
+          v-if="ordersLoading"
+          class="loading-bar"
+        >
           <div class="loading-bar__fill" />
         </div>
 
@@ -595,8 +652,12 @@ onMounted(() => {
                 <th>Product</th>
                 <th>Type</th>
                 <th>Payment</th>
-                <th class="text-right">Amount</th>
-                <th class="text-right">Actions</th>
+                <th class="text-right">
+                  Amount
+                </th>
+                <th class="text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -607,44 +668,77 @@ onMounted(() => {
                 @click="openOrderDetail(item.id)"
               >
                 <td>
-                  <div class="cell-primary font-mono">{{ item.order_uuid }}</div>
-                  <div class="cell-meta">#{{ item.id }}</div>
-                  <span class="status-pill" :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }">
+                  <div class="cell-primary font-mono">
+                    {{ item.order_uuid }}
+                  </div>
+                  <div class="cell-meta">
+                    #{{ item.id }}
+                  </div>
+                  <span
+                    class="status-pill"
+                    :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }"
+                  >
                     {{ statusConfig(item.status).label }}
                   </span>
                 </td>
                 <td>
-                  <div class="cell-primary">{{ item.patient?.name || '—' }}</div>
-                  <div class="cell-meta">{{ item.patient?.email || '—' }}</div>
+                  <div class="cell-primary">
+                    {{ item.patient?.name || '—' }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ item.patient?.email || '—' }}
+                  </div>
                 </td>
                 <td>
-                  <div class="cell-primary">{{ item.product?.name || '—' }}</div>
-                  <div class="cell-meta">{{ item.product?.slug || '—' }}</div>
+                  <div class="cell-primary">
+                    {{ item.product?.name || '—' }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ item.product?.slug || '—' }}
+                  </div>
                 </td>
                 <td>
                   <span class="type-badge">
-                    <span v-if="item.purchase_type === 'subscription'" class="mdi mdi-calendar-sync-outline" />
-                    <span v-else class="mdi mdi-shopping-outline" />
+                    <span
+                      v-if="item.purchase_type === 'subscription'"
+                      class="mdi mdi-calendar-sync-outline"
+                    />
+                    <span
+                      v-else
+                      class="mdi mdi-shopping-outline"
+                    />
                     {{ item.purchase_type === 'subscription' ? 'Subscription' : 'One-time' }}
                   </span>
                 </td>
                 <td @click.stop>
-                  <span class="status-pill" :style="{ color: statusConfig(item.payment_status).color, background: statusConfig(item.payment_status).bg }">
+                  <span
+                    class="status-pill"
+                    :style="{ color: statusConfig(item.payment_status).color, background: statusConfig(item.payment_status).bg }"
+                  >
                     {{ statusConfig(item.payment_status).label }}
                   </span>
                 </td>
                 <td class="text-right cell-amount">
                   {{ formatMoney(item.price, item.currency || 'USD') }}
                 </td>
-                <td class="text-right" @click.stop>
-                  <button class="action-icon-btn" @click="openOrderDetail(item.id)">
+                <td
+                  class="text-right"
+                  @click.stop
+                >
+                  <button
+                    class="action-icon-btn"
+                    @click="openOrderDetail(item.id)"
+                  >
                     <span class="mdi mdi-eye-outline" />
                     View
                   </button>
                 </td>
               </tr>
               <tr v-if="!ordersLoading && orders.length === 0">
-                <td colspan="7" class="empty-state">
+                <td
+                  colspan="7"
+                  class="empty-state"
+                >
                   <span class="mdi mdi-inbox-outline empty-icon" />
                   <span>No orders found</span>
                 </td>
@@ -677,7 +771,10 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-show="tab === 'subscriptions'" class="tab-content">
+      <div
+        v-show="tab === 'subscriptions'"
+        class="tab-content"
+      >
         <div class="filter-bar">
           <div class="filter-search">
             <span class="mdi mdi-magnify search-icon" />
@@ -712,19 +809,44 @@ onMounted(() => {
             </div>
           </div>
           <div class="filter-actions">
-            <button class="btn-apply" @click="applySubscriptionSearch">Apply</button>
-            <button class="btn-reset" @click="resetSubscriptionFilters">Reset</button>
+            <button
+              class="btn-apply"
+              @click="applySubscriptionSearch"
+            >
+              Apply
+            </button>
+            <button
+              class="btn-reset"
+              @click="resetSubscriptionFilters"
+            >
+              Reset
+            </button>
           </div>
         </div>
 
-        <VAlert v-if="subscriptionsMessage" type="success" variant="tonal" class="mb-4" closable>
+        <VAlert
+          v-if="subscriptionsMessage"
+          type="success"
+          variant="tonal"
+          class="mb-4"
+          closable
+        >
           {{ subscriptionsMessage }}
         </VAlert>
-        <VAlert v-if="subscriptionsError" type="error" variant="tonal" class="mb-4" closable>
+        <VAlert
+          v-if="subscriptionsError"
+          type="error"
+          variant="tonal"
+          class="mb-4"
+          closable
+        >
           {{ subscriptionsError }}
         </VAlert>
 
-        <div v-if="subscriptionsLoading" class="loading-bar">
+        <div
+          v-if="subscriptionsLoading"
+          class="loading-bar"
+        >
           <div class="loading-bar__fill" />
         </div>
 
@@ -738,8 +860,12 @@ onMounted(() => {
                 <th>Billing</th>
                 <th>Cycles</th>
                 <th>Status</th>
-                <th class="text-right">Next billing</th>
-                <th class="text-right">Actions</th>
+                <th class="text-right">
+                  Next billing
+                </th>
+                <th class="text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -750,42 +876,78 @@ onMounted(() => {
                 @click="openSubscriptionDetail(item.id)"
               >
                 <td>
-                  <div class="cell-primary">#{{ item.id }}</div>
-                  <div class="cell-meta font-mono">{{ item.order?.order_uuid || '—' }}</div>
+                  <div class="cell-primary">
+                    #{{ item.id }}
+                  </div>
+                  <div class="cell-meta font-mono">
+                    {{ item.order?.order_uuid || '—' }}
+                  </div>
                 </td>
                 <td>
-                  <div class="cell-primary">{{ item.patient?.name || '—' }}</div>
-                  <div class="cell-meta">{{ item.patient?.email || '—' }}</div>
+                  <div class="cell-primary">
+                    {{ item.patient?.name || '—' }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ item.patient?.email || '—' }}
+                  </div>
                 </td>
                 <td>
-                  <div class="cell-primary">{{ item.order?.product?.name || '—' }}</div>
-                  <div class="cell-meta">{{ item.order?.product?.slug || '—' }}</div>
+                  <div class="cell-primary">
+                    {{ item.order?.product?.name || '—' }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ item.order?.product?.slug || '—' }}
+                  </div>
                 </td>
                 <td>
                   <div class="cell-primary">
                     {{ item.billing_frequency_months ? `Every ${item.billing_frequency_months} mo` : '—' }}
                   </div>
-                  <div v-if="item.discount_percentage" class="cell-meta discount">
+                  <div
+                    v-if="item.discount_percentage"
+                    class="cell-meta discount"
+                  >
                     {{ item.discount_percentage }}% off
                   </div>
                 </td>
                 <td>
                   <div class="cycle-track">
-                    <div class="cycle-fill" :style="{ width: item.total_cycles ? `${(item.current_cycle_number / item.total_cycles) * 100}%` : '0%' }" />
+                    <div
+                      class="cycle-fill"
+                      :style="{ width: item.total_cycles ? `${(item.current_cycle_number / item.total_cycles) * 100}%` : '0%' }"
+                    />
                   </div>
-                  <div class="cell-meta">{{ item.current_cycle_number || 0 }} / {{ item.total_cycles || '—' }}</div>
+                  <div class="cell-meta">
+                    {{ item.current_cycle_number || 0 }} / {{ item.total_cycles || '—' }}
+                  </div>
                 </td>
                 <td @click.stop>
-                  <span class="status-pill" :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }">
+                  <span
+                    class="status-pill"
+                    :style="{ color: statusConfig(item.status).color, background: statusConfig(item.status).bg }"
+                  >
                     {{ statusConfig(item.status).label }}
                   </span>
                 </td>
-                <td class="text-right" @click.stop>
-                  <div class="cell-primary">{{ formatDate(item.next_billing_date) }}</div>
-                  <div class="cell-meta">{{ formatMoney(item.order?.price, item.order?.currency || 'USD') }}</div>
+                <td
+                  class="text-right"
+                  @click.stop
+                >
+                  <div class="cell-primary">
+                    {{ formatDate(item.next_billing_date) }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ formatMoney(item.order?.price, item.order?.currency || 'USD') }}
+                  </div>
                 </td>
-                <td class="text-right actions-cell" @click.stop>
-                  <button class="action-icon-btn" @click="openSubscriptionDetail(item.id)">
+                <td
+                  class="text-right actions-cell"
+                  @click.stop
+                >
+                  <button
+                    class="action-icon-btn"
+                    @click="openSubscriptionDetail(item.id)"
+                  >
                     <span class="mdi mdi-eye-outline" />
                     View
                   </button>
@@ -801,7 +963,10 @@ onMounted(() => {
                 </td>
               </tr>
               <tr v-if="!subscriptionsLoading && subscriptions.length === 0">
-                <td colspan="8" class="empty-state">
+                <td
+                  colspan="8"
+                  class="empty-state"
+                >
                   <span class="mdi mdi-inbox-outline empty-icon" />
                   <span>No subscriptions found</span>
                 </td>
@@ -834,7 +999,10 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-show="tab === 'coupons'" class="tab-content">
+      <div
+        v-show="tab === 'coupons'"
+        class="tab-content"
+      >
         <div class="filter-bar">
           <div class="filter-search">
             <span class="mdi mdi-magnify search-icon" />
@@ -896,19 +1064,44 @@ onMounted(() => {
             />
           </div>
           <div class="filter-actions">
-            <button class="btn-apply" @click="applyCouponSearch">Apply</button>
-            <button class="btn-reset" @click="resetCouponFilters">Reset</button>
+            <button
+              class="btn-apply"
+              @click="applyCouponSearch"
+            >
+              Apply
+            </button>
+            <button
+              class="btn-reset"
+              @click="resetCouponFilters"
+            >
+              Reset
+            </button>
           </div>
         </div>
 
-        <VAlert v-if="couponsMessage" type="success" variant="tonal" class="mb-4" closable>
+        <VAlert
+          v-if="couponsMessage"
+          type="success"
+          variant="tonal"
+          class="mb-4"
+          closable
+        >
           {{ couponsMessage }}
         </VAlert>
-        <VAlert v-if="couponsError" type="error" variant="tonal" class="mb-4" closable>
+        <VAlert
+          v-if="couponsError"
+          type="error"
+          variant="tonal"
+          class="mb-4"
+          closable
+        >
           {{ couponsError }}
         </VAlert>
 
-        <div v-if="couponsLoading" class="loading-bar">
+        <div
+          v-if="couponsLoading"
+          class="loading-bar"
+        >
           <div class="loading-bar__fill" />
         </div>
 
@@ -923,15 +1116,30 @@ onMounted(() => {
                 <th>Products</th>
                 <th>Usage</th>
                 <th>Status</th>
-                <th class="text-right">Actions</th>
+                <th class="text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="coupon in coupons" :key="coupon.id" class="data-row">
+              <tr
+                v-for="coupon in coupons"
+                :key="coupon.id"
+                class="data-row"
+              >
                 <td>
-                  <div class="cell-primary font-mono">{{ coupon.code }}</div>
-                  <div class="cell-meta">{{ coupon.name || '—' }}</div>
-                  <div v-if="coupon.description" class="cell-meta">{{ coupon.description }}</div>
+                  <div class="cell-primary font-mono">
+                    {{ coupon.code }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ coupon.name || '—' }}
+                  </div>
+                  <div
+                    v-if="coupon.description"
+                    class="cell-meta"
+                  >
+                    {{ coupon.description }}
+                  </div>
                 </td>
                 <td>
                   <span class="type-badge">
@@ -940,20 +1148,36 @@ onMounted(() => {
                   </span>
                 </td>
                 <td>
-                  <div class="cell-primary">{{ getCouponAppliesToLabel(coupon) }}</div>
-                  <div class="cell-meta">{{ coupon.first_order_only ? 'First order only' : 'No first-order restriction' }}</div>
+                  <div class="cell-primary">
+                    {{ getCouponAppliesToLabel(coupon) }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ coupon.first_order_only ? 'First order only' : 'No first-order restriction' }}
+                  </div>
                 </td>
                 <td>
-                  <div class="cell-primary">{{ getCouponValueLabel(coupon) }}</div>
-                  <div class="cell-meta">Min: {{ coupon.min_order_amount ? formatMoney(coupon.min_order_amount) : 'None' }}</div>
+                  <div class="cell-primary">
+                    {{ getCouponValueLabel(coupon) }}
+                  </div>
+                  <div class="cell-meta">
+                    Min: {{ coupon.min_order_amount ? formatMoney(coupon.min_order_amount) : 'None' }}
+                  </div>
                 </td>
                 <td>
-                  <div class="cell-primary coupon-products">{{ getCouponProductSummary(coupon) }}</div>
-                  <div class="cell-meta">{{ coupon.products_count || 0 }} product{{ Number(coupon.products_count || 0) === 1 ? '' : 's' }}</div>
+                  <div class="cell-primary coupon-products">
+                    {{ getCouponProductSummary(coupon) }}
+                  </div>
+                  <div class="cell-meta">
+                    {{ coupon.products_count || 0 }} product{{ Number(coupon.products_count || 0) === 1 ? '' : 's' }}
+                  </div>
                 </td>
                 <td>
-                  <div class="cell-primary">{{ coupon.redemptions_count || 0 }} redeemed</div>
-                  <div class="cell-meta">Limit: {{ coupon.usage_limit_total || 'Unlimited' }}</div>
+                  <div class="cell-primary">
+                    {{ coupon.redemptions_count || 0 }} redeemed
+                  </div>
+                  <div class="cell-meta">
+                    Limit: {{ coupon.usage_limit_total || 'Unlimited' }}
+                  </div>
                 </td>
                 <td @click.stop>
                   <div class="coupon-status">
@@ -969,19 +1193,31 @@ onMounted(() => {
                     <span class="coupon-status__label">{{ coupon.is_active ? 'Active' : 'Inactive' }}</span>
                   </div>
                 </td>
-                <td class="text-right actions-cell" @click.stop>
-                  <button class="action-icon-btn" @click="openCouponEdit(coupon)">
+                <td
+                  class="text-right actions-cell"
+                  @click.stop
+                >
+                  <button
+                    class="action-icon-btn"
+                    @click="openCouponEdit(coupon)"
+                  >
                     <span class="mdi mdi-pencil-outline" />
                     Edit
                   </button>
-                  <button class="action-icon-btn action-icon-btn--danger" @click="askDeleteCoupon(coupon)">
+                  <button
+                    class="action-icon-btn action-icon-btn--danger"
+                    @click="askDeleteCoupon(coupon)"
+                  >
                     <span class="mdi mdi-trash-can-outline" />
                     Delete
                   </button>
                 </td>
               </tr>
               <tr v-if="!couponsLoading && coupons.length === 0">
-                <td colspan="8" class="empty-state">
+                <td
+                  colspan="8"
+                  class="empty-state"
+                >
                   <span class="mdi mdi-ticket-outline empty-icon" />
                   <span>No coupons found</span>
                 </td>

@@ -1,14 +1,9 @@
 <script setup>
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import { onMounted, ref, watch } from 'vue';
-import { useToast } from "vue-toastification";
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import { onMounted, ref, watch } from 'vue'
+import { useToast } from "vue-toastification"
 import { devLog } from '@/utils/devLogger'
-
-const toast = useToast();
-const loading = ref(false);
-const memberList = ref([]);
-const userData = JSON.parse(localStorage.getItem('userData') || 'null');
 
 const props = defineProps({
   modelValue: {
@@ -18,6 +13,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
+const toast = useToast()
+const loading = ref(false)
+const memberList = ref([])
+const userData = JSON.parse(localStorage.getItem('userData') || 'null')
 
 function updateDialog(value) {
   devLog('Security dialog update', { open: value })
@@ -26,22 +25,22 @@ function updateDialog(value) {
 
 function saveForm() {      
   devLog('Security dialog save triggered', { count: memberList.value.length })
-  loading.value = true;
-  Network.postRequest(Const.SECURITY_SAVE_URL, {}, {userList: [...memberList.value]}, 
-    (response)=>{
-      loading.value = false;
+  loading.value = true
+  Network.postRequest(Const.SECURITY_SAVE_URL, {}, { userList: [...memberList.value] }, 
+    response=>{
+      loading.value = false
       if(response.data.success){
-          devLog('Security dialog save success')
-          toast.success(`Successfully Saved Security Settings.`);          
+        devLog('Security dialog save success')
+        toast.success(`Successfully Saved Security Settings.`)          
       }else{
-          devLog('Security dialog save failed', { error: response.data.err_msg })
-          toast.error(`Password is incorrect. Please try again.`);          
+        devLog('Security dialog save failed', { error: response.data.err_msg })
+        toast.error(`Password is incorrect. Please try again.`)          
       }
       setTimeout(() => {
-        closeDialog();
-      }, 1000);
-    }
-  );  
+        closeDialog()
+      }, 1000)
+    },
+  )  
 }
 
 function closeDialog() {
@@ -60,15 +59,17 @@ const hasAccessToken = () => {
 const getAllMembers = () => {
   if (!hasAccessToken()) {
     devLog('Security dialog skipped getAllMembers: missing token')
+    
     return
   }
   devLog('Security dialog fetching members')
-  loading.value = true;
+  loading.value = true
   Network.getRequest(`${Const.GET_ALL_MEMBERS}`, {}, {}, 
-    (response) => {
-      loading.value = false;
+    response => {
+      loading.value = false
       if(response.data.success){        
-        const data = response.data.data;
+        const data = response.data.data
+
         memberList.value = data.membersList.map(user => ({
           id: user.id,
           firstName: user.firstName,
@@ -76,14 +77,14 @@ const getAllMembers = () => {
           email: user.email,
           role: user.role,
           status: user.status == 1,
-        })) || [];
+        })) || []
         devLog('Security dialog members fetched', { count: memberList.value.length })
       }else{
         devLog('Security dialog members fetch failed', { error: response.data.err_msg })
-        toast.error(response.data.err_msg || "Failed to load members.");
+        toast.error(response.data.err_msg || "Failed to load members.")
       }
-    }
-  );
+    },
+  )
 }
 
 watch(() => props.modelValue, value => {
@@ -94,10 +95,9 @@ watch(() => props.modelValue, value => {
 
 onMounted(() => {
   if (props.modelValue) {
-    getAllMembers();
+    getAllMembers()
   }
-});
-
+})
 </script>
 
 <template>
@@ -119,26 +119,41 @@ onMounted(() => {
         </div>
         
         <VRow>
-          <VCol v-if="!loading" cols="12">
+          <VCol
+            v-if="!loading"
+            cols="12"
+          >
             <VTable class="border">
               <tbody>
-                  <tr v-for="(item, index) in memberList?.filter(user => user.role === 'staff')" :key="index">
-                      <td>{{ index + 1 }}</td>
-                      <td class="text-primary">{{ `${item.firstName} ${item.lastName}` }}</td>
-                      <td>{{ item.email }}</td>                    
-                      <td style="width: 8rem;">                        
-                        <VCheckbox
-                          v-model="item.status"
-                          :label="item.status ? 'ENABLED' : 'DISABLED'"
-                          :color="item.status ? 'primary' : 'danger'"
-                        />
-                      </td>
-                  </tr>                                
+                <tr
+                  v-for="(item, index) in memberList?.filter(user => user.role === 'staff')"
+                  :key="index"
+                >
+                  <td>{{ index + 1 }}</td>
+                  <td class="text-primary">
+                    {{ `${item.firstName} ${item.lastName}` }}
+                  </td>
+                  <td>{{ item.email }}</td>                    
+                  <td style="width: 8rem;">                        
+                    <VCheckbox
+                      v-model="item.status"
+                      :label="item.status ? 'ENABLED' : 'DISABLED'"
+                      :color="item.status ? 'primary' : 'danger'"
+                    />
+                  </td>
+                </tr>                                
               </tbody>
             </VTable>
           </VCol>
-          <VCol v-else cols="12" class="text-center">
-            <VProgressCircular color="white" indeterminate />
+          <VCol
+            v-else
+            cols="12"
+            class="text-center"
+          >
+            <VProgressCircular
+              color="white"
+              indeterminate
+            />
           </VCol>      
         </VRow>
 
@@ -151,18 +166,23 @@ onMounted(() => {
             <VCol cols="12">
               <VTable class="border">
                 <tbody>
-                    <tr v-for="(item, index) in memberList?.filter(user => user.role === 'admin')" :key="index">
-                        <td>{{ index + 1 }}</td>
-                        <td class="text-primary">{{ `${item.firstName} ${item.lastName}` }}</td>
-                        <td>{{ item.email }}</td>                    
-                        <td style="width: 8rem;">
-                          <VCheckbox
-                            v-model="item.status"
-                            :label="item.status ? 'ENABLED' : 'DISABLED'"
-                            :color="item.status ? 'primary' : 'danger'"
-                          />
-                        </td>
-                    </tr>                                
+                  <tr
+                    v-for="(item, index) in memberList?.filter(user => user.role === 'admin')"
+                    :key="index"
+                  >
+                    <td>{{ index + 1 }}</td>
+                    <td class="text-primary">
+                      {{ `${item.firstName} ${item.lastName}` }}
+                    </td>
+                    <td>{{ item.email }}</td>                    
+                    <td style="width: 8rem;">
+                      <VCheckbox
+                        v-model="item.status"
+                        :label="item.status ? 'ENABLED' : 'DISABLED'"
+                        :color="item.status ? 'primary' : 'danger'"
+                      />
+                    </td>
+                  </tr>                                
                 </tbody>
               </VTable>
             </VCol>

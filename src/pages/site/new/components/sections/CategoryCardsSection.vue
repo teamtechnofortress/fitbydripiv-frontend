@@ -61,8 +61,12 @@ const getContentPagePath = item => {
           @click="navigate(getContentPagePath(item))"
         >
           <div class="relative z-10 p-6 text-center">
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{{ item.title }}</h3>
-            <p class="text-sm text-gray-700 mb-4">{{ item.description }}</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">
+              {{ item.title }}
+            </h3>
+            <p class="text-sm text-gray-700 mb-4">
+              {{ item.description }}
+            </p>
             <button
               class="text-emerald-600 font-semibold text-sm hover:text-emerald-700 transition-colors"
               @click.stop="navigate(getContentPagePath(item))"

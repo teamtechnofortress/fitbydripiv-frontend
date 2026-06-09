@@ -47,7 +47,7 @@ const component = computed(() => sectionMap[props.section.type] || SectionHeader
 </script>
 
 <template>
-  <component
+  <Component
     :is="component"
     :section="section"
     :page-slug="pageSlug"

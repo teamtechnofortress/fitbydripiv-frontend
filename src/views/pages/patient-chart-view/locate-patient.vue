@@ -1,29 +1,29 @@
 <script setup>
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import { formDate } from '@/router/utils';
-import { usePatientDataStore } from '@/store/patientData';
-import { storeToRefs } from 'pinia';
-import { computed } from 'vue';
-import { useToast } from 'vue-toastification';
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import { formDate } from '@/router/utils'
+import { usePatientDataStore } from '@/store/patientData'
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
+import { useToast } from 'vue-toastification'
 
 const rowPerPage = ref(10)
 const currentPage = ref(1)
 const totalPage = ref(1)
-const patientDataStore = usePatientDataStore();
-const {patientList, loading, error} = storeToRefs(patientDataStore);
-const toast = useToast();
+const patientDataStore = usePatientDataStore()
+const { patientList, loading, error } = storeToRefs(patientDataStore)
+const toast = useToast()
 
-const searchId = ref(null);
-const searchName = ref('');
-const searchCell = ref('');
-const searchBOD = ref('');
-const searchEmail = ref('');
-const searchZip = ref('');
-const searchAddress = ref('');
-const searchVisitDate = ref('');
-const isAscending = ref(false);
-const isConfirmDialogVisible = ref(false);
+const searchId = ref(null)
+const searchName = ref('')
+const searchCell = ref('')
+const searchBOD = ref('')
+const searchEmail = ref('')
+const searchZip = ref('')
+const searchAddress = ref('')
+const searchVisitDate = ref('')
+const isAscending = ref(false)
+const isConfirmDialogVisible = ref(false)
 
 
 const resolveUserStatusVariant = stat => {
@@ -36,10 +36,11 @@ const resolveUserStatusVariant = stat => {
   
   return 'primary'
 }
-patientDataStore.getAllPatient();
+
+patientDataStore.getAllPatient()
 
 const toggleSort = () => {
-  isAscending.value = !isAscending.value;
+  isAscending.value = !isAscending.value
 }
 
 /**
@@ -50,16 +51,16 @@ const toggleSort = () => {
 watchEffect(() => {
   if (currentPage.value > totalPage.value)
     currentPage.value = totalPage.value
-});
+})
 watchEffect(() => {
   if (currentPage.value > totalPage.value)
     currentPage.value = totalPage.value
-});
-watch(error, (value) => {
+})
+watch(error, value => {
   if(value){
-    toast.error(value.message || 'failed');
+    toast.error(value.message || 'failed')
   }
-});
+})
 
 // 👉 Computing pagination data
 const paginationData = computed(() => {
@@ -67,10 +68,10 @@ const paginationData = computed(() => {
   const lastIndex = patients.value.length + (currentPage.value - 1) * rowPerPage.value
   
   return `Showing ${ firstIndex } to ${ lastIndex } of ${ patients.value.length } entries`
-});
+})
 
 const patients = computed(() => {
-  const filtered = patientList.value.filter((item) => {
+  const filtered = patientList.value.filter(item => {
     return (item.first_name+item.middle_name+item.last_name).toLowerCase().includes(searchName.value.toLowerCase()) && 
            (!searchId.value ? true : item.id == searchId.value) &&
            item.cell?.toLowerCase().includes(searchCell.value.toLowerCase())    &&
@@ -78,37 +79,39 @@ const patients = computed(() => {
            item.email?.toLowerCase().includes(searchEmail.value.toLowerCase())  &&
            item.zip.toLowerCase().includes(searchZip.value.toLowerCase())      &&
            item.address.toLowerCase().includes(searchAddress.value.toLowerCase()) &&
-           item.updated_at.toLowerCase().includes(searchVisitDate.value.toLowerCase());
-  });
+           item.updated_at.toLowerCase().includes(searchVisitDate.value.toLowerCase())
+  })
 
   //sort
   if(isAscending.value == false){
-    return filtered;
+    return filtered
   }else{
     return [...filtered].sort((a, b) => {
-      const nameA = a.first_name;
-      const nameB = b.first_name;
+      const nameA = a.first_name
+      const nameB = b.first_name
+      
       return nameA.localeCompare(nameB)
-    });
+    })
   }
-});
+})
 
-const removeUserId = ref(null);
+const removeUserId = ref(null)
+
 /*####################################
 // Remove confirmation
 ###################################*/
 function doConfirm(value){
   if(value){
     Network.postRequest(`${Const.DELETE_PATIENT_URL}/${removeUserId.value}`, {}, {}, 
-      (response) => {
+      response => {
         if(response.data.success){
-          toast.success(response.data.message);
-          patientDataStore.getAllPatient();
+          toast.success(response.data.message)
+          patientDataStore.getAllPatient()
         }else{
-          console.log(`Error: ${response.data.err_msg}`);
+          console.log(`Error: ${response.data.err_msg}`)
         }
-      }
-    );
+      },
+    )
   }
 }
 </script>
@@ -122,7 +125,10 @@ function doConfirm(value){
           <VCardText>
             <VRow>
               <!-- 👉 FirstName, LastName -->
-              <VCol cols="3" style="width: 15rem;">
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >
                 <VTextField
                   v-model="searchName"
                   placeholder="First, Last Name"
@@ -139,7 +145,10 @@ function doConfirm(value){
               </VCol>
 
               <!-- 👉 Patient Record -->
-              <VCol cols="3" style="width: 15rem;">                                
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >                                
                 <VTextField
                   v-model="searchId"
                   placeholder="PATIENT RECORD NUMBER"
@@ -156,7 +165,10 @@ function doConfirm(value){
               </VCol>
 
               <!-- 👉 Phone -->
-              <VCol cols="3" style="width: 15rem;">                  
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >                  
                 <VTextField
                   v-model="searchCell"
                   placeholder="Phone Number"
@@ -173,17 +185,22 @@ function doConfirm(value){
               </VCol>
 
               <!-- 👉 DOB -->
-              <VCol cols="3" style="width: 15rem;">                
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >                
                 <AppDateTimePicker
-                  class="my-3"
                   v-model="searchBOD"
+                  class="my-3"
                   label="DATE OF BIRTH"
-                >                  
-                </AppDateTimePicker>
+                />
               </VCol>
 
               <!-- 👉 Email -->
-              <VCol cols="3" style="width: 15rem;">                  
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >                  
                 <VTextField
                   v-model="searchEmail"
                   placeholder="EMAIL"
@@ -200,7 +217,10 @@ function doConfirm(value){
               </VCol>
 
               <!-- 👉 Zipcode -->
-              <VCol cols="3" style="width: 15rem;">                  
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >                  
                 <VTextField
                   v-model="searchZip"
                   placeholder="ZIP CODE"
@@ -217,7 +237,10 @@ function doConfirm(value){
               </VCol>
 
               <!-- 👉 Address -->
-              <VCol cols="3" style="width: 15rem;">                  
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >                  
                 <VTextField
                   v-model="searchAddress"
                   placeholder="Address"
@@ -234,25 +257,30 @@ function doConfirm(value){
               </VCol>                
 
               <!-- 👉 Date of Last Visit -->
-              <VCol cols="3" style="width: 15rem;">                
+              <VCol
+                cols="3"
+                style="width: 15rem;"
+              >                
                 <AppDateTimePicker
-                  class="my-3"
                   v-model="searchVisitDate"
+                  class="my-3"
                   label="DATE OF LAST VISIT"
                 />
               </VCol>                              
 
               <!-- 👉 Export button -->
-              <!-- <VCol cols="3">
+              <!--
+                <VCol cols="3">
                 <VBtn 
-                  class="d-flex mx-auto mt-2"
-                  variant="tonal"
-                  color="primary"
-                  prepend-icon="tabler-screen-share"
+                class="d-flex mx-auto mt-2"
+                variant="tonal"
+                color="primary"
+                prepend-icon="tabler-screen-share"
                 >
-                  Export
+                Export
                 </VBtn>  
-              </VCol> -->
+                </VCol> 
+              -->
             </VRow>
           </VCardText>
 
@@ -262,24 +290,49 @@ function doConfirm(value){
             <!-- 👉 table head -->
             <thead>
               <tr>
-                <th scope="col">P-NUMBER</th>
-                <th scope="col" @click="toggleSort" class="cursor-pointer">
+                <th scope="col">
+                  P-NUMBER
+                </th>
+                <th
+                  scope="col"
+                  class="cursor-pointer"
+                  @click="toggleSort"
+                >
                   PATIENT ({{ isAscending ? 'A-Z' : 'Z-A' }})
                 </th>
-                <th scope="col">PHONE</th>
-                <th scope="col">EMAIL</th>
-                <th scope="col">DOB</th>                
-                <th scope="col">ZIPCODE</th>
-                <th scope="col">ADDRESS</th>
-                <th scope="col">LAST VISIT DATE</th>
-                <th scope="col">ACTION</th>
+                <th scope="col">
+                  PHONE
+                </th>
+                <th scope="col">
+                  EMAIL
+                </th>
+                <th scope="col">
+                  DOB
+                </th>                
+                <th scope="col">
+                  ZIPCODE
+                </th>
+                <th scope="col">
+                  ADDRESS
+                </th>
+                <th scope="col">
+                  LAST VISIT DATE
+                </th>
+                <th scope="col">
+                  ACTION
+                </th>
               </tr>
             </thead>
             <!-- 👉 table body -->
             <tbody v-if="loading">
               <tr>
                 <td colspan="8">
-                  <div class="d-flex align-center justify-center"><VProgressCircular color="primary" indeterminate /></div>
+                  <div class="d-flex align-center justify-center">
+                    <VProgressCircular
+                      color="primary"
+                      indeterminate
+                    />
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -292,7 +345,9 @@ function doConfirm(value){
                 <!-- Patient Number -->
                 <td>
                   <RouterLink :to="{name: 'patient-chart-tab', params:{tab: 'chart'}, query: {pid: patient.id}}">
-                    <div class="d-flex align-center">{{ `#00${patient.id}` }}</div>
+                    <div class="d-flex align-center">
+                      {{ `#00${patient.id}` }}
+                    </div>
                   </RouterLink>
                 </td>
 
@@ -343,11 +398,19 @@ function doConfirm(value){
                 </td>
 
                 <td style="width: 8rem;">
-                  <VBtn icon variant="text" color="default" size="x-small" @click="isConfirmDialogVisible = true; removeUserId = patient.id;">
-                    <VIcon icon="tabler-trash" :size="22"/>
+                  <VBtn
+                    icon
+                    variant="text"
+                    color="default"
+                    size="x-small"
+                    @click="isConfirmDialogVisible = true; removeUserId = patient.id;"
+                  >
+                    <VIcon
+                      icon="tabler-trash"
+                      :size="22"
+                    />
                   </VBtn>
                 </td>
-
               </tr>
             </tbody>
 

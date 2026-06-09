@@ -1,70 +1,73 @@
 <script setup>
-import ShowDialog from "@/@core/components/ShowDialog.vue";
-import { useThemeConfig } from "@/@core/composable/useThemeConfig";
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import { getHumanDate } from '@/router/utils';
-import { usePatientDataStore } from "@/store/patientData.js";
-import { requiredValidator } from '@validators';
-import { watch } from "vue";
-import { useRoute } from "vue-router";
-import VueSelect from "vue-select";
-import { useToast } from 'vue-toastification';
+import ShowDialog from "@/@core/components/ShowDialog.vue"
+import { useThemeConfig } from "@/@core/composable/useThemeConfig"
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import { getHumanDate } from '@/router/utils'
+import { usePatientDataStore } from "@/store/patientData.js"
+import { requiredValidator } from '@validators'
+import { watch } from "vue"
+import { useRoute } from "vue-router"
+import VueSelect from "vue-select"
+import { useToast } from 'vue-toastification'
 
 const router = useRouter()
 const rowPerPage = ref(5)
 const currentPage = ref(1)
 const totalPage = ref(1)
-const route = useRoute();
-const items = ref(['Man', 'Woman', 'Other']);
-const options = ref([]);
-const patient = ref([]);
-const patientList = ref([]);
-const toast = useToast();
-const patientDataStore = usePatientDataStore();
-const refVForm = ref();
-const intakeHistoryList = ref([]);
-const encounterHistoryList = ref([]);
+const route = useRoute()
+const items = ref(['Man', 'Woman', 'Other'])
+const options = ref([])
+const patient = ref([])
+const patientList = ref([])
+const toast = useToast()
+const patientDataStore = usePatientDataStore()
+const refVForm = ref()
+const intakeHistoryList = ref([])
+const encounterHistoryList = ref([])
 const isLoading = ref(false)
-const { updatedPatient, error, loading } = storeToRefs(patientDataStore);
-const { theme } = useThemeConfig();
-const selectedRows = ref([]);
+const { updatedPatient, error, loading } = storeToRefs(patientDataStore)
+const { theme } = useThemeConfig()
+const selectedRows = ref([])
 
-const today = new Date(); const oneMonthAgo = new Date(today); oneMonthAgo.setMonth(today.getMonth() - 1);
-const historySDate = ref(oneMonthAgo.toJSON().slice(0, 10));
-const historyEDate = ref(today.toJSON().slice(0, 10));
+const today = new Date(); const oneMonthAgo = new Date(today)
+
+oneMonthAgo.setMonth(today.getMonth() - 1)
+
+const historySDate = ref(oneMonthAgo.toJSON().slice(0, 10))
+const historyEDate = ref(today.toJSON().slice(0, 10))
 
 function saveForm(){  
   refVForm.value?.validate().then(({ valid: isValid }) => {
-    localStorage.removeItem('patientId');
+    localStorage.removeItem('patientId')
     if (isValid){
       patientDataStore.savePatient({
         ...patient.value,        
-      });
+      })
     }else{
-      toast.error("Please fill out the fields!");
+      toast.error("Please fill out the fields!")
     }
-  });  
+  })  
 }
 
-const tagSelected = (value) => {  
-  patient.value = patientList.value.find( user => user.first_name == value);  
-  intakeHistoryList.value = patient.value.intake;
-  encounterHistoryList.value = patient.value.encounter_all;
+const tagSelected = value => {  
+  patient.value = patientList.value.find( user => user.first_name == value)  
+  intakeHistoryList.value = patient.value.intake
+  encounterHistoryList.value = patient.value.encounter_all
 }
 
-const getPatientDataById = (value) => {
-  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, {id: value}, 
-    (response) => {
+const getPatientDataById = value => {
+  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_ID, {}, { id: value }, 
+    response => {
       if(response.data.success){
-        patient.value = response.data.message;
-        intakeHistoryList.value = patient.value.intake;
-        encounterHistoryList.value = patient.value.encounter_all;
+        patient.value = response.data.message
+        intakeHistoryList.value = patient.value.intake
+        encounterHistoryList.value = patient.value.encounter_all
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
 onMounted(() => {
@@ -74,22 +77,22 @@ onMounted(() => {
 })
 
 //########################################################################################
-const getPatientDataByName = (value) => {
-  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_NAME, {}, {fname: value}, 
-    (response) => {
+const getPatientDataByName = value => {
+  Network.getRequestNoAuth(Const.GET_PATIENT_AND_HISTORY_BY_NAME, {}, { fname: value }, 
+    response => {
       if(response.data.success){
-        options.value = response.data.message.map( item => item.first_name );
-        patientList.value = response.data.message;
+        options.value = response.data.message.map( item => item.first_name )
+        patientList.value = response.data.message
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
+        console.log(`Error: ${response.data.err_msg}`)
       }
-    }
-  );
+    },
+  )
 }
 
 function onSearch(searchTxt){
   if(searchTxt.length >= 3){
-    getPatientDataByName(searchTxt);
+    getPatientDataByName(searchTxt)
   }
 }
 
@@ -98,27 +101,27 @@ function onSearch(searchTxt){
 *    Watches
 * ###############################################
 */
-watch(updatedPatient, (val) => {
+watch(updatedPatient, val => {
   if(val != null){    
-    toast.success("Successfully Saved Patient Chart Data.");  
+    toast.success("Successfully Saved Patient Chart Data.")  
         
-    let treatmentType = "";
+    let treatmentType = ""
     if(route.query.type){
-      treatmentType = route.query.type;
+      treatmentType = route.query.type
     }else{
-      treatmentType = patient.value.complaint?.reverse()[0]?.treatment_type || 'IV Therapy';
+      treatmentType = patient.value.complaint?.reverse()[0]?.treatment_type || 'IV Therapy'
     }
     
     setTimeout(() => {
-      router.push({ name: 'patient-encounter-tab', params: { tab: 'encounter' }, query: { pid: patient.value.id, type: treatmentType } });
-    }, 700);
+      router.push({ name: 'patient-encounter-tab', params: { tab: 'encounter' }, query: { pid: patient.value.id, type: treatmentType } })
+    }, 700)
   }
-});
-watch(error, (value) => {
+})
+watch(error, value => {
   if(value){
-    toast.error(value.message || 'failed');
+    toast.error(value.message || 'failed')
   }
-});
+})
 
 // 👉 Computing pagination data
 const paginationData = computed(() => {
@@ -126,73 +129,87 @@ const paginationData = computed(() => {
   const lastIndex  = encounterHistoryList.value.length + (currentPage.value - 1) * rowPerPage.value
   
   return `Showing ${ firstIndex } to ${ lastIndex } of ${ encounterHistoryList.value.length } entries`
-});
+})
 
 const paginatedEncounterList = computed(() => {
-  const start = (currentPage.value - 1) * rowPerPage.value;
-  const end = start + rowPerPage.value;
-  return encounterHistoryList.value.slice(start, end);
-});
+  const start = (currentPage.value - 1) * rowPerPage.value
+  const end = start + rowPerPage.value
+  
+  return encounterHistoryList.value.slice(start, end)
+})
 
 watch([encounterHistoryList, rowPerPage], () => {
-  totalPage.value = Math.ceil((encounterHistoryList.value?.length || 0) / rowPerPage.value) || 1;
-});
+  totalPage.value = Math.ceil((encounterHistoryList.value?.length || 0) / rowPerPage.value) || 1
+})
 
-const doGetPatientById = (dom) =>{
+const doGetPatientById = dom =>{
   if(dom.target.value != null){
-    getPatientDataById(dom.target.value);
+    getPatientDataById(dom.target.value)
   }
 }
 
 //############################################
 //########### Encouter history ###############
 //############################################
-const isConfirmDialogVisible = ref(false);
-const removeEncounterId = ref(null);
-const isViewNotes = ref(false);
-const noteContent = ref("");
+const isConfirmDialogVisible = ref(false)
+const removeEncounterId = ref(null)
+const isViewNotes = ref(false)
+const noteContent = ref("")
 
-const removeEncounterById = (_id) => {  
-  isLoading.value = true;
+const removeEncounterById = _id => {  
+  isLoading.value = true
   Network.getRequest(`${Const.DELETE_ENCOUNTER_URL}/${_id}`, {}, {}, 
-    (response) => {
-      isLoading.value = false;
+    response => {
+      isLoading.value = false
       if(response.data.success){
-        toast.success("Successfully Deleted Encounter History.");    
-        getPatientDataById(patient.value.id);    
+        toast.success("Successfully Deleted Encounter History.")    
+        getPatientDataById(patient.value.id)    
       }else{
-        console.log(`Error: ${response.data.err_msg}`);
-        toast.error(response.data.err_msg || "Failed to load schedule.");
+        console.log(`Error: ${response.data.err_msg}`)
+        toast.error(response.data.err_msg || "Failed to load schedule.")
       }
-    }
-  );
+    },
+  )
 }
 
 function doConfirm(value){
   if(value){      
-    removeEncounterById(removeEncounterId.value);
+    removeEncounterById(removeEncounterId.value)
   }
 }
 
 const sortByDate = () => {
   encounterHistoryList.value = patient.value.encounter_all.filter(item => {      
-    const createAt = new Date(item.created_at.slice(0, 10)).getTime();      
-    return (createAt >= new Date(historySDate.value).getTime()) && (createAt <= new Date(historyEDate.value).getTime());
-  });
+    const createAt = new Date(item.created_at.slice(0, 10)).getTime()      
+    
+    return (createAt >= new Date(historySDate.value).getTime()) && (createAt <= new Date(historyEDate.value).getTime())
+  })
 }
 </script>
 
 <template>
   <VCard class="pa-4">
-    <VForm ref="refVForm" @submit.prevent="saveForm">      
+    <VForm
+      ref="refVForm"
+      @submit.prevent="saveForm"
+    >      
       <VRow class="mt-4">
         <VCol
           cols="12"
           md="4"
           class="d-flex gap-8 mx-auto align-center justify-space-between"
         >
-          <VBtn v-if="loading==false" type="submit" color="primary">DONE</VBtn>
-          <VProgressCircular v-else indeterminate />    
+          <VBtn
+            v-if="loading==false"
+            type="submit"
+            color="primary"
+          >
+            DONE
+          </VBtn>
+          <VProgressCircular
+            v-else
+            indeterminate
+          />    
                 
           <VTextField      
             v-model="patient['id']"
@@ -203,172 +220,252 @@ const sortByDate = () => {
         </VCol>
       </VRow>
       <VRow>        
-        <VCol v-if="route.query.pid" class="d-flex align-center" cols="3" sm="6" md="3">
+        <VCol
+          v-if="route.query.pid"
+          class="d-flex align-center"
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField 
             v-model="patient['first_name']"
             label="First Name"
             placeholder="First Name"
-            variant='underlined'
-            :rules=[requiredValidator]
+            variant="underlined"
+            :rules="[requiredValidator]"
           />
         </VCol>
 
-        <VCol v-else class="d-flex align-center" cols="3" sm="6" md="3">
+        <VCol
+          v-else
+          class="d-flex align-center"
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <label class="me-4">First Name</label>
-          <vue-select 
-            :class="{'vue-select-custom': theme=='dark'}"
+          <VueSelect 
             v-model="patient['first_name']"
+            :class="{'vue-select-custom': theme=='dark'}"
             :options="options"                                            
+            style="min-width: 13rem;"
             @option:selected="tagSelected"
             @option:deselected="tagSelected"
             @search="onSearch"
-            style="min-width: 13rem;">
-          </vue-select> 
+          /> 
         </VCol>
 
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['last_name']"
             label="Last Name"
             placeholder="Last Name"
-            variant='underlined'
-            :rules=[requiredValidator]
+            variant="underlined"
+            :rules="[requiredValidator]"
           />
         </VCol>
 
-        <VCol class="d-flex align-center" cols="3" sm="6" md="3">                          
+        <VCol
+          class="d-flex align-center"
+          cols="3"
+          sm="6"
+          md="3"
+        >                          
           <label class="me-4">DOB</label>
           <AppDateTimePicker 
-              v-model="patient['birthday']"
-              label="Date of Birth" 
-              :model-value="patient['birthday'] || (new Date().toJSON().slice(0, 10))" 
-              variant="underlined" />
+            v-model="patient['birthday']"
+            label="Date of Birth" 
+            :model-value="patient['birthday'] || (new Date().toJSON().slice(0, 10))" 
+            variant="underlined"
+          />
         </VCol> 
 
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['address']"
             label="Address"
             placeholder="Address"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['city']"
             label="City"
             placeholder="City"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['state']"
             label="State"
             placeholder="State"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['zip']"
             label="Zip"
             placeholder="ZIP"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VSelect
             v-model="patient['gender']"
             :items="items"            
             label="Gender"
             name="gender"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
 
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['email']"
             type="email"
             label="Email"
             placeholder="Email"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['phone']"
             type="phone"
             label="Phone"
             placeholder="Phone"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
-            type="phone"
             v-model="patient['emergency']"
+            type="phone"
             label="Emergency Phone"
             placeholder="Emergency Phone"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="6" md="3">
+        <VCol
+          cols="3"
+          sm="6"
+          md="3"
+        >
           <VTextField
             v-model="patient['contact']"
             label="Contact"
             placeholder="Contact"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
 
-        <VCol cols="6" sm="6" md="6">
+        <VCol
+          cols="6"
+          sm="6"
+          md="6"
+        >
           <VTextField
             v-model="patient['current_conditions']"
             label="Current Conditions"
             placeholder="Current Conditions"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="6" sm="6" md="6">
+        <VCol
+          cols="6"
+          sm="6"
+          md="6"
+        >
           <VTextField
             v-model="patient['current_allergies']"
             label="Current Allergies"
             placeholder="Current Allergies"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="6" sm="6" md="6">
+        <VCol
+          cols="6"
+          sm="6"
+          md="6"
+        >
           <VTextField
             v-model="patient['allergy_reactions']"
             label="Allergy Reactions"
             placeholder="Allergy Reactions"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>
-        <VCol cols="3" sm="3" md="3" class="mb-4">
+        <VCol
+          cols="3"
+          sm="3"
+          md="3"
+          class="mb-4"
+        >
           <VTextField
             v-model="patient['current_medications']"
             label="Current Medications"
             placeholder="Current Medications"
             variant="underlined"
-            :rules=[requiredValidator]
+            :rules="[requiredValidator]"
           />
         </VCol>        
-        <VCol cols="3" sm="3" md="3" class="mb-4">
+        <VCol
+          cols="3"
+          sm="3"
+          md="3"
+          class="mb-4"
+        >
           <VTextField            
             v-model="patient['reward_level']"          
             :label="`Reward Level ($ ${patient['reward']} )`"
@@ -381,25 +478,33 @@ const sortByDate = () => {
     </VForm>
   </VCard>
 
-  <VCard v-if="encounterHistoryList" class="mt-4">
+  <VCard
+    v-if="encounterHistoryList"
+    class="mt-4"
+  >
     <VRow class="py-4">
       <VCol cols="6">
         <VCardTitle>HISTORY</VCardTitle>
       </VCol>
       <VCol cols="2">        
         <AppDateTimePicker               
-          label="START DATE" 
           v-model="historySDate" 
+          label="START DATE" 
         />
       </VCol>
       <VCol cols="2">
         <AppDateTimePicker               
-          label="END DATE" 
           v-model="historyEDate" 
+          label="END DATE" 
         />
       </VCol>
       <VCol cols="1">
-        <VBtn @click="sortByDate()" color="primary">Filter</VBtn>
+        <VBtn
+          color="primary"
+          @click="sortByDate"
+        >
+          Filter
+        </VBtn>
       </VCol>
     </VRow>
 
@@ -409,14 +514,54 @@ const sortByDate = () => {
     <VTable class="text-no-wrap">
       <thead>
         <tr>
-          <th scope="col" class="font-weight-semibold">NAME</th>
-          <th scope="col" class="font-weight-semibold">DATE</th>
-          <th scope="col" class="font-weight-semibold">TREATMENT</th>
-          <th scope="col" class="font-weight-semibold">INGREDIENTS</th>
-          <th scope="col" class="font-weight-semibold">DOSAGE</th>
-          <th scope="col" class="font-weight-semibold">Qty</th>
-          <th scope="col" class="font-weight-semibold">Notes</th>
-          <th scope="col" class="font-weight-semibold">Action</th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            NAME
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            DATE
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            TREATMENT
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            INGREDIENTS
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            DOSAGE
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            Qty
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            Notes
+          </th>
+          <th
+            scope="col"
+            class="font-weight-semibold"
+          >
+            Action
+          </th>
         </tr>
       </thead>
 
@@ -456,13 +601,25 @@ const sortByDate = () => {
           </td>    
           <td>
             <div class="v-avatar-group">
-              <VIcon @click="isViewNotes = true; noteContent = item.notes;" color="primary" icon="tabler-eye"></VIcon>
+              <VIcon
+                color="primary"
+                icon="tabler-eye"
+                @click="isViewNotes = true; noteContent = item.notes;"
+              />
             </div>
           </td>              
           <td class="text-center">
             <div class="v-avatar-group">              
-              <VIcon v-if="!isLoading" @click="isConfirmDialogVisible = true; removeEncounterId = item.id;" color="primary" icon="tabler-trash"></VIcon>
-              <VProgressCircular v-else indeterminate />
+              <VIcon
+                v-if="!isLoading"
+                color="primary"
+                icon="tabler-trash"
+                @click="isConfirmDialogVisible = true; removeEncounterId = item.id;"
+              />
+              <VProgressCircular
+                v-else
+                indeterminate
+              />
             </div>
           </td>          
         </tr>
@@ -470,7 +627,12 @@ const sortByDate = () => {
 
       <tfoot v-show="!encounterHistoryList.length">
         <tr>
-          <td colspan="8" class="text-center text-body-1">No data available</td>
+          <td
+            colspan="8"
+            class="text-center text-body-1"
+          >
+            No data available
+          </td>
         </tr>
       </tfoot>
     </VTable>
@@ -514,10 +676,11 @@ const sortByDate = () => {
     />
     <ShowDialog
       v-model:isDialogVisible="isViewNotes"
-      :messageContent="noteContent || {}"
+      :message-content="noteContent || {}"
     />
   </VCard>
 </template>
+
 <style>
 .v-select .vs__dropdown-toggle {
   border-top: none !important;

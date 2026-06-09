@@ -45,7 +45,9 @@ const heroMediaInput = ref(null)
 const heroMediaUploading = ref(false)
 const heroMediaPreviewOpen = ref(false)
 const heroMediaDragActive = ref(false)
+const pdfDocumentInput = ref(null)
 const pdfDocumentUploading = ref(false)
+const pdfDocumentDragActive = ref(false)
 
 const isEditing = computed(() => Boolean(props.section?.id))
 const isHero = computed(() => localSection.value.type === 'hero')
@@ -63,6 +65,30 @@ const itemEditorLabel = computed(() => 'Step')
 const heroMediaUrl = computed(() => localSection.value.content?.background?.url || '')
 const heroMediaType = computed(() => localSection.value.content?.background?.type || '')
 const isHeroVideo = computed(() => heroMediaType.value === 'video')
+
+const pdfDocumentSourceUrl = computed(() => (
+  localSection.value.content?.document?.view_url
+  || localSection.value.content?.document?.download_url
+  || localSection.value.content?.document?.pdf_url
+  || ''
+))
+
+const pdfDocumentFileName = computed(() => {
+  const source = String(pdfDocumentSourceUrl.value || '').trim()
+  if (!source)
+    return ''
+
+  const cleanSource = source.split('?')[0].split('#')[0]
+  const fileName = cleanSource.split('/').filter(Boolean).at(-1) || ''
+  if (!fileName)
+    return ''
+
+  try {
+    return decodeURIComponent(fileName)
+  } catch {
+    return fileName
+  }
+})
 
 const createPdfDocumentDraft = () => ({
   key: 'document_1',
@@ -94,6 +120,7 @@ const ensurePdfLibraryShape = () => {
     localSection.value.content = {}
 
   const settings = localSection.value.content.settings
+
   localSection.value.content.settings = {
     viewer_enabled: settings?.viewer_enabled ?? true,
     viewer_embed_mode: settings?.viewer_embed_mode || 'iframe',
@@ -102,7 +129,9 @@ const ensurePdfLibraryShape = () => {
   const rawDocuments = Array.isArray(localSection.value.content.documents)
     ? localSection.value.content.documents
     : (Array.isArray(localSection.value.documents) ? localSection.value.documents : [])
+
   const normalized = normalizePdfDocument(localSection.value.content.document || rawDocuments[0] || {})
+
   localSection.value.content.document = normalized
   localSection.value.content.documents = [normalized]
 }
@@ -132,6 +161,7 @@ const buildErrorMessage = error => {
     const firstKey = Object.keys(responseData.errors)[0]
     if (firstKey) {
       const entry = responseData.errors[firstKey]
+      
       return Array.isArray(entry) ? entry[0] : entry
     }
   }
@@ -193,6 +223,7 @@ const inferMediaType = file => {
 
 const uploadAdminMedia = async file => {
   const formData = new FormData()
+
   formData.append('file', file)
   formData.append('type', 'product')
 
@@ -222,11 +253,13 @@ const handleHeroMediaFile = async file => {
   const mediaType = inferMediaType(file)
   if (!mediaType) {
     toast.error('Unsupported file type. Upload an image or video.')
+    
     return
   }
 
   if (mediaType === 'video' && file.size > MAX_SERVER_VIDEO_UPLOAD_BYTES) {
     toast.error('Video is larger than the current server upload limit of 10MB.')
+    
     return
   }
 
@@ -234,6 +267,7 @@ const handleHeroMediaFile = async file => {
   try {
     const media = await uploadAdminMedia(file)
     const resolvedType = media.media_type === 'video' ? 'video' : media.media_type === 'image' ? 'image' : mediaType
+
     applyHeroMedia(media.url || '', resolvedType)
     toast.success('Hero media uploaded successfully.')
   } catch (error) {
@@ -245,6 +279,7 @@ const handleHeroMediaFile = async file => {
 
 const onHeroMediaInputChange = async event => {
   const file = event?.target?.files?.[0]
+
   await handleHeroMediaFile(file)
   if (event?.target)
     event.target.value = ''
@@ -252,7 +287,9 @@ const onHeroMediaInputChange = async event => {
 
 const onHeroMediaDrop = async event => {
   heroMediaDragActive.value = false
+
   const file = event?.dataTransfer?.files?.[0]
+
   await handleHeroMediaFile(file)
 }
 
@@ -265,6 +302,7 @@ const removeHeroMedia = () => {
 
 const addItem = () => {
   const nextSortOrder = (localSection.value.items?.length || 0) + 1
+
   localSection.value.items = [
     ...(localSection.value.items || []),
     createSectionItemDraft(localSection.value.type, nextSortOrder),
@@ -286,6 +324,7 @@ const moveItem = (index, direction) => {
 
   const updated = [...localSection.value.items]
   const [moved] = updated.splice(index, 1)
+
   updated.splice(targetIndex, 0, moved)
   localSection.value.items = updated.map((item, itemIndex) => ({
     ...item,
@@ -295,6 +334,7 @@ const moveItem = (index, direction) => {
 
 const addFaq = () => {
   const nextSortOrder = (localSection.value.faqs?.length || 0) + 1
+
   localSection.value.faqs = [
     ...(localSection.value.faqs || []),
     createFaqDraft(nextSortOrder),
@@ -316,6 +356,7 @@ const moveFaq = (index, direction) => {
 
   const updated = [...localSection.value.faqs]
   const [moved] = updated.splice(index, 1)
+
   updated.splice(targetIndex, 0, moved)
   localSection.value.faqs = updated.map((faq, faqIndex) => ({
     ...faq,
@@ -340,12 +381,14 @@ const removeParagraph = index => {
 
 const moveParagraph = (index, direction) => {
   ensureContentArray('paragraphs')
+
   const targetIndex = index + direction
   if (targetIndex < 0 || targetIndex >= localSection.value.content.paragraphs.length)
     return
 
   const updated = [...localSection.value.content.paragraphs]
   const [moved] = updated.splice(index, 1)
+
   updated.splice(targetIndex, 0, moved)
   localSection.value.content.paragraphs = updated
 }
@@ -362,12 +405,14 @@ const removeBullet = index => {
 
 const moveBullet = (index, direction) => {
   ensureContentArray('bullets')
+
   const targetIndex = index + direction
   if (targetIndex < 0 || targetIndex >= localSection.value.content.bullets.length)
     return
 
   const updated = [...localSection.value.content.bullets]
   const [moved] = updated.splice(index, 1)
+
   updated.splice(targetIndex, 0, moved)
   localSection.value.content.bullets = updated
 }
@@ -384,12 +429,14 @@ const removeRow = index => {
 
 const moveRow = (index, direction) => {
   ensureContentArray('rows')
+
   const targetIndex = index + direction
   if (targetIndex < 0 || targetIndex >= localSection.value.content.rows.length)
     return
 
   const updated = [...localSection.value.content.rows]
   const [moved] = updated.splice(index, 1)
+
   updated.splice(targetIndex, 0, moved)
   localSection.value.content.rows = updated
 }
@@ -401,15 +448,13 @@ const isPdfFile = file => {
   return mime === 'application/pdf' || name.endsWith('.pdf')
 }
 
-const onPdfDocumentUpload = async event => {
-  const file = event?.target?.files?.[0]
+const uploadPdfDocumentFile = async file => {
   if (!file)
     return
 
   if (!isPdfFile(file)) {
     toast.error('Only PDF files are supported.')
-    if (event?.target)
-      event.target.value = ''
+
     return
   }
 
@@ -421,13 +466,16 @@ const onPdfDocumentUpload = async event => {
       throw new Error('Upload completed but file URL is missing.')
 
     ensurePdfLibraryShape()
+
     const current = normalizePdfDocument(localSection.value.content.document)
+
     const updated = {
       ...current,
       view_url: mediaUrl,
       download_url: mediaUrl,
       pdf_url: mediaUrl,
     }
+
     localSection.value.content.document = updated
     localSection.value.content.documents = [updated]
     toast.success('PDF uploaded successfully.')
@@ -435,9 +483,50 @@ const onPdfDocumentUpload = async event => {
     toast.error(buildErrorMessage(error))
   } finally {
     pdfDocumentUploading.value = false
-    if (event?.target)
-      event.target.value = ''
   }
+}
+
+const openPdfDocumentPicker = () => {
+  if (pdfDocumentUploading.value)
+    return
+
+  pdfDocumentInput.value?.click()
+}
+
+const onPdfDocumentInputChange = async event => {
+  const file = event?.target?.files?.[0]
+
+  await uploadPdfDocumentFile(file)
+  if (event?.target)
+    event.target.value = ''
+}
+
+const activatePdfDropzone = event => {
+  event.preventDefault()
+  if (pdfDocumentUploading.value)
+    return
+
+  pdfDocumentDragActive.value = true
+}
+
+const onPdfDocumentDragLeave = event => {
+  const container = event?.currentTarget
+  const nextTarget = event?.relatedTarget
+  if (container && nextTarget && container.contains(nextTarget))
+    return
+
+  pdfDocumentDragActive.value = false
+}
+
+const onPdfDocumentDrop = async event => {
+  event.preventDefault()
+  pdfDocumentDragActive.value = false
+  if (pdfDocumentUploading.value)
+    return
+
+  const file = event?.dataTransfer?.files?.[0]
+
+  await uploadPdfDocumentFile(file)
 }
 
 const saveSection = () => {
@@ -478,7 +567,10 @@ const saveSection = () => {
 
       <VCardText class="px-6 py-6">
         <VRow>
-          <VCol cols="12" md="4">
+          <VCol
+            cols="12"
+            md="4"
+          >
             <VSelect
               v-model="localSection.type"
               :items="sectionTypeOptions"
@@ -488,7 +580,10 @@ const saveSection = () => {
             />
           </VCol>
 
-          <VCol cols="12" md="4">
+          <VCol
+            cols="12"
+            md="4"
+          >
             <VTextField
               v-model="localSection.section_key"
               label="Section Key"
@@ -496,7 +591,10 @@ const saveSection = () => {
             />
           </VCol>
 
-          <VCol cols="12" md="4">
+          <VCol
+            cols="12"
+            md="4"
+          >
             <VTextField
               v-model="localSection.sort_order"
               label="Sort Order"
@@ -506,7 +604,10 @@ const saveSection = () => {
             />
           </VCol>
 
-          <VCol cols="12" md="6">
+          <VCol
+            cols="12"
+            md="6"
+          >
             <VTextField
               v-model="localSection.title"
               label="Internal Title"
@@ -514,7 +615,10 @@ const saveSection = () => {
             />
           </VCol>
 
-          <VCol cols="12" md="6">
+          <VCol
+            cols="12"
+            md="6"
+          >
             <VTextField
               v-model="localSection.subtitle"
               label="Subtitle / Eyebrow"
@@ -525,7 +629,10 @@ const saveSection = () => {
 
         <VDivider class="my-4" />
 
-        <div v-if="isHero" class="d-flex flex-column gap-4">
+        <div
+          v-if="isHero"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             Hero Content
           </div>
@@ -541,7 +648,10 @@ const saveSection = () => {
             rows="4"
           />
           <VRow>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 :model-value="heroMediaType || 'image'"
                 label="Detected Background Type"
@@ -549,35 +659,50 @@ const saveSection = () => {
                 readonly
               />
             </VCol>
-            <VCol cols="12" md="8">
+            <VCol
+              cols="12"
+              md="8"
+            >
               <VTextField
                 v-model="localSection.content.background.url"
                 label="Background URL"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.background.poster"
                 label="Poster URL"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.cta.label"
                 label="CTA Label"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.cta.link"
                 label="CTA Link"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.cta.style"
                 label="CTA Style"
@@ -636,7 +761,11 @@ const saveSection = () => {
                       <div class="text-subtitle-2 font-weight-semibold">
                         Current Hero Media
                       </div>
-                      <VChip color="primary" variant="tonal" size="x-small">
+                      <VChip
+                        color="primary"
+                        variant="tonal"
+                        size="x-small"
+                      >
                         {{ isHeroVideo ? 'Video' : 'Image' }}
                       </VChip>
                     </div>
@@ -666,7 +795,10 @@ const saveSection = () => {
           </VRow>
         </div>
 
-        <div v-else-if="isHeader" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isHeader"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             Header Content
           </div>
@@ -689,7 +821,10 @@ const saveSection = () => {
           />
         </div>
 
-        <div v-else-if="isFeatured" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isFeatured"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             Featured Products Configuration
           </div>
@@ -700,7 +835,10 @@ const saveSection = () => {
             Featured product selection is configured in the products module. This section controls only the display settings.
           </VAlert>
           <VRow>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.limit"
                 label="Product Limit"
@@ -709,14 +847,20 @@ const saveSection = () => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.variant"
                 label="Variant"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.cta_label"
                 label="CTA Label"
@@ -726,7 +870,10 @@ const saveSection = () => {
           </VRow>
         </div>
 
-        <div v-else-if="isCategoryCards" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isCategoryCards"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             Category Cards Configuration
           </div>
@@ -739,7 +886,10 @@ const saveSection = () => {
           </VAlert>
 
           <VRow>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="localSection.content.cta_label"
                 label="Default CTA Label"
@@ -749,20 +899,29 @@ const saveSection = () => {
           </VRow>
         </div>
 
-        <div v-else-if="isProcess" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isProcess"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             Process Configuration
           </div>
 
           <VRow>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="localSection.content.variant"
                 label="Variant"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="localSection.content.background_style"
                 label="Background Style"
@@ -797,21 +956,45 @@ const saveSection = () => {
                     {{ itemEditorLabel }} {{ index + 1 }}
                   </div>
                   <div class="d-flex align-center gap-2">
-                    <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveItem(index, -1)" />
-                    <VBtn size="small" variant="text" icon="tabler-arrow-down" :disabled="index === localSection.items.length - 1" @click="moveItem(index, 1)" />
-                    <VBtn size="small" color="error" variant="text" icon="tabler-trash" @click="removeItem(index)" />
+                    <VBtn
+                      size="small"
+                      variant="text"
+                      icon="tabler-arrow-up"
+                      :disabled="index === 0"
+                      @click="moveItem(index, -1)"
+                    />
+                    <VBtn
+                      size="small"
+                      variant="text"
+                      icon="tabler-arrow-down"
+                      :disabled="index === localSection.items.length - 1"
+                      @click="moveItem(index, 1)"
+                    />
+                    <VBtn
+                      size="small"
+                      color="error"
+                      variant="text"
+                      icon="tabler-trash"
+                      @click="removeItem(index)"
+                    />
                   </div>
                 </div>
 
                 <VRow>
-                  <VCol cols="12" md="6">
+                  <VCol
+                    cols="12"
+                    md="6"
+                  >
                     <VTextField
                       v-model="item.title"
                       label="Title"
                       variant="outlined"
                     />
                   </VCol>
-                  <VCol cols="12" md="6">
+                  <VCol
+                    cols="12"
+                    md="6"
+                  >
                     <VTextField
                       v-model="item.icon"
                       label="Icon"
@@ -839,20 +1022,29 @@ const saveSection = () => {
           </div>
         </div>
 
-        <div v-else-if="isContentBlock" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isContentBlock"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             Content Block Configuration
           </div>
 
           <VRow>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="localSection.content.headline"
                 label="Headline"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VSelect
                 v-model="localSection.content.alignment"
                 :items="['left', 'center']"
@@ -860,7 +1052,10 @@ const saveSection = () => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VSelect
                 v-model="localSection.content.max_width"
                 :items="['content', 'wide', 'full']"
@@ -889,7 +1084,12 @@ const saveSection = () => {
             <div class="text-subtitle-2 font-weight-semibold">
               Paragraphs
             </div>
-            <VBtn color="primary" variant="tonal" prepend-icon="tabler-plus" @click="addParagraph">
+            <VBtn
+              color="primary"
+              variant="tonal"
+              prepend-icon="tabler-plus"
+              @click="addParagraph"
+            >
               Add Paragraph
             </VBtn>
           </div>
@@ -905,9 +1105,27 @@ const saveSection = () => {
                   Paragraph {{ index + 1 }}
                 </div>
                 <div class="d-flex align-center gap-2">
-                  <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveParagraph(index, -1)" />
-                  <VBtn size="small" variant="text" icon="tabler-arrow-down" :disabled="index === (localSection.content.paragraphs || []).length - 1" @click="moveParagraph(index, 1)" />
-                  <VBtn size="small" color="error" variant="text" icon="tabler-trash" @click="removeParagraph(index)" />
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-up"
+                    :disabled="index === 0"
+                    @click="moveParagraph(index, -1)"
+                  />
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-down"
+                    :disabled="index === (localSection.content.paragraphs || []).length - 1"
+                    @click="moveParagraph(index, 1)"
+                  />
+                  <VBtn
+                    size="small"
+                    color="error"
+                    variant="text"
+                    icon="tabler-trash"
+                    @click="removeParagraph(index)"
+                  />
                 </div>
               </div>
               <VTextarea
@@ -923,7 +1141,12 @@ const saveSection = () => {
             <div class="text-subtitle-2 font-weight-semibold">
               Bullets
             </div>
-            <VBtn color="primary" variant="tonal" prepend-icon="tabler-plus" @click="addBullet">
+            <VBtn
+              color="primary"
+              variant="tonal"
+              prepend-icon="tabler-plus"
+              @click="addBullet"
+            >
               Add Bullet
             </VBtn>
           </div>
@@ -939,9 +1162,27 @@ const saveSection = () => {
                   Bullet {{ index + 1 }}
                 </div>
                 <div class="d-flex align-center gap-2">
-                  <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveBullet(index, -1)" />
-                  <VBtn size="small" variant="text" icon="tabler-arrow-down" :disabled="index === (localSection.content.bullets || []).length - 1" @click="moveBullet(index, 1)" />
-                  <VBtn size="small" color="error" variant="text" icon="tabler-trash" @click="removeBullet(index)" />
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-up"
+                    :disabled="index === 0"
+                    @click="moveBullet(index, -1)"
+                  />
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-down"
+                    :disabled="index === (localSection.content.bullets || []).length - 1"
+                    @click="moveBullet(index, 1)"
+                  />
+                  <VBtn
+                    size="small"
+                    color="error"
+                    variant="text"
+                    icon="tabler-trash"
+                    @click="removeBullet(index)"
+                  />
                 </div>
               </div>
               <VTextField
@@ -956,7 +1197,12 @@ const saveSection = () => {
             <div class="text-subtitle-2 font-weight-semibold">
               Label / Value Rows
             </div>
-            <VBtn color="primary" variant="tonal" prepend-icon="tabler-plus" @click="addRow">
+            <VBtn
+              color="primary"
+              variant="tonal"
+              prepend-icon="tabler-plus"
+              @click="addRow"
+            >
               Add Row
             </VBtn>
           </div>
@@ -972,20 +1218,44 @@ const saveSection = () => {
                   Row {{ index + 1 }}
                 </div>
                 <div class="d-flex align-center gap-2">
-                  <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveRow(index, -1)" />
-                  <VBtn size="small" variant="text" icon="tabler-arrow-down" :disabled="index === (localSection.content.rows || []).length - 1" @click="moveRow(index, 1)" />
-                  <VBtn size="small" color="error" variant="text" icon="tabler-trash" @click="removeRow(index)" />
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-up"
+                    :disabled="index === 0"
+                    @click="moveRow(index, -1)"
+                  />
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-down"
+                    :disabled="index === (localSection.content.rows || []).length - 1"
+                    @click="moveRow(index, 1)"
+                  />
+                  <VBtn
+                    size="small"
+                    color="error"
+                    variant="text"
+                    icon="tabler-trash"
+                    @click="removeRow(index)"
+                  />
                 </div>
               </div>
               <VRow>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="row.label"
                     label="Label"
                     variant="outlined"
                   />
                 </VCol>
-                <VCol cols="12" md="8">
+                <VCol
+                  cols="12"
+                  md="8"
+                >
                   <VTextField
                     v-model="row.value"
                     label="Value"
@@ -997,7 +1267,10 @@ const saveSection = () => {
           </VCard>
         </div>
 
-        <div v-else-if="isPdfLibrary" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isPdfLibrary"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             PDF Library
           </div>
@@ -1010,14 +1283,20 @@ const saveSection = () => {
           </VAlert>
 
           <VRow>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="localSection.content.headline"
                 label="Headline"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="localSection.content.upload_help"
                 label="Upload Help Text"
@@ -1032,7 +1311,10 @@ const saveSection = () => {
                 rows="3"
               />
             </VCol>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VSwitch
                 v-model="localSection.content.settings.viewer_enabled"
                 color="primary"
@@ -1040,7 +1322,10 @@ const saveSection = () => {
                 label="Enable PDF Viewer"
               />
             </VCol>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VSelect
                 v-model="localSection.content.settings.viewer_embed_mode"
                 :items="['iframe', 'object']"
@@ -1057,35 +1342,50 @@ const saveSection = () => {
               </div>
 
               <VRow>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="localSection.content.document.key"
                     label="Document Key"
                     variant="outlined"
                   />
                 </VCol>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="localSection.content.document.label"
                     label="Document Label"
                     variant="outlined"
                   />
                 </VCol>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="localSection.content.document.download_label"
                     label="Download Button Label"
                     variant="outlined"
                   />
                 </VCol>
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     v-model="localSection.content.document.view_url"
                     label="View URL"
                     variant="outlined"
                   />
                 </VCol>
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     v-model="localSection.content.document.download_url"
                     label="Download URL"
@@ -1093,23 +1393,58 @@ const saveSection = () => {
                   />
                 </VCol>
                 <VCol cols="12">
-                  <div class="pen-doc-upload d-flex flex-wrap align-center gap-3">
+                  <div class="pdf-document-uploader">
                     <input
+                      ref="pdfDocumentInput"
+                      class="d-none"
                       type="file"
                       accept="application/pdf,.pdf"
-                      @change="onPdfDocumentUpload"
+                      @change="onPdfDocumentInputChange"
                     >
-                    <VChip
-                      v-if="pdfDocumentUploading"
-                      color="primary"
-                      size="small"
-                      variant="tonal"
+                    <div
+                      class="pdf-document-uploader__dropzone"
+                      :class="{ 'pdf-document-uploader__dropzone--active': pdfDocumentDragActive }"
+                      role="button"
+                      tabindex="0"
+                      @click="openPdfDocumentPicker"
+                      @keydown.enter.prevent="openPdfDocumentPicker"
+                      @keydown.space.prevent="openPdfDocumentPicker"
+                      @dragenter="activatePdfDropzone"
+                      @dragover="activatePdfDropzone"
+                      @dragleave="onPdfDocumentDragLeave"
+                      @drop="onPdfDocumentDrop"
                     >
-                      Uploading...
-                    </VChip>
-                    <span class="text-body-2 text-medium-emphasis">
-                      Uploading a PDF sets both view and download URLs.
-                    </span>
+                      <VIcon
+                        :icon="pdfDocumentUploading ? 'tabler-loader-2' : 'tabler-file-type-pdf'"
+                        :class="{ 'spin-icon': pdfDocumentUploading }"
+                        size="36"
+                        color="primary"
+                      />
+                      <div class="text-subtitle-2 font-weight-semibold mt-3">
+                        {{ pdfDocumentUploading ? 'Uploading PDF...' : (pdfDocumentDragActive ? 'Drop PDF to upload' : 'Drag and drop a PDF here') }}
+                      </div>
+                      <div class="text-body-2 text-medium-emphasis mt-1">
+                        or click to browse your files
+                      </div>
+                      <div class="text-caption text-medium-emphasis mt-2">
+                        Only `.pdf` files are supported
+                      </div>
+                    </div>
+
+                    <div class="pdf-document-uploader__meta d-flex flex-wrap align-center gap-2">
+                      <VChip
+                        v-if="pdfDocumentFileName"
+                        color="primary"
+                        variant="tonal"
+                        size="small"
+                        prepend-icon="tabler-file-type-pdf"
+                      >
+                        {{ pdfDocumentFileName }}
+                      </VChip>
+                      <span class="text-body-2 text-medium-emphasis">
+                        Uploading a PDF sets both view and download URLs.
+                      </span>
+                    </div>
                   </div>
                 </VCol>
               </VRow>
@@ -1117,7 +1452,10 @@ const saveSection = () => {
           </VCard>
         </div>
 
-        <div v-else-if="isSpacer" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isSpacer"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             Spacer Configuration
           </div>
@@ -1128,7 +1466,10 @@ const saveSection = () => {
             Use this section to control vertical spacing between blocks in a backend-managed way.
           </VAlert>
           <VRow>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="localSection.content.height"
                 label="Base Height"
@@ -1137,7 +1478,10 @@ const saveSection = () => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="localSection.content.desktop"
                 label="Desktop Height"
@@ -1146,7 +1490,10 @@ const saveSection = () => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="localSection.content.tablet"
                 label="Tablet Height"
@@ -1155,7 +1502,10 @@ const saveSection = () => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="localSection.content.mobile"
                 label="Mobile Height"
@@ -1167,7 +1517,10 @@ const saveSection = () => {
           </VRow>
         </div>
 
-        <div v-else-if="isFaq" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isFaq"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             FAQ Configuration
           </div>
@@ -1212,9 +1565,27 @@ const saveSection = () => {
                       inset
                       label="Active"
                     />
-                    <VBtn size="small" variant="text" icon="tabler-arrow-up" :disabled="index === 0" @click="moveFaq(index, -1)" />
-                    <VBtn size="small" variant="text" icon="tabler-arrow-down" :disabled="index === localSection.faqs.length - 1" @click="moveFaq(index, 1)" />
-                    <VBtn size="small" color="error" variant="text" icon="tabler-trash" @click="removeFaq(index)" />
+                    <VBtn
+                      size="small"
+                      variant="text"
+                      icon="tabler-arrow-up"
+                      :disabled="index === 0"
+                      @click="moveFaq(index, -1)"
+                    />
+                    <VBtn
+                      size="small"
+                      variant="text"
+                      icon="tabler-arrow-down"
+                      :disabled="index === localSection.faqs.length - 1"
+                      @click="moveFaq(index, 1)"
+                    />
+                    <VBtn
+                      size="small"
+                      color="error"
+                      variant="text"
+                      icon="tabler-trash"
+                      @click="removeFaq(index)"
+                    />
                   </div>
                 </div>
 
@@ -1236,26 +1607,38 @@ const saveSection = () => {
           </div>
         </div>
 
-        <div v-else-if="isTelehealth" class="d-flex flex-column gap-4">
+        <div
+          v-else-if="isTelehealth"
+          class="d-flex flex-column gap-4"
+        >
           <div class="text-subtitle-1 font-weight-semibold">
             CTA Configuration
           </div>
           <VRow>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.layout"
                 label="Layout"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.button.label"
                 label="Button Label"
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="localSection.content.button.style"
                 label="Button Style"
@@ -1377,6 +1760,42 @@ const saveSection = () => {
   min-width: 0;
 }
 
+.pdf-document-uploader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdf-document-uploader__dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 184px;
+  padding: 22px 20px;
+  border: 1px dashed rgba(var(--v-theme-primary), 0.3);
+  border-radius: 16px;
+  background: rgba(var(--v-theme-primary), 0.04);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.pdf-document-uploader__dropzone:hover {
+  border-color: rgba(var(--v-theme-primary), 0.52);
+  background: rgba(var(--v-theme-primary), 0.07);
+}
+
+.pdf-document-uploader__dropzone--active {
+  border-color: rgba(var(--v-theme-primary), 0.7);
+  background: rgba(var(--v-theme-primary), 0.11);
+  transform: translateY(-1px);
+}
+
+.pdf-document-uploader__meta {
+  min-height: 28px;
+}
+
 .hero-video-dialog__video {
   width: 100%;
   max-height: 70vh;
@@ -1400,6 +1819,11 @@ const saveSection = () => {
   .hero-media-uploader__preview {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .pdf-document-uploader__dropzone {
+    min-height: 160px;
+    padding: 18px 14px;
   }
 }
 </style>

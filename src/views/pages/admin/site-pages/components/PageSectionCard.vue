@@ -52,9 +52,11 @@ const getSectionSummary = section => {
     const documents = Array.isArray(section.documents)
       ? section.documents
       : (Array.isArray(section.content?.documents) ? section.content.documents : [])
+
     const singleDocument = section.content?.document || documents[0] || {}
     const viewerEnabled = section.viewer_enabled ?? section.content?.settings?.viewer_enabled ?? true
     const hasPdf = Boolean(singleDocument.view_url || singleDocument.download_url || singleDocument.pdf_url)
+    
     return `${hasPdf ? '1 PDF configured' : 'PDF not set'} • viewer ${viewerEnabled ? 'enabled' : 'disabled'}`
   }
 

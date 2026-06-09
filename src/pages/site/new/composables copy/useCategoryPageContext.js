@@ -18,6 +18,7 @@ export const useCategoryPageContext = slugRef => {
 
     if (categoryCache.has(slug)) {
       category.value = categoryCache.get(slug)
+      
       return
     }
 
@@ -25,6 +26,7 @@ export const useCategoryPageContext = slugRef => {
     try {
       const response = await axios.get(getCmsCategoryUrl(slug))
       const data = response?.data?.data || null
+
       categoryCache.set(slug, data)
       category.value = data
     } catch (err) {
@@ -41,6 +43,7 @@ export const useCategoryPageContext = slugRef => {
 
     if (productsCache.has(slug)) {
       products.value = productsCache.get(slug)
+      
       return
     }
 
@@ -48,6 +51,7 @@ export const useCategoryPageContext = slugRef => {
     try {
       const response = await axios.get(getCmsCategoryProductsUrl(slug))
       const data = response?.data?.data || []
+
       productsCache.set(slug, data)
       products.value = data
     } catch (err) {

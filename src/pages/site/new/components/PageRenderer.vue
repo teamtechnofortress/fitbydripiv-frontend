@@ -18,14 +18,19 @@ const props = defineProps({
 })
 
 const orderedSections = computed(() => props.page?.sections || [])
+
 const needsHeaderOffset = computed(() => {
   const firstSectionType = orderedSections.value[0]?.type
+  
   return firstSectionType !== 'hero'
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-white" :class="needsHeaderOffset ? 'pt-16' : ''">
+  <div
+    class="min-h-screen bg-white"
+    :class="needsHeaderOffset ? 'pt-16' : ''"
+  >
     <SectionRenderer
       v-for="section in orderedSections"
       :key="section.section_key"

@@ -4,11 +4,12 @@ import { UPLOAD_ENDPOINT_URL } from '@/network/const'
 import { convertUTCDate, formDate } from '@/router/utils'
 import { useMarketingStore } from '@/store/marketingData'
 import avatar1 from '@images/logos/gumroad.png'
-import { requiredValidator, } from '@validators'
+import { requiredValidator } from '@validators'
 import axios from 'axios'
 import { watch } from 'vue'
 import { useToast } from 'vue-toastification'
-const { error } = storeToRefs(useMarketingStore());
+
+const { error } = storeToRefs(useMarketingStore())
 
 const toast = useToast()
 const marketingStore = useMarketingStore()
@@ -37,8 +38,9 @@ const pageSize = ref(5)
 const resetForm = () => {
   accountDataLocal.value = structuredClone(accountData)
 }
-const refForm = ref();
-const now = new Date();
+
+const refForm = ref()
+const now = new Date()
 const defaultTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0')
 
 const form = ref({
@@ -66,12 +68,13 @@ const toBeDeleted = computed({
 })
 
 const totalPages = computed(() =>
-  Math.ceil(marketingStore.emailCampaigns.length / pageSize.value)
+  Math.ceil(marketingStore.emailCampaigns.length / pageSize.value),
 )
 
 const paginatedCampaigns = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
+  
   return marketingStore.emailCampaigns?.slice(start, end)
 })
 
@@ -144,12 +147,12 @@ const resetAvatar = () => {
 }
 
 async function saveForm() {
- refForm.value?.validate().then(({ valid }) => {
+  refForm.value?.validate().then(({ valid }) => {
     if (valid) {   
       try {        
         //convert from localtime to UTC time
-        const getYMD = formDate(form.value.send_date).split(' ')[0];
-        const utcDateTimeStr = convertUTCDate(getYMD, form.value.send_time);
+        const getYMD = formDate(form.value.send_date).split(' ')[0]
+        const utcDateTimeStr = convertUTCDate(getYMD, form.value.send_time)
 
         let params = {
           ...form.value,
@@ -158,12 +161,12 @@ async function saveForm() {
           staff_id: JSON.parse(localStorage.getItem('userData')).id,
           archive_after_send: form.value.toBeArchived,
         }
-        marketingStore.saveEmailCampaign(params);        
+        marketingStore.saveEmailCampaign(params)        
       } catch (error) {
         toast.error('Error scheduling Email campaign.')
       }
     }
-  });
+  })
 }
 
 watch(error, msg => {
@@ -386,19 +389,32 @@ watch(error, msg => {
                   <thead>
                     <tr>
                       <th scope="col">
-                        <h2 class="text-primary">Title</h2>
+                        <h2 class="text-primary">
+                          Title
+                        </h2>
                       </th>
                       <th scope="col">
-                        <h2 class="text-primary">Created Date</h2>
+                        <h2 class="text-primary">
+                          Created Date
+                        </h2>
                       </th>              
                       <th scope="col">
-                        <h2 class="text-primary">Action</h2>
+                        <h2 class="text-primary">
+                          Action
+                        </h2>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr class="cursor-pointer" v-for="(campaign, index) in paginatedCampaigns" :key="campaign.id" @click="handleItemClick(index + (currentPage - 1) * pageSize)">
-                      <td class="text-primary">{{ campaign.title }}</td>
+                    <tr
+                      v-for="(campaign, index) in paginatedCampaigns"
+                      :key="campaign.id"
+                      class="cursor-pointer"
+                      @click="handleItemClick(index + (currentPage - 1) * pageSize)"
+                    >
+                      <td class="text-primary">
+                        {{ campaign.title }}
+                      </td>
                       <td>{{ new Date(campaign.created_at).toLocaleDateString() }}</td>
                       <td>
                         <VBtn
@@ -418,30 +434,36 @@ watch(error, msg => {
                   </tbody>
                 </VTable>
                 <!-- Pagination Controls -->
-                <v-row class="mt-4" justify="end" align="center">
-                  <v-col class="d-flex justify-end align-center" cols="auto">
-
-                    <v-btn
+                <VRow
+                  class="mt-4"
+                  justify="end"
+                  align="center"
+                >
+                  <VCol
+                    class="d-flex justify-end align-center"
+                    cols="auto"
+                  >
+                    <VBtn
                       variant="outlined"
                       size="small"
                       :disabled="currentPage === 1"
-                      @click="prevPage"
                       class="me-2"
+                      @click="prevPage"
                     >
                       Previous
-                    </v-btn>
+                    </VBtn>
                     <span class="me-3">Page {{ currentPage }} of {{ totalPages }}</span>
 
-                    <v-btn
+                    <VBtn
                       variant="outlined"
                       size="small"
                       :disabled="currentPage === totalPages"
                       @click="nextPage"
                     >
                       Next
-                    </v-btn>
-                  </v-col>
-                </v-row>
+                    </VBtn>
+                  </VCol>
+                </VRow>
               </VCol>
             </VRow>
             <ConfirmDialog

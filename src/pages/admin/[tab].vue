@@ -1,21 +1,20 @@
 <script setup>
-
-import Banking from '@/views/pages/admin/banking.vue';
-import Business from '@/views/pages/admin/business.vue';
-import CmsCategories from '@/views/pages/admin/cms/categories.vue';
-import CmsProducts from '@/views/pages/admin/cms/products.vue';
-import Export from '@/views/pages/admin/export.vue';
-import Inventory from '@/views/pages/admin/inventory.vue';
-import Notes from '@/views/pages/admin/notes.vue';
-import ProductsModule from '@/views/pages/admin/products-module.vue';
-import SiteSettings from '@/views/pages/admin/site-settings.vue';
-import Signature from '@/views/pages/admin/notes/signature.vue';
-import Payments from '@/views/pages/admin/payments.vue';
-import Payroll from '@/views/pages/admin/payroll.vue';
-import Report from '@/views/pages/admin/report.vue';
-import Schedule from '@/views/pages/admin/schedule.vue';
-import Staffing from '@/views/pages/admin/staffing.vue';
-import { useRoute } from 'vue-router';
+import Banking from '@/views/pages/admin/banking.vue'
+import Business from '@/views/pages/admin/business.vue'
+import CmsCategories from '@/views/pages/admin/cms/categories.vue'
+import CmsProducts from '@/views/pages/admin/cms/products.vue'
+import Export from '@/views/pages/admin/export.vue'
+import Inventory from '@/views/pages/admin/inventory.vue'
+import Notes from '@/views/pages/admin/notes.vue'
+import ProductsModule from '@/views/pages/admin/products-module.vue'
+import SiteSettings from '@/views/pages/admin/site-settings.vue'
+import Signature from '@/views/pages/admin/notes/signature.vue'
+import Payments from '@/views/pages/admin/payments.vue'
+import Payroll from '@/views/pages/admin/payroll.vue'
+import Report from '@/views/pages/admin/report.vue'
+import Schedule from '@/views/pages/admin/schedule.vue'
+import Staffing from '@/views/pages/admin/staffing.vue'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const normalizeTab = tab => ['products', 'product_drafts', 'add_product'].includes(tab) ? 'products' : tab
@@ -102,6 +101,7 @@ const tabs = [
     icon: 'tabler-category',
     tab: 'cms-categories',
   },
+
   // {
   //   title: 'CMS PRODUCTS',
   //   icon: 'tabler-pill',
@@ -142,7 +142,11 @@ const tabs = [
         :value="item.tab"
         :to="getTabTarget(item.tab)"
       >
-        <VIcon size="20" start :icon="item.icon"/>
+        <VIcon
+          size="20"
+          start
+          :icon="item.icon"
+        />
         {{ item.title }}
       </VTab>
     </VTabs>
@@ -181,7 +185,7 @@ const tabs = [
       <VWindowItem value="report">
         <Report />
       </VWindowItem>      
-            <!-- notes -->
+      <!-- notes -->
       <VWindowItem value="notes">
         <Notes />
       </VWindowItem>    

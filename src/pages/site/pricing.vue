@@ -14,6 +14,7 @@ const toast = useToast()
 
 const isPricingRoute = () => {
   const name = String(route.name || '')
+  
   return route.path === '/pricing' || name.includes('site-pricing') || name.endsWith('pricing')
 }
 
@@ -55,13 +56,16 @@ const emitPricingDebug = (slug, payload) => {
 
 const logCheckoutDraftEvent = (status, payload = {}) => {
   const slug = getProductSlug() || 'unknown'
+
   emitPricingDebug(slug, { event: `checkout-draft:${status}`, ...payload })
 }
 
 const loadPricing = async () => {
   if (!isPricingRoute()) return
   const slug = route.query.slug
-  if (!slug) { router.replace('/products/select'); return }
+  if (!slug) { router.replace('/products/select') 
+
+    return }
   window.scrollTo(0, 0)
   selectedOptionId.value = null
   loading.value = true
@@ -70,12 +74,16 @@ const loadPricing = async () => {
     const { data } = await axios.get(getPublicProductPricingUrl(slug), {
       headers: { Accept: 'application/json' },
     })
+
     pricingResponse.value = data?.data || null
   } catch (error) {
     pricingResponse.value = null
+
     const message = error?.response?.data?.message || 'Unable to load product pricing.'
+
     toast.error(message)
     loading.value = false
+    
     return
   }
 
@@ -166,28 +174,36 @@ const buildCheckoutDraftPayload = () => {
 const handleStartJourney = async () => {
   if (!selectedOptionId.value || submitting.value) return
   addToCartError.value = ''
+
   const draft = buildCheckoutDraftPayload()
   if (!draft) {
     addToCartError.value = 'Unable to determine the selected pricing option. Please refresh and try again.'
     toast.error('Unable to continue. Please refresh and try again.')
+    
     return
   }
 
   submitting.value = true
+
   const { payload } = draft
   const idempotencyKey = uuidv4()
 
   try {
     logCheckoutDraftEvent('pending', { payload, idempotencyKey })
+
     const { data } = await axios.post(CHECKOUT_DRAFT_URL, payload, {
       headers: { 'Idempotency-Key': idempotencyKey },
     })
+
     const draftResponse = data?.data ?? data
+
     logCheckoutDraftEvent('success', { payload, response: draftResponse, idempotencyKey })
+
     const orderUuid = draftResponse?.order_uuid
     if (!orderUuid) {
       toast.error('We could not start your checkout session. Redirecting you home.')
       router.push('/')
+      
       return
     }
     router.push({ path: '/telehealth-intake', query: { order_uuid: orderUuid } })
@@ -195,6 +211,7 @@ const handleStartJourney = async () => {
     const message = error?.response?.data?.message
       || error?.response?.data?.err_msg
       || 'Unable to add this item to your cart right now.'
+
     addToCartError.value = message
     toast.error(message)
     logCheckoutDraftEvent('error', {
@@ -206,68 +223,126 @@ const handleStartJourney = async () => {
   }
 }
 
-const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
+const navigate = path => { router.push(path); window.scrollTo(0, 0) }
 </script>
 
 <template>
   <div class="pricing-page min-h-screen pt-20 bg-white">
-
     <!-- Loading -->
-    <div v-if="loading" class="min-h-screen pt-20 flex items-center justify-center">
-      <div class="loader"></div>
+    <div
+      v-if="loading"
+      class="min-h-screen pt-20 flex items-center justify-center"
+    >
+      <div class="loader" />
     </div>
 
     <!-- Not Found -->
-    <div v-else-if="!pricingProduct" class="max-w-3xl mx-auto px-4 py-12 text-center">
-      <h1 class="text-3xl font-bold text-gray-900 mb-4">Product Not Found</h1>
-      <p class="text-gray-600 mb-8">We couldn't find the product you're looking for.</p>
-      <button class="btn-primary" @click="navigate('/products/select')">Select a Product</button>
+    <div
+      v-else-if="!pricingProduct"
+      class="max-w-3xl mx-auto px-4 py-12 text-center"
+    >
+      <h1 class="text-3xl font-bold text-gray-900 mb-4">
+        Product Not Found
+      </h1>
+      <p class="text-gray-600 mb-8">
+        We couldn't find the product you're looking for.
+      </p>
+      <button
+        class="btn-primary"
+        @click="navigate('/products/select')"
+      >
+        Select a Product
+      </button>
     </div>
 
     <!-- Main -->
-    <div v-else class="max-w-2xl mx-auto px-4 py-8">
-
+    <div
+      v-else
+      class="max-w-2xl mx-auto px-4 py-8"
+    >
       <!-- Back -->
       <button
         class="back-btn flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium text-sm mb-8 transition-colors"
         @click="router.back()"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6"/>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="15 18 9 12 15 6" />
         </svg>
         Back
       </button>
 
       <!-- Header -->
       <div class="mb-10">
-        <div v-if="productImage" class="mb-5 pricing-product-media">
-          <img :src="productImage" :alt="pricingProduct.name" class="pricing-product-media__img">
+        <div
+          v-if="productImage"
+          class="mb-5 pricing-product-media"
+        >
+          <img
+            :src="productImage"
+            :alt="pricingProduct.name"
+            class="pricing-product-media__img"
+          >
         </div>
-        <p class="text-xs font-semibold tracking-widest text-emerald-600 uppercase mb-2">Select Your Plan</p>
-        <h1 class="text-3xl font-bold text-gray-900 mb-1 leading-tight">{{ pricingProduct.name }}</h1>
+        <p class="text-xs font-semibold tracking-widest text-emerald-600 uppercase mb-2">
+          Select Your Plan
+        </p>
+        <h1 class="text-3xl font-bold text-gray-900 mb-1 leading-tight">
+          {{ pricingProduct.name }}
+        </h1>
         <p class="text-sm text-gray-500 mt-3 leading-relaxed max-w-lg">
           {{ pricingProduct.description || 'Pricing is customized based on your individual health goals and treatment plan. Our medical team will discuss specific pricing during your telehealth consultation.' }}
         </p>
       </div>
 
-      <!-- ══════════════════════════════════════════
-           SECTION 1 — SUBSCRIPTION PLANS
-      ═══════════════════════════════════════════ -->
-      <div v-if="subscriptionOptions.length > 0" class="mb-8">
+      <!--
+        ══════════════════════════════════════════
+        SECTION 1 — SUBSCRIPTION PLANS
+        ═══════════════════════════════════════════ 
+      -->
+      <div
+        v-if="subscriptionOptions.length > 0"
+        class="mb-8"
+      >
         <!-- Section Header -->
         <div class="section-header">
           <div class="section-header__left">
             <div class="section-icon sub-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
               </svg>
             </div>
             <div>
-              <h2 class="section-title">{{ subscriptionGroup?.title || 'Subscription Plans' }}</h2>
-              <p class="section-subtitle">{{ subscriptionGroup?.description || 'Save more with longer commitments · Cancel anytime' }}</p>
+              <h2 class="section-title">
+                {{ subscriptionGroup?.title || 'Subscription Plans' }}
+              </h2>
+              <p class="section-subtitle">
+                {{ subscriptionGroup?.description || 'Save more with longer commitments · Cancel anytime' }}
+              </p>
             </div>
           </div>
-          <div class="section-header__badge">Most Popular</div>
+          <div class="section-header__badge">
+            Most Popular
+          </div>
         </div>
 
         <!-- Subscription Cards Grid -->
@@ -284,10 +359,17 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
             @click="selectedOptionId = option.id"
           >
             <!-- Best Value ribbon -->
-            <div v-if="option.isBestValue" class="best-ribbon">Best Value</div>
+            <div
+              v-if="option.isBestValue"
+              class="best-ribbon"
+            >
+              Best Value
+            </div>
 
             <!-- Discount badge -->
-            <div v-if="option.discountPercentage" class="sub-discount-pill"
+            <div
+              v-if="option.discountPercentage"
+              class="sub-discount-pill"
               :class="selectedOptionId === option.id ? 'sub-discount-pill--active' : ''"
             >
               Save {{ option.discountPercentage }}%
@@ -295,53 +377,112 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
 
             <!-- Duration + dosage -->
             <div class="sub-card__head">
-              <div class="sub-card__duration">{{ option.title }}</div>
-              <div class="sub-card__dosage">{{ option.subtitle }}</div>
+              <div class="sub-card__duration">
+                {{ option.title }}
+              </div>
+              <div class="sub-card__dosage">
+                {{ option.subtitle }}
+              </div>
             </div>
 
             <!-- Price -->
             <div class="sub-card__price-block">
-              <div v-if="option.originalPrice" class="sub-card__original">${{ option.originalPrice.toFixed(2) }}</div>
-              <div class="sub-card__price" :class="selectedOptionId === option.id ? 'sub-card__price--active' : ''">
+              <div
+                v-if="option.originalPrice"
+                class="sub-card__original"
+              >
+                ${{ option.originalPrice.toFixed(2) }}
+              </div>
+              <div
+                class="sub-card__price"
+                :class="selectedOptionId === option.id ? 'sub-card__price--active' : ''"
+              >
                 ${{ option.price.toFixed(2) }}
               </div>
             </div>
 
             <!-- Delivery cadence -->
-            <div class="sub-card__desc">{{ option.description }}</div>
+            <div class="sub-card__desc">
+              {{ option.description }}
+            </div>
 
             <!-- Selected check -->
-            <div class="sub-card__check" :class="selectedOptionId === option.id ? 'sub-card__check--visible' : ''">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
+            <div
+              class="sub-card__check"
+              :class="selectedOptionId === option.id ? 'sub-card__check--visible' : ''"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
           </button>
         </div>
       </div>
 
-      <!-- ══════════════════════════════════════════
-           SECTION 2 — ONE-TIME OPTIONS
-      ═══════════════════════════════════════════ -->
-      <div v-if="oneTimeOptions.length > 0" class="mb-8">
+      <!--
+        ══════════════════════════════════════════
+        SECTION 2 — ONE-TIME OPTIONS
+        ═══════════════════════════════════════════ 
+      -->
+      <div
+        v-if="oneTimeOptions.length > 0"
+        class="mb-8"
+      >
         <!-- Divider with label -->
         <div class="divider-label">
-          <span class="divider-label__line"></span>
+          <span class="divider-label__line" />
           <span class="divider-label__text">Or choose a one-time purchase</span>
-          <span class="divider-label__line"></span>
+          <span class="divider-label__line" />
         </div>
 
         <!-- Section Header -->
         <div class="section-header mt-4">
           <div class="section-header__left">
             <div class="section-icon onetime-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect
+                  x="1"
+                  y="3"
+                  width="15"
+                  height="13"
+                /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle
+                  cx="5.5"
+                  cy="18.5"
+                  r="2.5"
+                /><circle
+                  cx="18.5"
+                  cy="18.5"
+                  r="2.5"
+                />
               </svg>
             </div>
             <div>
-              <h2 class="section-title">{{ oneTimeGroup?.title || 'One-Time Purchase' }}</h2>
-              <p class="section-subtitle">{{ oneTimeGroup?.description || 'No commitment · Order as needed' }}</p>
+              <h2 class="section-title">
+                {{ oneTimeGroup?.title || 'One-Time Purchase' }}
+              </h2>
+              <p class="section-subtitle">
+                {{ oneTimeGroup?.description || 'No commitment · Order as needed' }}
+              </p>
             </div>
           </div>
         </div>
@@ -359,19 +500,32 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
             @click="selectedOptionId = option.id"
           >
             <div class="onetime-row__radio">
-              <div class="radio-ring" :class="selectedOptionId === option.id ? 'radio-ring--on' : ''">
-                <div v-if="selectedOptionId === option.id" class="radio-dot"></div>
+              <div
+                class="radio-ring"
+                :class="selectedOptionId === option.id ? 'radio-ring--on' : ''"
+              >
+                <div
+                  v-if="selectedOptionId === option.id"
+                  class="radio-dot"
+                />
               </div>
             </div>
 
             <div class="onetime-row__body">
-              <div class="onetime-row__title">{{ option.title }}</div>
-              <div class="onetime-row__desc">{{ option.description }}</div>
+              <div class="onetime-row__title">
+                {{ option.title }}
+              </div>
+              <div class="onetime-row__desc">
+                {{ option.description }}
+              </div>
             </div>
 
             <div class="onetime-row__price">
               <span v-if="option.price > 0">${{ option.price.toFixed(2) }}</span>
-              <span v-else class="contact-price">Contact</span>
+              <span
+                v-else
+                class="contact-price"
+              >Contact</span>
             </div>
           </button>
         </div>
@@ -381,7 +535,10 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
       <div class="notice-box mt-6">
         <p class="text-xs text-gray-500 leading-relaxed">
           *This item is a recurring or deferred purchase. By continuing, I agree to the
-          <button class="text-emerald-600 hover:text-emerald-700 font-semibold underline" @click="showCancelModal = true">
+          <button
+            class="text-emerald-600 hover:text-emerald-700 font-semibold underline"
+            @click="showCancelModal = true"
+          >
             Cancellation Policy
           </button>
           and authorize you to charge my payment method at the prices, frequency, and dates listed on this page until my order is fulfilled or I cancel.
@@ -396,18 +553,45 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
           :class="selectedOptionId && !submitting ? 'cta-btn--active' : 'cta-btn--disabled'"
           @click="handleStartJourney"
         >
-          <span v-if="!submitting" class="flex items-center justify-center gap-2">
+          <span
+            v-if="!submitting"
+            class="flex items-center justify-center gap-2"
+          >
             {{ selectedOptionId ? 'Add to Cart' : 'Select a Plan to Continue' }}
-            <svg v-if="selectedOptionId" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            <svg
+              v-if="selectedOptionId"
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line
+                x1="5"
+                y1="12"
+                x2="19"
+                y2="12"
+              /><polyline points="12 5 19 12 12 19" />
             </svg>
           </span>
-          <span v-else class="flex items-center justify-center gap-2">
-            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span
+            v-else
+            class="flex items-center justify-center gap-2"
+          >
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             Adding to cart…
           </span>
         </button>
-        <p v-if="addToCartError" class="text-sm text-red-600 text-center mt-3">{{ addToCartError }}</p>
+        <p
+          v-if="addToCartError"
+          class="text-sm text-red-600 text-center mt-3"
+        >
+          {{ addToCartError }}
+        </p>
       </div>
     </div>
 
@@ -418,29 +602,66 @@ const navigate = (path) => { router.push(path); window.scrollTo(0, 0) }
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
         @click="showCancelModal = false"
       >
-        <div class="modal-card bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" @click.stop>
+        <div
+          class="modal-card bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+          @click.stop
+        >
           <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between">
-            <h2 class="text-xl font-bold text-gray-900">Cancellation Policy</h2>
-            <button class="p-2 hover:bg-gray-100 rounded-full transition-colors" @click="showCancelModal = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            <h2 class="text-xl font-bold text-gray-900">
+              Cancellation Policy
+            </h2>
+            <button
+              class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              @click="showCancelModal = false"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#6b7280"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line
+                  x1="18"
+                  y1="6"
+                  x2="6"
+                  y2="18"
+                /><line
+                  x1="6"
+                  y1="6"
+                  x2="18"
+                  y2="18"
+                />
               </svg>
             </button>
           </div>
           <div class="p-6 space-y-5 text-sm text-gray-600 leading-relaxed">
-            <section v-for="(sec, i) in [
-              { title: 'Subscription Terms', body: 'When you purchase a subscription plan, you authorize us to charge your payment method at the frequency you selected until you cancel your subscription.' },
-              { title: 'How to Cancel', body: 'You may cancel your subscription at any time by contacting our customer support team, logging into your account portal, or calling our customer service line.' },
-              { title: 'Cancellation Effective Date', body: 'Cancellations will take effect at the end of your current billing cycle. No refunds will be provided for partial billing periods.' },
-              { title: 'One-Time Purchases', body: 'One-time purchases, micro-dose options, and sample orders are not recurring and do not require cancellation.' },
-              { title: 'Medical Oversight', body: 'All treatments require ongoing medical oversight. Our healthcare providers reserve the right to discontinue treatment if they determine it is no longer appropriate for your health needs.' },
-            ]" :key="i">
-              <h3 class="text-sm font-bold text-gray-900 mb-1">{{ sec.title }}</h3>
+            <section
+              v-for="(sec, i) in [
+                { title: 'Subscription Terms', body: 'When you purchase a subscription plan, you authorize us to charge your payment method at the frequency you selected until you cancel your subscription.' },
+                { title: 'How to Cancel', body: 'You may cancel your subscription at any time by contacting our customer support team, logging into your account portal, or calling our customer service line.' },
+                { title: 'Cancellation Effective Date', body: 'Cancellations will take effect at the end of your current billing cycle. No refunds will be provided for partial billing periods.' },
+                { title: 'One-Time Purchases', body: 'One-time purchases, micro-dose options, and sample orders are not recurring and do not require cancellation.' },
+                { title: 'Medical Oversight', body: 'All treatments require ongoing medical oversight. Our healthcare providers reserve the right to discontinue treatment if they determine it is no longer appropriate for your health needs.' },
+              ]"
+              :key="i"
+            >
+              <h3 class="text-sm font-bold text-gray-900 mb-1">
+                {{ sec.title }}
+              </h3>
               <p>{{ sec.body }}</p>
             </section>
           </div>
           <div class="sticky bottom-0 bg-gray-50 border-t border-gray-100 p-6">
-            <button class="w-full py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all" style="background: linear-gradient(135deg, #059669, #0d9488);" @click="showCancelModal = false">
+            <button
+              class="w-full py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all"
+              style="background: linear-gradient(135deg, #059669, #0d9488);"
+              @click="showCancelModal = false"
+            >
               I Understand
             </button>
           </div>

@@ -7,10 +7,10 @@ import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import timeGridPlugin from '@fullcalendar/timegrid'
 
-const patientDataStore = usePatientDataStore();
-const {patientList, loading, error} = storeToRefs(patientDataStore);
+const patientDataStore = usePatientDataStore()
+const { patientList, loading, error } = storeToRefs(patientDataStore)
 
-patientDataStore.getAllPatient();
+patientDataStore.getAllPatient()
 
 export const blankEvent = {
   title: '',
@@ -35,6 +35,7 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
   const store = useCalendarPatientStore()
   const settingsStore = useSettingsStore()
   const businessHours = ref({ start_time: '09:00', end_time: '17:00' })
+
   // 👉 Calendar template ref
   const refCalendar = ref()
 
@@ -51,7 +52,8 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
 
   // ℹ️ Extract event data from event API
   const extractEventDataFromEventApi = eventApi => {
-    const { id, title, start, end, extendedProps: { goal, patient_id, therapy, inventory_id,  appointed_type } } = eventApi;    
+    const { id, title, start, end, extendedProps: { goal, patient_id, therapy, inventory_id,  appointed_type } } = eventApi    
+    
     return {
       id,
       title,      
@@ -78,6 +80,7 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
         successCallback(r.value.map(e => ({
           id: e.id,          
           title: e.name,
+
           // Convert string representation of date to Date object          
           start: new Date(e.start),
           end: new Date(e.end),
@@ -102,7 +105,7 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
 
   // 👉 Update event in calendar [UI]
   const updateEventInCalendar = (updatedEventData, propsToUpdate, extendedPropsToUpdate) => {    
-    const existingEvent = calendarApi.value?.getEventById(updatedEventData.id);
+    const existingEvent = calendarApi.value?.getEventById(updatedEventData.id)
     if (!existingEvent) {
       console.warn('Can\'t found event in calendar to update')
       
@@ -179,7 +182,7 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
           },
         }
         const propsToUpdate = ['id', 'title', 'url']
-        const extendedPropsToUpdate = ['goal', 'therapy', 'inventory_id', 'appointed_type'];
+        const extendedPropsToUpdate = ['goal', 'therapy', 'inventory_id', 'appointed_type']
         
         updateEventInCalendar(rval, propsToUpdate, extendedPropsToUpdate)
       })
@@ -193,31 +196,31 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
   }
 
   function renderEventContent(arg) {
-    const event = arg.event;
+    const event = arg.event
 
     // Example icon logic based on event.extendedProps.type
-    let icon = '';
-    let allergy = "None";
+    let icon = ''
+    let allergy = "None"
     switch (event.extendedProps.goal) {
-      case 'INJECTABLES':
-        icon = '💉';
-        break;
-      case 'IV':
-        icon = '🧪';
-        break;
-      case 'WEIGHT LOSS':
-        icon = '🏃‍♂️';
-        break;
-      case 'OTHERS':
-        icon = '📋';
-        break;
-      default:
-        icon = '📅';
+    case 'INJECTABLES':
+      icon = '💉'
+      break
+    case 'IV':
+      icon = '🧪'
+      break
+    case 'WEIGHT LOSS':
+      icon = '🏃‍♂️'
+      break
+    case 'OTHERS':
+      icon = '📋'
+      break
+    default:
+      icon = '📅'
     }
 
     allergy = patientList.value.filter(
-      patient => `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}` === event.title
-      )?.[0]?.current_allergies;
+      patient => `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}` === event.title,
+    )?.[0]?.current_allergies
       
     return {
       domNodes: [
@@ -243,16 +246,18 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
                                       max-width: 100%;
                                     ">⚠ ${allergy}</div>` : ''}
             </div>
-        `)
-      ]
-    };
+        `),
+      ],
+    }
   }
 
   // Helper to create DOM node from HTML string
   function createElementWithHTML(html) {
-    const div = document.createElement('div');
-    div.innerHTML = html.trim();
-    return div.firstChild;
+    const div = document.createElement('div')
+
+    div.innerHTML = html.trim()
+    
+    return div.firstChild
   }
 
   // 👉 Calendar options
@@ -269,7 +274,7 @@ export const useCalendarPatient = (event, isEventHandlerSidebarActive, isLeftSid
       hour: 'numeric',
       minute: '2-digit',
       meridiem: 'short',
-      hour12: true
+      hour12: true,
     },
     events: fetchEvents,
     eventContent: renderEventContent,

@@ -1,72 +1,73 @@
 <script setup>
-import * as Network from "@/network";
-import * as Const from "@/network/const";
-import { getHumanDate } from "@/router/utils";
-import { onMounted, ref } from "vue";
-import { useToast } from "vue-toastification";
-import InvoicingSalesReportDialog from "./invoicing-sales-report-dialog.vue";
+import * as Network from "@/network"
+import * as Const from "@/network/const"
+import { getHumanDate } from "@/router/utils"
+import { onMounted, ref } from "vue"
+import { useToast } from "vue-toastification"
+import InvoicingSalesReportDialog from "./invoicing-sales-report-dialog.vue"
 
-const showDialog = ref(false);
-const toast = useToast();
+const showDialog = ref(false)
+const toast = useToast()
 
 const getAllInvoicingSalesReports = () => {
-  Network.getRequest(Const.ALL_INVOICING_SALES_REPORT, {}, {}, (response)=>{
+  Network.getRequest(Const.ALL_INVOICING_SALES_REPORT, {}, {}, response=>{
     if(response.data.success){      
-      historyList.value = response.data.data.reports;
+      historyList.value = response.data.data.reports
     }else{
       console.error(`Error: ${response.data.err_msg}`)
     }
-  });
+  })
 }
 
 /**
  * #########################################
  */
-const isConfirmDialogVisible = ref(false);
-const historyList = ref([]);
-const rowPerPage = ref(5);
+const isConfirmDialogVisible = ref(false)
+const historyList = ref([])
+const rowPerPage = ref(5)
 const currentPage = ref(1)
-const totalPage = ref(1);
-const rmRecordId = ref(null);
+const totalPage = ref(1)
+const rmRecordId = ref(null)
 
 function doConfirm(value){
   if(value){
     Network.getRequest(`${Const.DELETE_INVOICING_SALES_REPORT}/${rmRecordId.value}`, {}, {}, 
-      (response) => {
+      response => {
         if(response.data.success){
-          toast.success("Successfully Deleted Email/Text Reward Report.");              
-          getAllInvoicingSalesReports();
+          toast.success("Successfully Deleted Email/Text Reward Report.")              
+          getAllInvoicingSalesReports()
         }else{
-          console.log(`Error: ${response.data.err_msg}`);
-          toast.error(response.data.err_msg || "Failed to load.");
+          console.log(`Error: ${response.data.err_msg}`)
+          toast.error(response.data.err_msg || "Failed to load.")
         }
-      }
-    );
+      },
+    )
   }
 }
 
 // 👉 Computing pagination data
 const paginationData = computed(() => {  
-  const totalItems = historyList.value.length;
-  const firstIndex = totalItems ? (currentPage.value - 1) * rowPerPage.value + 1 : 0;
-  const lastIndex = Math.min(currentPage.value * rowPerPage.value, totalItems);
+  const totalItems = historyList.value.length
+  const firstIndex = totalItems ? (currentPage.value - 1) * rowPerPage.value + 1 : 0
+  const lastIndex = Math.min(currentPage.value * rowPerPage.value, totalItems)
 
-  return `Showing ${ firstIndex } to ${ lastIndex } of ${ totalItems } entries`;
-});
+  return `Showing ${ firstIndex } to ${ lastIndex } of ${ totalItems } entries`
+})
 
 const productMetricsReportList = computed(() => {
-  const start = (currentPage.value - 1) * rowPerPage.value;
-  const end = start + rowPerPage.value;
-  return historyList.value.slice(start, end);
-});
+  const start = (currentPage.value - 1) * rowPerPage.value
+  const end = start + rowPerPage.value
+  
+  return historyList.value.slice(start, end)
+})
 
 watch([historyList, rowPerPage], () => {
-  totalPage.value = Math.ceil((historyList.value?.length || 0) / rowPerPage.value) || 1;
-});
+  totalPage.value = Math.ceil((historyList.value?.length || 0) / rowPerPage.value) || 1
+})
 
 onMounted(()=>{
-  getAllInvoicingSalesReports();
-});
+  getAllInvoicingSalesReports()
+})
 </script>
 
 <template>
@@ -75,8 +76,15 @@ onMounted(()=>{
       <VCol>        
         <VCard class="px-1">
           <VRow class="my-4 mx-1">
-            <VBtn color="primary" @click="showDialog = true">
-              <VIcon size="24" icon="tabler-plus" class="me-2"/> 
+            <VBtn
+              color="primary"
+              @click="showDialog = true"
+            >
+              <VIcon
+                size="24"
+                icon="tabler-plus"
+                class="me-2"
+              /> 
               Add New
             </VBtn>                    
           </VRow>   
@@ -86,23 +94,108 @@ onMounted(()=>{
           <VTable class="text-no-wrap">
             <thead>
               <tr>
-                <th scope="col" class="font-weight-semibold">Frequency</th>
-                <th scope="col" class="font-weight-semibold">Range Date</th>                
-                <th scope="col" class="font-weight-semibold">CreditCard</th>
-                <th scope="col" class="font-weight-semibold">Cash</th>
-                <th scope="col" class="font-weight-semibold">Transfer</th>
-                <th scope="col" class="font-weight-semibold">Paypal</th>
-                <th scope="col" class="font-weight-semibold">Venmo</th>                
-                <th scope="col" class="font-weight-semibold">CashApp</th>                
-                <th scope="col" class="font-weight-semibold">Crypto</th>
-                <th scope="col" class="font-weight-semibold">Sales Totals</th>
-                <th scope="col" class="font-weight-semibold">Profit</th>
-                <th scope="col" class="font-weight-semibold">Margin</th>
-                <th scope="col" class="font-weight-semibold">Sales tax collected</th>
-                <th scope="col" class="font-weight-semibold">Receiver Email</th>
-                <th scope="col" class="font-weight-semibold">Last Reported Date</th>
-                <th scope="col" class="font-weight-semibold">Created At</th>
-                <th scope="col" class="font-weight-semibold">Action</th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Frequency
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Range Date
+                </th>                
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  CreditCard
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Cash
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Transfer
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Paypal
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Venmo
+                </th>                
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  CashApp
+                </th>                
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Crypto
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Sales Totals
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Profit
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Margin
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Sales tax collected
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Receiver Email
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Last Reported Date
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Created At
+                </th>
+                <th
+                  scope="col"
+                  class="font-weight-semibold"
+                >
+                  Action
+                </th>
               </tr>
             </thead>
   
@@ -160,11 +253,13 @@ onMounted(()=>{
                     {{ item.sales_totals ? 'Yes' : 'No' }}
                   </div>
                 </td>                 
-                <!-- <td class="text-center">
+                <!--
+                  <td class="text-center">
                   <div class="v-avatar-group">
-                    {{ item.sales_detail ? 'Yes' : 'No' }}
+                  {{ item.sales_detail ? 'Yes' : 'No' }}
                   </div>
-                </td> -->
+                  </td> 
+                -->
                 <td class="text-center">
                   <div class="v-avatar-group">
                     {{ item.profit ? 'Yes' : 'No' }}
@@ -196,8 +291,18 @@ onMounted(()=>{
                   </div>
                 </td>                
                 <td>
-                  <VBtn icon variant="text" color="default" size="x-small" @click="isConfirmDialogVisible = true; rmRecordId = item.id;">
-                      <VIcon icon="tabler-trash" :size="22" color="primary"/>
+                  <VBtn
+                    icon
+                    variant="text"
+                    color="default"
+                    size="x-small"
+                    @click="isConfirmDialogVisible = true; rmRecordId = item.id;"
+                  >
+                    <VIcon
+                      icon="tabler-trash"
+                      :size="22"
+                      color="primary"
+                    />
                   </VBtn>
                 </td>                       
               </tr>
@@ -205,7 +310,12 @@ onMounted(()=>{
   
             <tfoot v-show="!historyList.length">
               <tr>
-                <td colspan="17" class="text-center text-body-1">No data available</td>
+                <td
+                  colspan="17"
+                  class="text-center text-body-1"
+                >
+                  No data available
+                </td>
               </tr>
             </tfoot>
           </VTable>
@@ -244,13 +354,16 @@ onMounted(()=>{
         </VCard>
         <!-- 👉 Confirm Dialog -->
         <ConfirmDialog
-            v-model:isDialogVisible="isConfirmDialogVisible"
-            confirmation-msg="Are you sure to delete this?"
-            @confirm="doConfirm"
+          v-model:isDialogVisible="isConfirmDialogVisible"
+          confirmation-msg="Are you sure to delete this?"
+          @confirm="doConfirm"
         />
       </VCol>
     </VRow>
-    <InvoicingSalesReportDialog v-model="showDialog" @refresh="getAllInvoicingSalesReports()"/>
+    <InvoicingSalesReportDialog
+      v-model="showDialog"
+      @refresh="getAllInvoicingSalesReports"
+    />
   </section>  
 </template>
 

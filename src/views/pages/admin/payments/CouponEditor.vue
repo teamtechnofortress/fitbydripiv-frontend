@@ -67,6 +67,7 @@ const createDraft = () => ({
 const form = reactive(createDraft())
 
 const isEditing = computed(() => Boolean(props.couponId))
+
 const authHeaders = computed(() => ({
   Authorization: `Bearer ${getApiToken()}`,
   Accept: 'application/json',
@@ -109,6 +110,7 @@ const summaryItems = computed(() => [
 const normalizeRows = body => {
   if (Array.isArray(body?.data)) return body.data
   if (Array.isArray(body?.data?.data)) return body.data.data
+  
   return []
 }
 
@@ -176,6 +178,7 @@ const applyCoupon = coupon => {
 const fetchCoupon = async () => {
   if (!props.couponId) {
     resetForm()
+    
     return
   }
 
@@ -201,6 +204,7 @@ const fetchProductSearchResults = async query => {
   if (search.length < 2) {
     productSearchResults.value = []
     productSearchLoading.value = false
+    
     return
   }
 
@@ -215,6 +219,7 @@ const fetchProductSearchResults = async query => {
     })
 
     const selectedIds = new Set(selectedProductIds.value)
+
     productSearchResults.value = normalizeRows(response?.data)
       .map(normalizeProduct)
       .filter(product => product.id && !selectedIds.has(product.id))
@@ -232,6 +237,7 @@ const queueProductSearch = query => {
   if (search.length < 2) {
     productSearchResults.value = []
     productSearchLoading.value = false
+    
     return
   }
 
@@ -304,6 +310,7 @@ const saveCoupon = async () => {
   if (validationError) {
     error.value = validationError
     message.value = ''
+    
     return
   }
 
@@ -313,17 +320,17 @@ const saveCoupon = async () => {
   try {
     const response = isEditing.value
       ? await axios.put(getAdminCouponDetailUrl(props.couponId), payload, {
-          headers: {
-            ...authHeaders.value,
-            'Content-Type': 'application/json',
-          },
-        })
+        headers: {
+          ...authHeaders.value,
+          'Content-Type': 'application/json',
+        },
+      })
       : await axios.post(ADMIN_COUPONS_URL, payload, {
-          headers: {
-            ...authHeaders.value,
-            'Content-Type': 'application/json',
-          },
-        })
+        headers: {
+          ...authHeaders.value,
+          'Content-Type': 'application/json',
+        },
+      })
 
     message.value = response?.data?.message || `Coupon ${isEditing.value ? 'updated' : 'created'} successfully.`
     emit('saved')
@@ -366,39 +373,72 @@ onBeforeUnmount(() => {
   <section class="coupon-editor">
     <div class="coupon-editor__header">
       <div>
-        <h2 class="coupon-editor__title">{{ isEditing ? 'Edit Coupon' : 'Create Coupon' }}</h2>
+        <h2 class="coupon-editor__title">
+          {{ isEditing ? 'Edit Coupon' : 'Create Coupon' }}
+        </h2>
         <p class="coupon-editor__subtitle">
           Configure the offer details, discount rules, scope, scheduling, and product targeting.
         </p>
       </div>
 
       <div class="coupon-editor__actions">
-        <VBtn variant="text" prepend-icon="tabler-arrow-left" @click="$emit('cancel')">
+        <VBtn
+          variant="text"
+          prepend-icon="tabler-arrow-left"
+          @click="$emit('cancel')"
+        >
           Back to Coupons
         </VBtn>
-        <VBtn color="primary" :loading="saving" prepend-icon="tabler-device-floppy" @click="saveCoupon">
+        <VBtn
+          color="primary"
+          :loading="saving"
+          prepend-icon="tabler-device-floppy"
+          @click="saveCoupon"
+        >
           {{ isEditing ? 'Update Coupon' : 'Create Coupon' }}
         </VBtn>
       </div>
     </div>
 
-    <VAlert v-if="message" type="success" variant="tonal" class="mb-4" closable>
+    <VAlert
+      v-if="message"
+      type="success"
+      variant="tonal"
+      class="mb-4"
+      closable
+    >
       {{ message }}
     </VAlert>
-    <VAlert v-if="error" type="error" variant="tonal" class="mb-4" closable>
+    <VAlert
+      v-if="error"
+      type="error"
+      variant="tonal"
+      class="mb-4"
+      closable
+    >
       {{ error }}
     </VAlert>
 
-    <div v-if="loading" class="coupon-editor__loading">
-      <VProgressCircular indeterminate color="primary" />
+    <div
+      v-if="loading"
+      class="coupon-editor__loading"
+    >
+      <VProgressCircular
+        indeterminate
+        color="primary"
+      />
     </div>
 
     <template v-else>
       <div class="coupon-editor__hero">
         <div class="coupon-editor__hero-copy">
-          <div class="coupon-editor__eyebrow">Coupon Setup</div>
+          <div class="coupon-editor__eyebrow">
+            Coupon Setup
+          </div>
           <div class="coupon-editor__hero-title-row">
-            <h3 class="coupon-editor__hero-title">{{ form.name || 'Untitled Coupon' }}</h3>
+            <h3 class="coupon-editor__hero-title">
+              {{ form.name || 'Untitled Coupon' }}
+            </h3>
             <span class="coupon-editor__hero-code">{{ form.code || 'CODE' }}</span>
           </div>
           <p class="coupon-editor__hero-text">
@@ -407,7 +447,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="coupon-editor__summary">
-          <div v-for="item in summaryItems" :key="item.label" class="coupon-editor__summary-item">
+          <div
+            v-for="item in summaryItems"
+            :key="item.label"
+            class="coupon-editor__summary-item"
+          >
             <span class="coupon-editor__summary-label">{{ item.label }}</span>
             <strong>{{ item.value }}</strong>
           </div>
@@ -418,13 +462,20 @@ onBeforeUnmount(() => {
         <section class="coupon-editor__card">
           <div class="coupon-editor__card-header">
             <div>
-              <h4 class="coupon-editor__card-title">Coupon Details</h4>
-              <p class="coupon-editor__card-subtitle">Core identity fields for the coupon record.</p>
+              <h4 class="coupon-editor__card-title">
+                Coupon Details
+              </h4>
+              <p class="coupon-editor__card-subtitle">
+                Core identity fields for the coupon record.
+              </p>
             </div>
           </div>
 
           <VRow>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="form.code"
                 label="Coupon Code"
@@ -432,7 +483,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="8">
+            <VCol
+              cols="12"
+              md="8"
+            >
               <VTextField
                 v-model="form.name"
                 label="Coupon Name"
@@ -455,13 +509,20 @@ onBeforeUnmount(() => {
         <section class="coupon-editor__card">
           <div class="coupon-editor__card-header">
             <div>
-              <h4 class="coupon-editor__card-title">Discount Values</h4>
-              <p class="coupon-editor__card-subtitle">Choose the discount model and order-level rules.</p>
+              <h4 class="coupon-editor__card-title">
+                Discount Values
+              </h4>
+              <p class="coupon-editor__card-subtitle">
+                Choose the discount model and order-level rules.
+              </p>
             </div>
           </div>
 
           <VRow>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VSelect
                 v-model="form.type"
                 :items="couponTypeOptions"
@@ -471,7 +532,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="form.value"
                 :prefix="couponValueAdornment.prefix"
@@ -482,7 +546,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="form.min_order_amount"
                 label="Minimum Order Amount"
@@ -492,7 +559,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="form.max_discount_amount"
                 label="Maximum Discount Amount"
@@ -502,7 +572,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VSelect
                 v-model="form.applies_to"
                 :items="couponAppliesToOptions"
@@ -512,7 +585,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VSwitch
                 v-model="form.first_order_only"
                 label="First Order Only"
@@ -520,7 +596,10 @@ onBeforeUnmount(() => {
                 inset
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VSwitch
                 v-model="form.is_active"
                 label="Active"
@@ -534,13 +613,20 @@ onBeforeUnmount(() => {
         <section class="coupon-editor__card">
           <div class="coupon-editor__card-header">
             <div>
-              <h4 class="coupon-editor__card-title">Scope & Product Targeting</h4>
-              <p class="coupon-editor__card-subtitle">Switch between global coverage and selected products.</p>
+              <h4 class="coupon-editor__card-title">
+                Scope & Product Targeting
+              </h4>
+              <p class="coupon-editor__card-subtitle">
+                Switch between global coverage and selected products.
+              </p>
             </div>
           </div>
 
           <VRow>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VSelect
                 v-model="form.scope"
                 :items="couponScopeOptions"
@@ -550,7 +636,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="8">
+            <VCol
+              cols="12"
+              md="8"
+            >
               <VAlert
                 :color="form.scope === 'product_specific' ? 'warning' : 'info'"
                 variant="tonal"
@@ -564,10 +653,17 @@ onBeforeUnmount(() => {
             </VCol>
           </VRow>
 
-          <div v-if="form.scope === 'product_specific'" class="coupon-editor__product-picker">
+          <div
+            v-if="form.scope === 'product_specific'"
+            class="coupon-editor__product-picker"
+          >
             <div class="coupon-editor__product-picker-header">
-              <div class="coupon-editor__picker-title">Product Selector</div>
-              <div class="coupon-editor__picker-subtitle">Type at least 2 characters to search by name or slug.</div>
+              <div class="coupon-editor__picker-title">
+                Product Selector
+              </div>
+              <div class="coupon-editor__picker-subtitle">
+                Type at least 2 characters to search by name or slug.
+              </div>
             </div>
 
             <VAutocomplete
@@ -595,8 +691,13 @@ onBeforeUnmount(() => {
               </template>
             </VAutocomplete>
 
-            <div v-if="selectedProducts.length" class="coupon-editor__selected-products">
-              <div class="coupon-editor__selected-title">Selected Products</div>
+            <div
+              v-if="selectedProducts.length"
+              class="coupon-editor__selected-products"
+            >
+              <div class="coupon-editor__selected-title">
+                Selected Products
+              </div>
               <div class="coupon-editor__selected-list">
                 <div
                   v-for="product in selectedProducts"
@@ -604,8 +705,12 @@ onBeforeUnmount(() => {
                   class="coupon-editor__selected-item"
                 >
                   <div>
-                    <div class="coupon-editor__selected-name">{{ product.name }}</div>
-                    <div class="coupon-editor__selected-slug">{{ product.slug || product.id }}</div>
+                    <div class="coupon-editor__selected-name">
+                      {{ product.name }}
+                    </div>
+                    <div class="coupon-editor__selected-slug">
+                      {{ product.slug || product.id }}
+                    </div>
                   </div>
                   <VBtn
                     icon="tabler-x"
@@ -618,7 +723,10 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div v-else class="coupon-editor__selected-empty">
+            <div
+              v-else
+              class="coupon-editor__selected-empty"
+            >
               No products selected yet.
             </div>
           </div>
@@ -627,13 +735,20 @@ onBeforeUnmount(() => {
         <section class="coupon-editor__card">
           <div class="coupon-editor__card-header">
             <div>
-              <h4 class="coupon-editor__card-title">Scheduling & Usage Limits</h4>
-              <p class="coupon-editor__card-subtitle">Set availability windows and redemption limits.</p>
+              <h4 class="coupon-editor__card-title">
+                Scheduling & Usage Limits
+              </h4>
+              <p class="coupon-editor__card-subtitle">
+                Set availability windows and redemption limits.
+              </p>
             </div>
           </div>
 
           <VRow>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="form.starts_at"
                 label="Starts At"
@@ -641,7 +756,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="form.expires_at"
                 label="Expires At"
@@ -649,7 +767,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="form.usage_limit_total"
                 label="Total Usage Limit"
@@ -658,7 +779,10 @@ onBeforeUnmount(() => {
                 variant="outlined"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="form.usage_limit_per_user"
                 label="Usage Limit Per User"

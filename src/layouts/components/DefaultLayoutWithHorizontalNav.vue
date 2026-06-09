@@ -22,7 +22,7 @@ const { appRouteTransition } = useThemeConfig()
 // Create a ref to store the current time
 const currentTime = ref('')
 
-let intervalId;
+let intervalId
 const navDrawItems = ref(navItems)
 
 // Format function: hh:mm (24-hour)
@@ -40,21 +40,21 @@ const updateTime = () => {
 }
 
 const cleanNavs = () => {
-  const UserData = JSON.parse(localStorage.getItem('userData') || '{}');
+  const UserData = JSON.parse(localStorage.getItem('userData') || '{}')
   if(UserData?.role != 'admin'){    
-    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing];
+    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing]
   }else{
-    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing, ...admin];
+    navDrawItems.value = [...lobby, ...patientChart, ...patientEncounter, ...appointments, ...marketing, ...admin]
   }
 }
 
 onMounted(() => {
-  updateTime();
-  intervalId = setInterval(updateTime, 1000);  
+  updateTime()
+  intervalId = setInterval(updateTime, 1000)  
 
   setTimeout(() => {
-    cleanNavs();
-  }, 500);
+    cleanNavs()
+  }, 500)
 })
 
 onUnmounted(() => {
@@ -95,7 +95,10 @@ onUnmounted(() => {
       <UserProfile v-if="isUserLoggedIn()" />
 
       <!-- ############################ Intake ################################################### -->
-      <div v-if="$route.name.includes('intake')" class="flex-grow-1 d-flex justify-space-between align-center"></div>
+      <div
+        v-if="$route.name.includes('intake')"
+        class="flex-grow-1 d-flex justify-space-between align-center"
+      />
     </template>
 
     <!-- 👉 Pages -->

@@ -23,7 +23,9 @@ const getStepImage = item => item?.image || item?.icon_image || item?.icon_url |
 <template>
   <section class="py-12 px-4 gradient-bg-light border-y border-gray-200">
     <div class="max-w-6xl mx-auto">
-      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">{{ heading }}</h2>
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">
+        {{ heading }}
+      </h2>
       <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
         <div
           v-for="(item, index) in items"
@@ -37,10 +39,19 @@ const getStepImage = item => item?.image || item?.icon_image || item?.icon_url |
               :alt="item.title"
               class="w-full h-full object-contain"
             >
-            <VIcon v-else :icon="iconMap[item.icon] || 'tabler-circle'" size="54" color="primary" />
+            <VIcon
+              v-else
+              :icon="iconMap[item.icon] || 'tabler-circle'"
+              size="54"
+              color="primary"
+            />
           </div>
-          <h3 class="text-lg font-bold text-gray-900 mb-2">{{ item.title }}</h3>
-          <p class="text-sm text-gray-700 leading-relaxed">{{ item.description }}</p>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">
+            {{ item.title }}
+          </h3>
+          <p class="text-sm text-gray-700 leading-relaxed">
+            {{ item.description }}
+          </p>
         </div>
       </div>
     </div>
