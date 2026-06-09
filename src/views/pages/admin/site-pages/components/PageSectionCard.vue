@@ -48,6 +48,16 @@ const getSectionSummary = section => {
   if (section.type === 'telehealth_cta')
     return section.content?.button?.label || 'CTA block'
 
+  if (section.type === 'pdf_library' || section.type === 'pen_instruction_library') {
+    const documents = Array.isArray(section.documents)
+      ? section.documents
+      : (Array.isArray(section.content?.documents) ? section.content.documents : [])
+    const singleDocument = section.content?.document || documents[0] || {}
+    const viewerEnabled = section.viewer_enabled ?? section.content?.settings?.viewer_enabled ?? true
+    const hasPdf = Boolean(singleDocument.view_url || singleDocument.download_url || singleDocument.pdf_url)
+    return `${hasPdf ? '1 PDF configured' : 'PDF not set'} • viewer ${viewerEnabled ? 'enabled' : 'disabled'}`
+  }
+
   return section.subtitle || 'Content section'
 }
 </script>
@@ -64,7 +74,7 @@ const getSectionSummary = section => {
           <div class="section-card__eyebrow">
             {{ index + 1 }}. {{ section.type.replaceAll('_', ' ') }}
           </div>
-          <div class="text-subtitle-1 font-weight-bold">
+          <div class="section-card__title">
             {{ section.title || section.section_key }}
           </div>
         </div>
@@ -82,45 +92,49 @@ const getSectionSummary = section => {
         {{ getSectionSummary(section) }}
       </p>
 
-      <div class="d-flex flex-wrap align-center gap-2">
-        <VBtn
-          size="small"
-          variant="tonal"
-          prepend-icon="tabler-eye"
-          @click="$emit('preview')"
-        >
-          Preview
-        </VBtn>
-        <VBtn
-          size="small"
-          variant="tonal"
-          prepend-icon="tabler-settings"
-          @click="$emit('edit')"
-        >
-          Edit
-        </VBtn>
-        <VBtn
-          size="small"
-          variant="text"
-          icon="tabler-arrow-up"
-          :disabled="index === 0"
-          @click="$emit('move-up')"
-        />
-        <VBtn
-          size="small"
-          variant="text"
-          icon="tabler-arrow-down"
-          :disabled="index === total - 1"
-          @click="$emit('move-down')"
-        />
-        <VSpacer />
-        <VBtn
-          size="small"
-          color="error"
-          variant="text"
-          icon="tabler-trash"
-          @click="$emit('delete')"
-        />
+      <div class="section-card__actions">
+        <div class="section-card__actions-main">
+          <VBtn
+            size="small"
+            variant="tonal"
+            prepend-icon="tabler-eye"
+            @click="$emit('preview')"
+          >
+            Preview
+          </VBtn>
+          <VBtn
+            size="small"
+            variant="tonal"
+            prepend-icon="tabler-settings"
+            @click="$emit('edit')"
+          >
+            Edit
+          </VBtn>
+        </div>
+
+        <div class="section-card__actions-end">
+          <VBtn
+            size="small"
+            variant="text"
+            icon="tabler-arrow-up"
+            :disabled="index === 0"
+            @click="$emit('move-up')"
+          />
+          <VBtn
+            size="small"
+            variant="text"
+            icon="tabler-arrow-down"
+            :disabled="index === total - 1"
+            @click="$emit('move-down')"
+          />
+          <VBtn
+            size="small"
+            color="error"
+            variant="text"
+            icon="tabler-trash"
+            @click="$emit('delete')"
+          />
+        </div>
       </div>
     </VCardText>
   </VCard>
@@ -156,7 +170,30 @@ const getSectionSummary = section => {
   line-height: 1.6;
 }
 
-:deep(.section-card .text-subtitle-1) {
-  color: #0f172a;
+.section-card__title {
+  color: #1e2a52;
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 0.1rem;
+}
+
+.section-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.section-card__actions-main {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.section-card__actions-end {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
 }
 </style>

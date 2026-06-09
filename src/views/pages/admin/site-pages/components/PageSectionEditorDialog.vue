@@ -45,6 +45,7 @@ const heroMediaInput = ref(null)
 const heroMediaUploading = ref(false)
 const heroMediaPreviewOpen = ref(false)
 const heroMediaDragActive = ref(false)
+const pdfDocumentUploading = ref(false)
 
 const isEditing = computed(() => Boolean(props.section?.id))
 const isHero = computed(() => localSection.value.type === 'hero')
@@ -56,11 +57,55 @@ const isContentBlock = computed(() => localSection.value.type === 'content_block
 const isSpacer = computed(() => localSection.value.type === 'spacer')
 const isFaq = computed(() => localSection.value.type === 'faq')
 const isTelehealth = computed(() => localSection.value.type === 'telehealth_cta')
+const isPdfLibrary = computed(() => ['pdf_library', 'pen_instruction_library'].includes(localSection.value.type))
 
 const itemEditorLabel = computed(() => 'Step')
 const heroMediaUrl = computed(() => localSection.value.content?.background?.url || '')
 const heroMediaType = computed(() => localSection.value.content?.background?.type || '')
 const isHeroVideo = computed(() => heroMediaType.value === 'video')
+
+const createPdfDocumentDraft = () => ({
+  key: 'document_1',
+  label: '',
+  view_url: '',
+  download_url: '',
+  pdf_url: '',
+  download_label: 'Download PDF',
+})
+
+const normalizePdfDocument = document => {
+  const source = document && typeof document === 'object' ? document : {}
+  const resolvedUrl = source.view_url || source.download_url || source.pdf_url || source.item?.download_url || ''
+
+  return {
+    ...createPdfDocumentDraft(),
+    ...source,
+    key: source.key || 'document_1',
+    label: source.label || source.title || '',
+    view_url: source.view_url || resolvedUrl,
+    download_url: source.download_url || resolvedUrl,
+    pdf_url: source.pdf_url || resolvedUrl,
+    download_label: source.download_label || source.item?.label || 'Download PDF',
+  }
+}
+
+const ensurePdfLibraryShape = () => {
+  if (!localSection.value.content || typeof localSection.value.content !== 'object')
+    localSection.value.content = {}
+
+  const settings = localSection.value.content.settings
+  localSection.value.content.settings = {
+    viewer_enabled: settings?.viewer_enabled ?? true,
+    viewer_embed_mode: settings?.viewer_embed_mode || 'iframe',
+  }
+
+  const rawDocuments = Array.isArray(localSection.value.content.documents)
+    ? localSection.value.content.documents
+    : (Array.isArray(localSection.value.documents) ? localSection.value.documents : [])
+  const normalized = normalizePdfDocument(localSection.value.content.document || rawDocuments[0] || {})
+  localSection.value.content.document = normalized
+  localSection.value.content.documents = [normalized]
+}
 
 const closeDialog = () => {
   emit('update:modelValue', false)
@@ -101,6 +146,8 @@ const syncSection = () => {
 
   source.page_id = props.pageId
   localSection.value = source
+  if (isPdfLibrary.value)
+    ensurePdfLibraryShape()
 }
 
 watch(() => props.modelValue, value => {
@@ -119,6 +166,9 @@ watch(() => localSection.value.type, (type, previousType) => {
     page_id: props.pageId,
     section_key: localSection.value.section_key || freshDraft.section_key,
   }
+
+  if (['pdf_library', 'pen_instruction_library'].includes(type))
+    ensurePdfLibraryShape()
 })
 
 const updateDialog = value => {
@@ -344,7 +394,56 @@ const moveRow = (index, direction) => {
   localSection.value.content.rows = updated
 }
 
+const isPdfFile = file => {
+  const mime = String(file?.type || '').toLowerCase()
+  const name = String(file?.name || '').toLowerCase()
+
+  return mime === 'application/pdf' || name.endsWith('.pdf')
+}
+
+const onPdfDocumentUpload = async event => {
+  const file = event?.target?.files?.[0]
+  if (!file)
+    return
+
+  if (!isPdfFile(file)) {
+    toast.error('Only PDF files are supported.')
+    if (event?.target)
+      event.target.value = ''
+    return
+  }
+
+  pdfDocumentUploading.value = true
+  try {
+    const media = await uploadAdminMedia(file)
+    const mediaUrl = media.url || ''
+    if (!mediaUrl)
+      throw new Error('Upload completed but file URL is missing.')
+
+    ensurePdfLibraryShape()
+    const current = normalizePdfDocument(localSection.value.content.document)
+    const updated = {
+      ...current,
+      view_url: mediaUrl,
+      download_url: mediaUrl,
+      pdf_url: mediaUrl,
+    }
+    localSection.value.content.document = updated
+    localSection.value.content.documents = [updated]
+    toast.success('PDF uploaded successfully.')
+  } catch (error) {
+    toast.error(buildErrorMessage(error))
+  } finally {
+    pdfDocumentUploading.value = false
+    if (event?.target)
+      event.target.value = ''
+  }
+}
+
 const saveSection = () => {
+  if (isPdfLibrary.value)
+    ensurePdfLibraryShape()
+
   emit('save', {
     ...localSection.value,
     page_id: props.pageId,
@@ -892,6 +991,126 @@ const saveSection = () => {
                     label="Value"
                     variant="outlined"
                   />
+                </VCol>
+              </VRow>
+            </VCardText>
+          </VCard>
+        </div>
+
+        <div v-else-if="isPdfLibrary" class="d-flex flex-column gap-4">
+          <div class="text-subtitle-1 font-weight-semibold">
+            PDF Library
+          </div>
+
+          <VAlert
+            color="info"
+            variant="tonal"
+          >
+            Upload PDFs and manage only the required public fields: view URL, download URL, and button label.
+          </VAlert>
+
+          <VRow>
+            <VCol cols="12" md="6">
+              <VTextField
+                v-model="localSection.content.headline"
+                label="Headline"
+                variant="outlined"
+              />
+            </VCol>
+            <VCol cols="12" md="6">
+              <VTextField
+                v-model="localSection.content.upload_help"
+                label="Upload Help Text"
+                variant="outlined"
+              />
+            </VCol>
+            <VCol cols="12">
+              <VTextarea
+                v-model="localSection.content.description"
+                label="Description"
+                variant="outlined"
+                rows="3"
+              />
+            </VCol>
+            <VCol cols="12" md="6">
+              <VSwitch
+                v-model="localSection.content.settings.viewer_enabled"
+                color="primary"
+                inset
+                label="Enable PDF Viewer"
+              />
+            </VCol>
+            <VCol cols="12" md="6">
+              <VSelect
+                v-model="localSection.content.settings.viewer_embed_mode"
+                :items="['iframe', 'object']"
+                label="Viewer Embed Mode"
+                variant="outlined"
+              />
+            </VCol>
+          </VRow>
+
+          <VCard variant="outlined">
+            <VCardText class="pa-4">
+              <div class="text-subtitle-2 font-weight-semibold mb-4">
+                Single Document
+              </div>
+
+              <VRow>
+                <VCol cols="12" md="4">
+                  <VTextField
+                    v-model="localSection.content.document.key"
+                    label="Document Key"
+                    variant="outlined"
+                  />
+                </VCol>
+                <VCol cols="12" md="4">
+                  <VTextField
+                    v-model="localSection.content.document.label"
+                    label="Document Label"
+                    variant="outlined"
+                  />
+                </VCol>
+                <VCol cols="12" md="4">
+                  <VTextField
+                    v-model="localSection.content.document.download_label"
+                    label="Download Button Label"
+                    variant="outlined"
+                  />
+                </VCol>
+                <VCol cols="12" md="6">
+                  <VTextField
+                    v-model="localSection.content.document.view_url"
+                    label="View URL"
+                    variant="outlined"
+                  />
+                </VCol>
+                <VCol cols="12" md="6">
+                  <VTextField
+                    v-model="localSection.content.document.download_url"
+                    label="Download URL"
+                    variant="outlined"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <div class="pen-doc-upload d-flex flex-wrap align-center gap-3">
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      @change="onPdfDocumentUpload"
+                    >
+                    <VChip
+                      v-if="pdfDocumentUploading"
+                      color="primary"
+                      size="small"
+                      variant="tonal"
+                    >
+                      Uploading...
+                    </VChip>
+                    <span class="text-body-2 text-medium-emphasis">
+                      Uploading a PDF sets both view and download URLs.
+                    </span>
+                  </div>
                 </VCol>
               </VRow>
             </VCardText>

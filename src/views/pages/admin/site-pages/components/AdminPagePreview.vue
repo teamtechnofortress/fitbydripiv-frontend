@@ -1,4 +1,5 @@
 <script setup>
+import '@/styles/public-site.css'
 import SectionRenderer from '@/pages/site/new/components/SectionRenderer.vue'
 
 defineProps({
@@ -14,7 +15,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="admin-page-preview">
+  <div class="admin-page-preview public-site">
     <div
       v-for="section in page.sections || []"
       :id="`preview-section-${section.id}`"

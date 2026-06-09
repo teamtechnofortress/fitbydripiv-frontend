@@ -6,6 +6,7 @@ import ContentBlockSection from './sections/ContentBlockSection.vue'
 import FaqSection from './sections/FaqSection.vue'
 import FeaturedProductsSection from './sections/FeaturedProductsSection.vue'
 import HeroSection from './sections/HeroSection.vue'
+import PdfLibrarySection from './sections/PdfLibrarySection.vue'
 import ProcessSection from './sections/ProcessSection.vue'
 import ProductGridSection from './sections/ProductGridSection.vue'
 import SpacerSection from './sections/SpacerSection.vue'
@@ -35,6 +36,8 @@ const sectionMap = {
   process: ProcessSection,
   content_block: ContentBlockSection,
   product_grid: ProductGridSection,
+  pdf_library: PdfLibrarySection,
+  pen_instruction_library: PdfLibrarySection,
   spacer: SpacerSection,
   faq: FaqSection,
   telehealth_cta: TelehealthCtaSection,

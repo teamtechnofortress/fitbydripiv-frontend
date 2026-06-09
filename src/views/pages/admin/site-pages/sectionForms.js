@@ -18,6 +18,15 @@ const createContentRow = () => ({
   value: '',
 })
 
+const createPdfDocument = () => ({
+  key: 'document_1',
+  label: '',
+  view_url: '',
+  download_url: '',
+  pdf_url: '',
+  download_label: 'Download PDF',
+})
+
 export const sectionTypeOptions = [
   { title: 'Hero', value: 'hero' },
   { title: 'Section Header', value: 'section_header' },
@@ -28,6 +37,7 @@ export const sectionTypeOptions = [
   { title: 'Spacer', value: 'spacer' },
   { title: 'FAQ', value: 'faq' },
   { title: 'Telehealth CTA', value: 'telehealth_cta' },
+  { title: 'PDF Library', value: 'pdf_library' },
 ]
 
 export const createSectionDraft = (type = 'section_header', sortOrder = 1) => {
@@ -115,6 +125,17 @@ export const createSectionDraft = (type = 'section_header', sortOrder = 1) => {
         style: 'outline',
       },
     }
+  } else if (safeType === 'pdf_library' || safeType === 'pen_instruction_library') {
+    base.content = {
+      headline: 'Instruction PDFs',
+      description: '',
+      upload_help: '',
+      settings: {
+        viewer_enabled: true,
+        viewer_embed_mode: 'iframe',
+      },
+      document: createPdfDocument(),
+    }
   } else {
     base.content = {
       headline: '',
@@ -141,15 +162,46 @@ export const cloneEditableSection = (section, sortOrder = 1) => {
 }
 
 export const buildSectionPayload = section => {
+  const normalizedType = section.type === 'pen_instruction_library' ? 'pdf_library' : section.type
   const payload = {
     id: section.id || undefined,
     page_id: section.page_id || undefined,
     section_key: section.section_key,
-    type: section.type,
+    type: normalizedType,
     title: section.title || '',
     subtitle: section.subtitle || '',
     sort_order: Number(section.sort_order || 1),
     content: deepClone(section.content || {}),
+  }
+
+  if (section.type === 'pdf_library' || section.type === 'pen_instruction_library') {
+    const sourceContent = section.content || {}
+    const sourceSettings = sourceContent.settings || {}
+    const sourceDocuments = Array.isArray(sourceContent.documents)
+      ? sourceContent.documents
+      : (Array.isArray(section.documents) ? section.documents : [])
+    const sourceDocument = sourceContent.document || sourceDocuments[0] || {}
+
+    const normalizedDocument = {
+      key: sourceDocument?.key || 'document_1',
+      label: sourceDocument?.label || sourceDocument?.title || '',
+      view_url: sourceDocument?.view_url || sourceDocument?.pdf_url || '',
+      download_url: sourceDocument?.download_url || sourceDocument?.pdf_url || '',
+      pdf_url: sourceDocument?.pdf_url || sourceDocument?.view_url || sourceDocument?.download_url || '',
+      download_label: sourceDocument?.download_label || sourceDocument?.item?.label || 'Download PDF',
+    }
+
+    payload.content = {
+      headline: sourceContent.headline || '',
+      description: sourceContent.description || '',
+      upload_help: sourceContent.upload_help || '',
+      settings: {
+        viewer_enabled: sourceSettings.viewer_enabled ?? true,
+        viewer_embed_mode: sourceSettings.viewer_embed_mode || 'iframe',
+      },
+      document: normalizedDocument,
+      documents: [normalizedDocument],
+    }
   }
 
   if (section.type === 'process') {

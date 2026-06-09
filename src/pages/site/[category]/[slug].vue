@@ -1,14 +1,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import DynamicContentPage from './new/components/DynamicContentPage.vue'
+import DynamicContentPage from '../new/components/DynamicContentPage.vue'
 
 const route = useRoute()
 const slug = computed(() => {
-  const pathSlug = String(route.path || '')
-    .replace(/^\/+|\/+$/g, '')
-
-  return pathSlug || 'home'
+  return String(route.path || '').replace(/^\/+|\/+$/g, '')
 })
 </script>
 

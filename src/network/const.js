@@ -191,6 +191,12 @@ export const CMS_GET_SITE_SETTINGS = SERVER_URL + "/cms/site-settings"
 export const CMS_SUBMIT_CONTACT = SERVER_URL + "/cms/contact"
 export const getContentPageUrl = slug => `${SERVER_URL}/content/pages/${slug}`
 export const PUBLIC_LAYOUT_URL = SERVER_URL + "/layout"
+export const getPublicPdfDownloadUrl = (path, name = '') => {
+  const normalizedPath = encodeURIComponent(String(path || '').replace(/^\/+/, ''))
+  const normalizedName = String(name || '').trim()
+
+  return `${SERVER_URL}/public/media/pdf-download?path=${normalizedPath}${normalizedName ? `&name=${encodeURIComponent(normalizedName)}` : ''}`
+}
 
 // CMS Admin Endpoints
 export const CMS_ADMIN_CATEGORIES = SERVER_URL + "/cms/admin/categories"

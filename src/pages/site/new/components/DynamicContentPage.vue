@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PageRenderer from './PageRenderer.vue'
 import { getContentPageUrl } from '@/network/const'
@@ -16,6 +17,7 @@ const loading = ref(true)
 const error = ref('')
 const page = ref(null)
 const resolvedSlug = ref('')
+const route = useRoute()
 
 const normalizedPage = computed(() => normalizePage(page.value))
 
@@ -62,28 +64,75 @@ const logResolvedPage = (requestedSlug, sourceLabel, payload) => {
   })
 }
 
+const getSlugCandidates = (slug) => {
+  const normalized = String(slug || '').trim().replace(/^\/+|\/+$/g, '')
+  if (!normalized)
+    return []
+
+  const encoded = encodeURIComponent(normalized)
+  return encoded === normalized ? [normalized] : [normalized, encoded]
+}
+
+const getRequestedSlug = (slug) => {
+  const normalizedSlug = String(slug || '').trim().replace(/^\/+|\/+$/g, '')
+  const pathSlug = String(route.path || '').trim().replace(/^\/+|\/+$/g, '')
+
+  if (!pathSlug)
+    return normalizedSlug
+
+  // Keep `/new/:slug` semantics (content slug is just the last segment).
+  if (pathSlug.startsWith('new/'))
+    return normalizedSlug || pathSlug.replace(/^new\/+/, '')
+
+  const pathSegments = pathSlug.split('/').filter(Boolean)
+  const slugSegments = normalizedSlug.split('/').filter(Boolean)
+  const lastPathSegment = pathSegments.at(-1) || ''
+
+  if (slugSegments.length === 1 && pathSegments.length > 1 && normalizedSlug === lastPathSegment)
+    return pathSlug
+
+  return normalizedSlug || pathSlug
+}
+
 const loadPage = async slug => {
   if (!slug)
     return
 
+  const requestedSlug = getRequestedSlug(slug)
+
   loading.value = true
   error.value = ''
-  resolvedSlug.value = slug
+  resolvedSlug.value = requestedSlug
 
   try {
-    const response = await axios.get(getContentPageUrl(slug))
-    page.value = response?.data?.data || null
-    logResolvedPage(slug, 'page', page.value)
+    const candidates = getSlugCandidates(requestedSlug)
+    let loaded = false
+    let lastError = null
+
+    for (const candidate of candidates) {
+      try {
+        const response = await axios.get(getContentPageUrl(candidate))
+        page.value = response?.data?.data || null
+        loaded = true
+        logResolvedPage(requestedSlug, candidate === requestedSlug ? 'page' : 'page-encoded-slug', page.value)
+        break
+      } catch (candidateError) {
+        lastError = candidateError
+      }
+    }
+
+    if (!loaded)
+      throw lastError || new Error('Unable to load content page.')
   } catch (err) {
     try {
       const fallbackResponse = await axios.get(getContentPageUrl('category-template'))
       page.value = fallbackResponse?.data?.data || null
-      logResolvedPage(slug, 'category-template-fallback', page.value)
+      logResolvedPage(requestedSlug, 'category-template-fallback', page.value)
     } catch (fallbackError) {
       error.value = fallbackError?.response?.data?.message || fallbackError?.message || err?.response?.data?.message || err?.message || 'Unable to load landing page content.'
       page.value = null
       sendDevLog('Content page load failed', {
-        requested_slug: slug,
+        requested_slug: requestedSlug,
         primary_error: err?.response?.data?.message || err?.message || null,
         fallback_error: fallbackError?.response?.data?.message || fallbackError?.message || null,
       })
@@ -96,11 +145,6 @@ const loadPage = async slug => {
 watch(() => props.slug, slug => {
   loadPage(slug)
 }, { immediate: true })
-
-onMounted(() => {
-  if (!page.value)
-    loadPage(props.slug)
-})
 </script>
 
 <template>
