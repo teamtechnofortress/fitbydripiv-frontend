@@ -8,6 +8,7 @@ import ProductPreviewDrawer from '@/views/pages/admin/components/ProductPreviewD
 import {
   ADMIN_INGREDIENTS_URL,
   ADMIN_MEDIA_UPLOAD_URL,
+  ADMIN_PRODUCTS_IMAGE_CONFIG_URL,
   ADMIN_PRODUCTS_STEP1_URL,
   ADMIN_PRODUCTS_STEP2_URL,
   ADMIN_PRODUCTS_STEP3_URL,
@@ -34,7 +35,7 @@ const STEP_DEFINITIONS = Object.freeze([
   {
     id: 1,
     title: 'Product Basics',
-    description: 'Start the draft, upload images, and select the cover image.',
+    description: 'Start the draft and upload the required product image types.',
     icon: 'tabler-package',
     color: 'primary',
   },
@@ -83,7 +84,6 @@ const categoryOptions = [
 
 const basicsFormRef = ref()
 const selectedStep = ref(routeProductId.value ? 2 : 1)
-const fileInputRef = ref()
 const isUploading = ref(false)
 const isSavingStep1 = ref(false)
 const isSavingStep2 = ref(false)
@@ -92,7 +92,12 @@ const isSavingStep4 = ref(false)
 const isSavingStep5 = ref(false)
 const publishStatusLoading = ref(false)
 const publishActionLoading = ref(false)
-const dragActive = ref(false)
+const imageConfigLoading = ref(false)
+const imageConfigError = ref('')
+const imageTypeConfigs = ref([])
+const dragTargetKey = ref('')
+const imageInputRefs = ref({})
+const selectedImageTab = ref('')
 const benefitDraft = ref('')
 const ingredientSearch = ref('')
 const ingredientSearchResults = ref([])
@@ -181,9 +186,70 @@ const publishState = reactive({
   can_unpublish: false,
 })
 
+const createImageTypeConfig = (config = {}, index = 0) => ({
+  type: String(config.type || '').trim(),
+  label: String(config.label || `Image Type ${index + 1}`).trim(),
+  required: !!config.required,
+  max_images: Math.max(1, Number(config.max_images || 1)),
+  used_for: String(config.used_for || '').trim(),
+})
+
 const uploadingCount = computed(() => productState.images.filter(image => image.isUploading).length)
 const uploadedImages = computed(() => productState.images.filter(image => !image.isUploading && !image.uploadError))
 const hasUploadedImages = computed(() => uploadedImages.value.length > 0)
+
+const imageTypeLookup = computed(() => imageTypeConfigs.value.reduce((acc, config, index) => {
+  acc[config.type] = {
+    ...config,
+    index,
+  }
+
+  return acc
+}, {}))
+
+const imageCountsByType = computed(() => productState.images.reduce((acc, image) => {
+  if (!image.image_url) return acc
+  acc[image.image_type] = (acc[image.image_type] || 0) + 1
+
+  return acc
+}, {}))
+
+const missingRequiredImageConfigs = computed(() => imageTypeConfigs.value.filter(config => (
+  config.required && !imageCountsByType.value[config.type]
+)))
+
+const legacyImageTypeConfigs = computed(() => Array.from(new Set(
+  productState.images
+    .map(image => image.image_type)
+    .filter(type => type && !imageTypeLookup.value[type]),
+)).map((type, index) => createImageTypeConfig({
+  type,
+  label: `Legacy ${type.replace(/[_-]+/g, ' ')}`,
+  required: false,
+  max_images: Math.max(imageCountsByType.value[type] || 0, 1),
+  used_for: 'Existing saved image type not returned by the current image config.',
+}, imageTypeConfigs.value.length + index)))
+
+const imageConfigsWithSlots = computed(() => [...imageTypeConfigs.value, ...legacyImageTypeConfigs.value].map(config => ({
+  ...config,
+  currentCount: imageCountsByType.value[config.type] || 0,
+  slots: Array.from({ length: config.max_images }, (_, index) => ({
+    key: `${config.type}-${index + 1}`,
+    type: config.type,
+    slotPosition: index + 1,
+    image: getImageByTypeSlot(config.type, index + 1),
+  })),
+})))
+
+const coverImageConfig = computed(() => imageConfigsWithSlots.value.find(config => config.type === 'cover') || null)
+
+const secondaryImageConfigs = computed(() => imageConfigsWithSlots.value.filter(config => config.type !== 'cover'))
+
+const activeSecondaryImageConfig = computed(() => (
+  secondaryImageConfigs.value.find(config => config.type === selectedImageTab.value)
+  || secondaryImageConfigs.value[0]
+  || null
+))
 
 const completionPercentage = computed(() => {
   const value = Number(productState.completion_percentage || 0)
@@ -268,6 +334,47 @@ const resetWizardState = () => {
   resetPricingDraft('one_time')
 }
 
+const getImageTypeOrder = type => {
+  const index = imageTypeLookup.value[type]?.index
+
+  return Number.isInteger(index) ? index : Number.MAX_SAFE_INTEGER
+}
+
+const sortImagesWithinType = images => [...images].sort((left, right) => (
+  Number(left.slot_index || 0) - Number(right.slot_index || 0)
+  || Number(left.sort_order || 0) - Number(right.sort_order || 0)
+  || String(left.local_id || '').localeCompare(String(right.local_id || ''))
+))
+
+const getImagesByType = type => sortImagesWithinType(
+  productState.images.filter(image => image.image_type === type),
+)
+
+const getImageByTypeSlot = (type, slotPosition) => getImagesByType(type).find(image => (
+  Number(image.slot_index || 0) === Number(slotPosition)
+))
+
+const getNextSlotIndex = imageType => getImagesByType(imageType).length + 1
+
+const canUploadMoreImages = config => {
+  if (!config) return false
+  if (config.max_images === 1) return true
+
+  return getImagesByType(config.type).length < config.max_images
+}
+
+const getImageUploaderSummary = config => {
+  if (!config) return ''
+  if (config.max_images === 1)
+    return config.currentCount ? 'Upload a new file here to replace the current image.' : 'Upload one image for this slot.'
+
+  const remainingCount = Math.max(0, config.max_images - config.currentCount)
+
+  return remainingCount
+    ? `You can upload ${remainingCount} more image${remainingCount === 1 ? '' : 's'} for this type.`
+    : 'Maximum images reached. Reorder or remove an image before uploading another.'
+}
+
 const getAuthHeaders = (extraHeaders = {}) => {
   const token = getApiToken()
   if (!token) throw new Error('Authentication token missing. Please login again.')
@@ -309,46 +416,93 @@ const selectStep = stepId => {
 }
 
 const syncImageMeta = () => {
-  productState.images = productState.images
+  const groups = new Map()
+
+  productState.images
     .filter(image => image?.image_url || image?.isUploading || image?.uploadError)
-    .map((image, index) => ({
-      local_id: image.local_id || `${Date.now()}-${index}`,
-      id: image.id || null,
-      image_url: image.image_url || '',
-      upload_path: image.upload_path || '',
-      original_name: image.original_name || '',
-      image_type: image.image_type || 'gallery',
-      sort_order: index,
-      slot_position: index + 1,
-      isUploading: !!image.isUploading,
-      uploadError: image.uploadError || '',
+    .forEach((image, index) => {
+      const imageType = image.image_type || imageTypeConfigs.value[0]?.type || 'cover'
+
+      const nextImage = {
+        local_id: image.local_id || `${Date.now()}-${imageType}-${index}`,
+        id: image.id || null,
+        image_url: image.image_url || '',
+        upload_path: image.upload_path || '',
+        original_name: image.original_name || '',
+        image_type: imageType,
+        sort_order: Number(image.sort_order ?? index),
+        slot_index: Number(image.slot_index || 1),
+        isUploading: !!image.isUploading,
+        uploadError: image.uploadError || '',
+      }
+
+      if (!groups.has(imageType)) groups.set(imageType, [])
+      groups.get(imageType).push(nextImage)
+    })
+
+  const orderedTypes = [
+    ...imageTypeConfigs.value.map(config => config.type),
+    ...Array.from(groups.keys()).filter(type => !imageTypeLookup.value[type]),
+  ]
+
+  const normalizedImages = orderedTypes.flatMap(type => {
+    const images = sortImagesWithinType(groups.get(type) || [])
+    const maxImages = imageTypeLookup.value[type]?.max_images || images.length || 1
+
+    return images.slice(0, maxImages).map((image, index) => ({
+      ...image,
+      slot_index: index + 1,
     }))
+  })
+
+  productState.images = normalizedImages.map((image, index) => ({
+    ...image,
+    sort_order: index,
+  }))
 
   const coverImage = productState.images.find(image => image.image_type === 'cover' && image.image_url)
 
   productState.cover_image_id = coverImage?.id || coverImage?.local_id || ''
 }
 
-const setCoverImage = localId => {
-  productState.images = productState.images.map(image => ({
-    ...image,
-    image_type: image.local_id === localId ? 'cover' : 'gallery',
-  }))
-  syncImageMeta()
-}
-
 const removeImage = localId => {
-  const target = productState.images.find(image => image.local_id === localId)
-
   productState.images = productState.images.filter(image => image.local_id !== localId)
   syncImageMeta()
-
-  if (target?.image_type === 'cover' && productState.images.length > 0) {
-    setCoverImage(productState.images[0].local_id)
-  }
 }
 
-const appendUploadingImage = file => {
+const setImageInputRef = (slotKey, element) => {
+  if (element) {
+    imageInputRefs.value[slotKey] = element
+
+    return
+  }
+
+  delete imageInputRefs.value[slotKey]
+}
+
+const openFilePicker = slotKey => {
+  imageInputRefs.value[slotKey]?.click()
+}
+
+const beginImageUpload = (file, imageType, slotPosition) => {
+  const existingImage = getImageByTypeSlot(imageType, slotPosition)
+
+  if (existingImage) {
+    productState.images = productState.images.map(image => (image.local_id === existingImage.local_id
+      ? {
+        ...image,
+        original_name: file.name,
+        isUploading: true,
+        uploadError: '',
+      }
+      : image))
+
+    return {
+      localId: existingImage.local_id,
+      isReplacement: true,
+    }
+  }
+
   const localId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
   productState.images.push({
@@ -357,18 +511,22 @@ const appendUploadingImage = file => {
     image_url: '',
     upload_path: '',
     original_name: file.name,
-    image_type: productState.images.length === 0 ? 'cover' : 'gallery',
+    image_type: imageType,
     sort_order: productState.images.length,
-    slot_position: productState.images.length + 1,
+    slot_index: slotPosition,
     isUploading: true,
     uploadError: '',
   })
-  
-  return localId
+  syncImageMeta()
+
+  return {
+    localId,
+    isReplacement: false,
+  }
 }
 
-const uploadSingleFile = async file => {
-  const localId = appendUploadingImage(file)
+const uploadSingleFile = async (file, imageType, slotPosition) => {
+  const { localId, isReplacement } = beginImageUpload(file, imageType, slotPosition)
   const formData = new FormData()
 
   formData.append('file', file)
@@ -389,6 +547,8 @@ const uploadSingleFile = async file => {
         image_url: payload.url || '',
         upload_path: payload.path || '',
         original_name: payload.original_name || file.name,
+        image_type: imageType,
+        slot_index: slotPosition,
         isUploading: false,
         uploadError: '',
       }
@@ -399,11 +559,11 @@ const uploadSingleFile = async file => {
   } catch (error) {
     productState.images = productState.images.map(image => {
       if (image.local_id !== localId) return image
-      
+
       return {
         ...image,
         isUploading: false,
-        uploadError: buildErrorMessage(error),
+        uploadError: isReplacement ? '' : buildErrorMessage(error),
       }
     })
     syncImageMeta()
@@ -411,31 +571,129 @@ const uploadSingleFile = async file => {
   }
 }
 
-const handleFiles = async input => {
+const getFilesToUploadForType = (config, files) => {
+  if (config.max_images === 1) return files.slice(0, 1)
+
+  const remainingCount = Math.max(0, config.max_images - config.currentCount)
+  if (!remainingCount) {
+    toast.error('Remove an uploaded image before adding another one.')
+
+    return []
+  }
+
+  const filesToUpload = files.slice(0, remainingCount)
+  if (filesToUpload.length < files.length)
+    toast.info(`Only the first ${remainingCount} file${remainingCount === 1 ? '' : 's'} will be uploaded for ${config.label}.`)
+
+  return filesToUpload
+}
+
+const uploadFilesForType = async (config, input) => {
   const files = Array.from(input || []).filter(Boolean)
-  if (!files.length) return
+  if (!files.length || !config) return
+
+  const filesToUpload = getFilesToUploadForType(config, files)
+  if (!filesToUpload.length) return
+
+  const baseSlotIndex = config.max_images === 1 ? 1 : getNextSlotIndex(config.type)
 
   isUploading.value = true
   try {
-    for (const file of files) {
-      await uploadSingleFile(file)
+    for (const [index, file] of filesToUpload.entries()) {
+      const slotIndex = config.max_images === 1 ? 1 : baseSlotIndex + index
+
+      await uploadSingleFile(file, config.type, slotIndex)
     }
   } finally {
     syncImageMeta()
     isUploading.value = false
-    if (fileInputRef.value) fileInputRef.value.value = ''
   }
 }
 
-const onFileChange = event => handleFiles(event?.target?.files)
+const handleFiles = async (imageType, slotPosition, input) => {
+  const file = Array.from(input || []).filter(Boolean)[0]
+  if (!file) return
 
-const onDrop = async event => {
-  dragActive.value = false
-  await handleFiles(event.dataTransfer?.files)
+  isUploading.value = true
+  try {
+    await uploadSingleFile(file, imageType, slotPosition)
+  } finally {
+    syncImageMeta()
+    isUploading.value = false
+  }
 }
 
-const openFilePicker = () => {
-  fileInputRef.value?.click()
+const onFileChange = async (imageType, slotPosition, event) => {
+  await handleFiles(imageType, slotPosition, event?.target?.files)
+  if (event?.target) event.target.value = ''
+}
+
+const onConfigFileChange = async (config, event) => {
+  await uploadFilesForType(config, event?.target?.files)
+  if (event?.target) event.target.value = ''
+}
+
+const onDrop = async (slotKey, imageType, slotPosition, event) => {
+  dragTargetKey.value = ''
+  await handleFiles(imageType, slotPosition, event.dataTransfer?.files)
+}
+
+const onConfigDrop = async (slotKey, config, event) => {
+  dragTargetKey.value = ''
+  await uploadFilesForType(config, event.dataTransfer?.files)
+}
+
+const moveImageWithinType = (imageType, localId, direction) => {
+  const images = getImagesByType(imageType)
+  const currentIndex = images.findIndex(image => image.local_id === localId)
+  const targetIndex = currentIndex + direction
+
+  if (currentIndex === -1 || targetIndex < 0 || targetIndex >= images.length) return
+
+  const reorderedImages = [...images]
+  const [currentImage] = reorderedImages.splice(currentIndex, 1)
+
+  reorderedImages.splice(targetIndex, 0, currentImage)
+
+  const nextImageLookup = new Map(reorderedImages.map((image, index) => [image.local_id, {
+    ...image,
+    slot_index: index + 1,
+    sort_order: index,
+  }]))
+
+  productState.images = productState.images.map(image => (
+    image.image_type === imageType && nextImageLookup.has(image.local_id)
+      ? nextImageLookup.get(image.local_id)
+      : image
+  ))
+  syncImageMeta()
+}
+
+const loadImageConfig = async () => {
+  imageConfigLoading.value = true
+  imageConfigError.value = ''
+
+  try {
+    const response = await axios.get(ADMIN_PRODUCTS_IMAGE_CONFIG_URL, {
+      headers: getAuthHeaders({ Accept: 'application/json' }),
+    })
+
+    const imageTypes = response?.data?.image_types || response?.data?.data?.image_types || []
+
+    imageTypeConfigs.value = imageTypes
+      .map((config, index) => createImageTypeConfig(config, index))
+      .filter(config => config.type)
+
+    if (!imageTypeConfigs.value.length)
+      throw new Error('No image upload types were returned by the server.')
+
+    syncImageMeta()
+  } catch (error) {
+    imageConfigError.value = buildErrorMessage(error)
+    toast.error(imageConfigError.value)
+  } finally {
+    imageConfigLoading.value = false
+  }
 }
 
 const openPreviewDrawer = () => {
@@ -697,18 +955,25 @@ const setDefaultPricingOption = (groupKey, localId) => {
   }))
 }
 
+const getOrderedStep1Images = () => [...productState.images]
+  .filter(image => image.image_url)
+  .sort((left, right) => (
+    getImageTypeOrder(left.image_type) - getImageTypeOrder(right.image_type)
+    || Number(left.slot_index || 0) - Number(right.slot_index || 0)
+    || Number(left.sort_order || 0) - Number(right.sort_order || 0)
+  ))
+
 const buildStep1Payload = () => ({
   ...(productState.id ? { id: productState.id } : {}),
   name: productState.name,
+  ...(productState.slug ? { slug: productState.slug } : {}),
   category: productState.category,
   description: productState.description,
-  images: productState.images
-    .filter(image => image.image_url)
+  images: getOrderedStep1Images()
     .map((image, index) => ({
       image_url: image.image_url,
-      image_type: image.image_type === 'cover' ? 'cover' : 'gallery',
+      image_type: image.image_type,
       sort_order: index,
-      slot_position: index + 1,
     })),
 })
 
@@ -804,10 +1069,52 @@ const applyStepStatus = payload => {
   completedStepLookup.value = Array.isArray(payload.steps)
     ? payload.steps.reduce((acc, item) => {
       acc[item.step] = !!item.is_completed
-      
+
       return acc
     }, {})
     : {}
+}
+
+const getStep1ImagesCollection = images => {
+  if (Array.isArray(images)) {
+    return images
+      .filter(Boolean)
+      .map((image, index) => ({
+        ...image,
+        _frontend_slot_type: image.image_type || '',
+        _frontend_slot_index: index,
+      }))
+  }
+
+  if (images && typeof images === 'object') {
+    return Object.entries(images)
+      .filter(([, image]) => !!image)
+      .map(([slotType, image], index) => ({
+        ...image,
+        _frontend_slot_type: slotType,
+        _frontend_slot_index: index,
+      }))
+  }
+
+  return []
+}
+
+const hydrateStep1Image = (image, index, coverImageId) => {
+  const slotType = image._frontend_slot_type || image.image_type || (image.id && coverImageId === image.id ? 'cover' : imageTypeConfigs.value[0]?.type || 'cover')
+  const slotIndex = image._frontend_slot_index ?? index
+
+  return {
+    local_id: `${slotType}-${image.id || image.local_id || `${Date.now()}-${slotIndex}`}`,
+    id: image.id || null,
+    image_url: image.image_url || image.url || '',
+    upload_path: image.path || image.upload_path || '',
+    original_name: image.original_name || image.name || '',
+    image_type: slotType,
+    sort_order: image.sort_order ?? slotIndex,
+    slot_index: slotIndex + 1,
+    isUploading: false,
+    uploadError: '',
+  }
 }
 
 const hydrateStep1 = payload => {
@@ -818,20 +1125,9 @@ const hydrateStep1 = payload => {
   productState.description = payload.description || ''
   productState.cover_image_id = payload.cover_image_id || ''
 
-  const images = Array.isArray(payload.images) ? payload.images : []
+  const images = getStep1ImagesCollection(payload.images)
 
-  productState.images = images.map((image, index) => ({
-    local_id: image.id || image.local_id || `${Date.now()}-${index}`,
-    id: image.id || null,
-    image_url: image.image_url || image.url || '',
-    upload_path: image.path || image.upload_path || '',
-    original_name: image.original_name || image.name || '',
-    image_type: image.image_type || (image.id && payload.cover_image_id === image.id ? 'cover' : 'gallery'),
-    sort_order: image.sort_order ?? index,
-    slot_position: image.slot_position ?? index + 1,
-    isUploading: false,
-    uploadError: '',
-  }))
+  productState.images = images.map((image, index) => hydrateStep1Image(image, index, payload.cover_image_id))
   syncImageMeta()
 }
 
@@ -993,50 +1289,60 @@ const loadStepData = async (productId, step) => {
   }
 }
 
+const getStepOneValidationError = () => {
+  if (imageConfigLoading.value) return 'Wait for the image configuration to finish loading.'
+  if (imageConfigError.value || !imageTypeConfigs.value.length) return 'Image configuration is unavailable. Reload it before saving.'
+  if (!hasUploadedImages.value) return 'Upload at least one product image before saving.'
+  if (missingRequiredImageConfigs.value.length)
+    return `Upload the required image types first: ${missingRequiredImageConfigs.value.map(item => item.label).join(', ')}.`
+  if (uploadingCount.value > 0) return 'Wait for current image uploads to finish before saving.'
+
+  return ''
+}
+
+const applySavedStep1Payload = payload => {
+  hydrateStep1(payload)
+  productState.completion_status = payload.completion_status || productState.completion_status
+  productState.completion_percentage = payload.completion_percentage ?? productState.completion_percentage
+  productState.completion_step = payload.completion_step ?? productState.completion_step
+  selectedStep.value = Math.max(2, payload.completion_step || 2)
+}
+
+const persistStepOne = async () => {
+  isSavingStep1.value = true
+  try {
+    syncImageMeta()
+
+    const response = await axios.post(ADMIN_PRODUCTS_STEP1_URL, buildStep1Payload(), {
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    })
+
+    const payload = response?.data?.data || {}
+
+    applySavedStep1Payload(payload)
+
+    if (payload.product_id)
+      router.replace({ path: `/admin/products/${payload.product_id}`, query: { section: 'add' } })
+
+    toast.success(response?.data?.message || 'Product basics saved successfully.')
+  } catch (error) {
+    toast.error(buildErrorMessage(error))
+  } finally {
+    isSavingStep1.value = false
+  }
+}
+
 const saveStepOne = () => {
-  basicsFormRef.value?.validate().then(async ({ valid }) => {
+  basicsFormRef.value?.validate().then(({ valid }) => {
     if (!valid) return
-    if (!hasUploadedImages.value) {
-      toast.error('Upload at least one product image before saving.')
-      
-      return
-    }
-    if (uploadingCount.value > 0) {
-      toast.error('Wait for current image uploads to finish before saving.')
-      
+    const validationError = getStepOneValidationError()
+    if (validationError) {
+      toast.error(validationError)
+
       return
     }
 
-    isSavingStep1.value = true
-    try {
-      syncImageMeta()
-
-      const response = await axios.post(ADMIN_PRODUCTS_STEP1_URL, buildStep1Payload(), {
-        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      })
-
-      const payload = response?.data?.data || {}
-
-      productState.id = payload.product_id || productState.id
-      productState.name = payload.name || productState.name
-      productState.slug = payload.slug || productState.slug
-      productState.category = payload.category || productState.category
-      productState.description = payload.description || productState.description
-      productState.completion_status = payload.completion_status || productState.completion_status
-      productState.completion_percentage = payload.completion_percentage ?? productState.completion_percentage
-      productState.completion_step = payload.completion_step ?? productState.completion_step
-      productState.cover_image_id = payload.cover_image_id || productState.cover_image_id
-      selectedStep.value = Math.max(2, payload.completion_step || 2)
-
-      if (payload.product_id)
-        router.replace({ path: `/admin/products/${payload.product_id}`, query: { section: 'add' } })
-
-      toast.success(response?.data?.message || 'Product basics saved successfully.')
-    } catch (error) {
-      toast.error(buildErrorMessage(error))
-    } finally {
-      isSavingStep1.value = false
-    }
+    persistStepOne()
   })
 }
 
@@ -1173,36 +1479,33 @@ const saveStepFour = async () => {
   }
 }
 
-const saveStepFive = async () => {
-  if (!productState.id) {
-    toast.error('Save the previous steps first.')
-    
-    return
-  }
+const validatePricingGroup = (group, label) => {
+  if (!group.is_active) return ''
+  if (!group.title.trim()) return `${label} title is required.`
+  if (!group.description.trim()) return `${label} description is required.`
+  if (!group.options.length) return `Add at least one option in ${label}.`
+
+  return ''
+}
+
+const getStepFiveValidationError = () => {
+  if (!productState.id) return 'Save the previous steps first.'
 
   const subscription = productState.pricing.subscription
   const oneTime = productState.pricing.one_time
   const hasActiveGroup = subscription.is_active || oneTime.is_active
 
-  if (!hasActiveGroup) {
-    toast.error('Enable at least one pricing section before saving.')
-    
-    return
-  }
+  if (!hasActiveGroup) return 'Enable at least one pricing section before saving.'
 
-  const validateGroup = (group, label) => {
-    if (!group.is_active) return null
-    if (!group.title.trim()) return `${label} title is required.`
-    if (!group.description.trim()) return `${label} description is required.`
-    if (!group.options.length) return `Add at least one option in ${label}.`
-    
-    return null
-  }
+  return validatePricingGroup(subscription, 'Subscription pricing')
+    || validatePricingGroup(oneTime, 'One-time pricing')
+}
 
-  const groupError = validateGroup(subscription, 'Subscription pricing') || validateGroup(oneTime, 'One-time pricing')
-  if (groupError) {
-    toast.error(groupError)
-    
+const saveStepFive = async () => {
+  const validationError = getStepFiveValidationError()
+  if (validationError) {
+    toast.error(validationError)
+
     return
   }
 
@@ -1305,7 +1608,21 @@ watch(selectedIngredientSuggestionId, value => {
   ingredientDraft.description = selected.description || ''
 })
 
+watch(secondaryImageConfigs, configs => {
+  if (!configs.length) {
+    selectedImageTab.value = ''
+
+    return
+  }
+
+  const hasActiveTab = configs.some(config => config.type === selectedImageTab.value)
+  if (!hasActiveTab)
+    selectedImageTab.value = configs[0].type
+}, { immediate: true })
+
 onMounted(() => {
+  loadImageConfig()
+
   if (routeProductId.value) {
     loadStepStatus(routeProductId.value).then(() => {
       loadStepData(routeProductId.value, selectedStep.value)
@@ -1641,7 +1958,7 @@ watch(routeProductId, nextId => {
                           Product Images
                         </h6>
                         <p class="text-body-2 text-medium-emphasis mb-0">
-                          Upload images immediately. Each uploaded file stores its final URL and path in the draft.
+                          Upload each configured image type. Every uploaded file stores its final URL, path, and backend `image_type` in the draft.
                         </p>
                       </div>
 
@@ -1664,125 +1981,434 @@ watch(routeProductId, nextId => {
                       </div>
                     </div>
 
-                    <input
-                      ref="fileInputRef"
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      multiple
-                      class="d-none"
-                      @change="onFileChange"
-                    >
-
                     <div
-                      class="upload-dropzone"
-                      :class="{ 'upload-dropzone--active': dragActive }"
-                      @click="openFilePicker"
-                      @dragenter.prevent="dragActive = true"
-                      @dragover.prevent="dragActive = true"
-                      @dragleave.prevent="dragActive = false"
-                      @drop.prevent="onDrop"
+                      v-if="imageConfigLoading"
+                      class="empty-panel"
                     >
-                      <VIcon
-                        :icon="isUploading ? 'tabler-loader-2' : 'tabler-cloud-upload'"
-                        :class="{ 'spin-icon': isUploading }"
-                        size="36"
+                      <VProgressCircular
+                        indeterminate
                         color="primary"
-                        class="mb-3"
+                        size="28"
+                        width="3"
                       />
-                      <h6 class="text-h6 mb-2">
-                        Drop images here or click to upload
-                      </h6>
-                      <p class="text-body-2 text-medium-emphasis mb-0">
-                        Accepted: JPG, PNG, WEBP up to 5MB. Recommended: 1200 x 1200 px and under 500 KB (light or transparent background). The first uploaded image becomes the cover by default.
+                      <p class="text-body-2 text-medium-emphasis mt-3 mb-0">
+                        Loading image configuration...
                       </p>
                     </div>
 
                     <div
-                      v-if="productState.images.length"
-                      class="image-grid mt-4"
+                      v-else-if="imageConfigError"
+                      class="empty-panel"
                     >
-                      <div
-                        v-for="image in productState.images"
-                        :key="image.local_id"
-                        class="image-card"
-                        :class="{ 'image-card--cover': image.image_type === 'cover' }"
+                      <VIcon
+                        icon="tabler-alert-circle"
+                        color="error"
+                        size="28"
+                      />
+                      <p class="text-body-2 text-error mt-3 mb-3">
+                        {{ imageConfigError }}
+                      </p>
+                      <VBtn
+                        color="primary"
+                        variant="outlined"
+                        @click="loadImageConfig"
                       >
-                        <div class="image-card__media">
-                          <div
-                            v-if="image.isUploading"
-                            class="image-card__loading"
-                          >
-                            <VProgressCircular
-                              indeterminate
-                              color="primary"
-                              size="28"
-                              width="3"
-                            />
-                            <span class="text-caption mt-2">Uploading...</span>
-                          </div>
+                        Retry Image Config
+                      </VBtn>
+                    </div>
 
-                          <div
-                            v-else-if="image.uploadError"
-                            class="image-card__error"
-                          >
-                            <VIcon
-                              icon="tabler-alert-circle"
-                              color="error"
-                              size="24"
-                            />
-                            <span class="text-caption text-error text-center mt-2">{{ image.uploadError }}</span>
-                          </div>
+                    <div v-else>
+                      <div
+                        v-if="missingRequiredImageConfigs.length"
+                        class="image-config-alert mb-4"
+                      >
+                        <VIcon
+                          icon="tabler-alert-triangle"
+                          color="warning"
+                          size="18"
+                        />
+                        <span class="text-body-2">
+                          Required image types pending: {{ missingRequiredImageConfigs.map(item => item.label).join(', ') }}
+                        </span>
+                      </div>
 
-                          <img
-                            v-else
-                            :src="image.image_url"
-                            :alt="image.original_name || 'Product image'"
-                          >
+                      <div
+                        v-if="coverImageConfig"
+                        class="image-type-panel image-type-panel--cover mb-4"
+                      >
+                        <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
+                          <div>
+                            <div class="d-flex align-center gap-2 flex-wrap mb-1">
+                              <h6 class="text-subtitle-1 font-weight-bold mb-0">
+                                {{ coverImageConfig.label }}
+                              </h6>
+                              <VChip
+                                size="x-small"
+                                color="error"
+                                variant="tonal"
+                              >
+                                Required
+                              </VChip>
+                              <VChip
+                                size="x-small"
+                                color="primary"
+                                variant="tonal"
+                              >
+                                {{ coverImageConfig.currentCount }}/{{ coverImageConfig.max_images }}
+                              </VChip>
+                            </div>
+
+                            <p class="text-body-2 text-medium-emphasis mb-1">
+                              {{ coverImageConfig.used_for || 'Used in product presentation.' }}
+                            </p>
+                            <div class="text-caption text-medium-emphasis">
+                              Type value sent to step 1: {{ coverImageConfig.type }}
+                            </div>
+                          </div>
                         </div>
 
-                        <div class="image-card__body">
-                          <div class="d-flex align-center justify-space-between gap-2 mb-2">
-                            <VChip
-                              :color="image.image_type === 'cover' ? 'success' : 'secondary'"
-                              variant="tonal"
-                              size="x-small"
-                            >
-                              {{ image.image_type === 'cover' ? 'Cover' : 'Gallery' }}
-                            </VChip>
-
-                            <VBtn
-                              icon
-                              variant="text"
-                              color="error"
-                              size="x-small"
-                              :disabled="image.isUploading"
-                              @click.stop="removeImage(image.local_id)"
-                            >
-                              <VIcon
-                                icon="tabler-trash"
-                                size="18"
-                              />
-                            </VBtn>
-                          </div>
-
-                          <div class="text-body-2 font-weight-medium text-truncate mb-1">
-                            {{ image.original_name || 'Uploaded image' }}
-                          </div>
-
-                          <div class="text-caption text-medium-emphasis text-break mb-3">
-                            {{ image.upload_path || image.image_url || 'Waiting for upload...' }}
-                          </div>
-
-                          <VBtn
-                            block
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            :disabled="image.isUploading || !!image.uploadError"
-                            @click.stop="setCoverImage(image.local_id)"
+                        <div class="image-grid">
+                          <div
+                            v-for="slot in coverImageConfig.slots"
+                            :key="slot.key"
+                            class="image-card image-card--slot"
                           >
-                            {{ image.image_type === 'cover' ? 'Selected as Cover' : 'Use as Cover' }}
-                          </VBtn>
+                            <input
+                              :ref="element => setImageInputRef(slot.key, element)"
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
+                              class="d-none"
+                              @change="event => onFileChange(slot.type, slot.slotPosition, event)"
+                            >
+
+                            <div
+                              class="image-card__media upload-dropzone"
+                              :class="{ 'upload-dropzone--active': dragTargetKey === slot.key }"
+                              @click="openFilePicker(slot.key)"
+                              @dragenter.prevent="dragTargetKey = slot.key"
+                              @dragover.prevent="dragTargetKey = slot.key"
+                              @dragleave.prevent="dragTargetKey = dragTargetKey === slot.key ? '' : dragTargetKey"
+                              @drop.prevent="event => onDrop(slot.key, slot.type, slot.slotPosition, event)"
+                            >
+                              <div
+                                v-if="slot.image?.isUploading"
+                                class="image-card__loading"
+                              >
+                                <VProgressCircular
+                                  indeterminate
+                                  color="primary"
+                                  size="28"
+                                  width="3"
+                                />
+                                <span class="text-caption mt-2">Uploading...</span>
+                              </div>
+
+                              <div
+                                v-else-if="slot.image?.uploadError"
+                                class="image-card__error"
+                              >
+                                <VIcon
+                                  icon="tabler-alert-circle"
+                                  color="error"
+                                  size="24"
+                                />
+                                <span class="text-caption text-error text-center mt-2">{{ slot.image.uploadError }}</span>
+                              </div>
+
+                              <img
+                                v-else-if="slot.image?.image_url"
+                                :src="slot.image.image_url"
+                                :alt="slot.image.original_name || coverImageConfig.label"
+                              >
+
+                              <div
+                                v-else
+                                class="image-card__placeholder"
+                              >
+                                <VIcon
+                                  :icon="isUploading ? 'tabler-loader-2' : 'tabler-cloud-upload'"
+                                  :class="{ 'spin-icon': isUploading }"
+                                  size="32"
+                                  color="primary"
+                                  class="mb-3"
+                                />
+                                <div class="text-body-2 font-weight-medium mb-1">
+                                  Upload {{ coverImageConfig.label }}
+                                </div>
+                                <div class="text-caption text-medium-emphasis">
+                                  Slot {{ slot.slotPosition }} of {{ coverImageConfig.max_images }}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="image-card__body">
+                              <div class="d-flex align-center justify-space-between gap-2 mb-2">
+                                <VChip
+                                  color="secondary"
+                                  variant="tonal"
+                                  size="x-small"
+                                >
+                                  {{ coverImageConfig.type }}
+                                </VChip>
+
+                                <VBtn
+                                  v-if="slot.image"
+                                  icon
+                                  variant="text"
+                                  color="error"
+                                  size="x-small"
+                                  :disabled="slot.image.isUploading"
+                                  @click.stop="removeImage(slot.image.local_id)"
+                                >
+                                  <VIcon
+                                    icon="tabler-trash"
+                                    size="18"
+                                  />
+                                </VBtn>
+                              </div>
+
+                              <div class="text-body-2 font-weight-medium text-truncate mb-1">
+                                {{ slot.image?.original_name || `${coverImageConfig.label} slot ${slot.slotPosition}` }}
+                              </div>
+
+                              <div class="text-caption text-medium-emphasis text-break mb-3">
+                                {{ slot.image?.upload_path || slot.image?.image_url || 'Accepted: JPG, PNG, WEBP up to 5MB. Recommended: 1200 x 1200 px and under 500 KB.' }}
+                              </div>
+
+                              <VBtn
+                                block
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                :disabled="slot.image?.isUploading"
+                                @click.stop="openFilePicker(slot.key)"
+                              >
+                                {{ slot.image?.image_url ? 'Replace Image' : 'Choose Image' }}
+                              </VBtn>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        v-if="secondaryImageConfigs.length"
+                        class="image-type-stack"
+                      >
+                        <div class="image-type-tabs">
+                          <div class="text-subtitle-2 font-weight-bold mb-3">
+                            Additional Image Types
+                          </div>
+
+                          <VTabs
+                            v-model="selectedImageTab"
+                            color="primary"
+                            class="image-type-tabs__nav"
+                          >
+                            <VTab
+                              v-for="config in secondaryImageConfigs"
+                              :key="config.type"
+                              :value="config.type"
+                              class="image-type-tabs__tab"
+                            >
+                              <span>{{ config.label }}</span>
+                              <VChip
+                                v-if="config.currentCount"
+                                size="x-small"
+                                color="primary"
+                                variant="flat"
+                                class="image-type-tabs__count"
+                              >
+                                {{ config.currentCount }}
+                              </VChip>
+                            </VTab>
+                          </VTabs>
+                        </div>
+
+                        <div
+                          v-if="activeSecondaryImageConfig"
+                          class="image-type-panel"
+                        >
+                          <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3 mb-4">
+                            <div>
+                              <div class="d-flex align-center gap-2 flex-wrap mb-1">
+                                <h6 class="text-subtitle-1 font-weight-bold mb-0">
+                                  {{ activeSecondaryImageConfig.label }}
+                                </h6>
+                                <VChip
+                                  size="x-small"
+                                  :color="activeSecondaryImageConfig.required ? 'error' : 'secondary'"
+                                  variant="tonal"
+                                >
+                                  {{ activeSecondaryImageConfig.required ? 'Required' : 'Optional' }}
+                                </VChip>
+                                <VChip
+                                  size="x-small"
+                                  color="primary"
+                                  variant="tonal"
+                                >
+                                  {{ activeSecondaryImageConfig.currentCount }}/{{ activeSecondaryImageConfig.max_images }}
+                                </VChip>
+                              </div>
+
+                              <p class="text-body-2 text-medium-emphasis mb-1">
+                                {{ activeSecondaryImageConfig.used_for || 'Used in product presentation.' }}
+                              </p>
+                              <div class="text-caption text-medium-emphasis">
+                                Type value sent to step 1: {{ activeSecondaryImageConfig.type }}
+                              </div>
+                            </div>
+                          </div>
+
+                          <input
+                            :ref="element => setImageInputRef(`${activeSecondaryImageConfig.type}-uploader`, element)"
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            :multiple="activeSecondaryImageConfig.max_images > 1"
+                            class="d-none"
+                            @change="event => onConfigFileChange(activeSecondaryImageConfig, event)"
+                          >
+
+                          <div
+                            class="upload-dropzone upload-dropzone--type mb-4"
+                            :class="{
+                              'upload-dropzone--active': dragTargetKey === `${activeSecondaryImageConfig.type}-uploader`,
+                              'upload-dropzone--disabled': !canUploadMoreImages(activeSecondaryImageConfig),
+                            }"
+                            @click="canUploadMoreImages(activeSecondaryImageConfig) && openFilePicker(`${activeSecondaryImageConfig.type}-uploader`)"
+                            @dragenter.prevent="canUploadMoreImages(activeSecondaryImageConfig) && (dragTargetKey = `${activeSecondaryImageConfig.type}-uploader`)"
+                            @dragover.prevent="canUploadMoreImages(activeSecondaryImageConfig) && (dragTargetKey = `${activeSecondaryImageConfig.type}-uploader`)"
+                            @dragleave.prevent="dragTargetKey = dragTargetKey === `${activeSecondaryImageConfig.type}-uploader` ? '' : dragTargetKey"
+                            @drop.prevent="event => canUploadMoreImages(activeSecondaryImageConfig) && onConfigDrop(`${activeSecondaryImageConfig.type}-uploader`, activeSecondaryImageConfig, event)"
+                          >
+                            <VIcon
+                              :icon="isUploading ? 'tabler-loader-2' : 'tabler-cloud-upload'"
+                              :class="{ 'spin-icon': isUploading }"
+                              size="36"
+                              color="primary"
+                              class="mb-3"
+                            />
+                            <h6 class="text-h6 mb-2">
+                              {{ activeSecondaryImageConfig.currentCount ? 'Upload More or Replace Images' : `Upload ${activeSecondaryImageConfig.label}` }}
+                            </h6>
+                            <p class="text-body-2 text-medium-emphasis mb-1">
+                              {{ getImageUploaderSummary(activeSecondaryImageConfig) }}
+                            </p>
+                            <div class="text-caption text-medium-emphasis">
+                              Accepted: JPG, PNG, WEBP up to 5MB. Recommended: 1200 x 1200 px and under 500 KB.
+                            </div>
+                          </div>
+
+                          <div
+                            v-if="getImagesByType(activeSecondaryImageConfig.type).length"
+                            class="image-grid"
+                          >
+                            <div
+                              v-for="(image, imageIndex) in getImagesByType(activeSecondaryImageConfig.type)"
+                              :key="image.local_id"
+                              class="image-card image-card--slot"
+                            >
+                              <div class="image-card__media">
+                                <div
+                                  v-if="image.isUploading"
+                                  class="image-card__loading"
+                                >
+                                  <VProgressCircular
+                                    indeterminate
+                                    color="primary"
+                                    size="28"
+                                    width="3"
+                                  />
+                                  <span class="text-caption mt-2">Uploading...</span>
+                                </div>
+
+                                <div
+                                  v-else-if="image.uploadError"
+                                  class="image-card__error"
+                                >
+                                  <VIcon
+                                    icon="tabler-alert-circle"
+                                    color="error"
+                                    size="24"
+                                  />
+                                  <span class="text-caption text-error text-center mt-2">{{ image.uploadError }}</span>
+                                </div>
+
+                                <img
+                                  v-else-if="image.image_url"
+                                  :src="image.image_url"
+                                  :alt="image.original_name || activeSecondaryImageConfig.label"
+                                >
+                              </div>
+
+                              <div class="image-card__body">
+                                <div class="d-flex align-center justify-space-between gap-2 mb-2">
+                                  <VChip
+                                    color="secondary"
+                                    variant="tonal"
+                                    size="x-small"
+                                  >
+                                    {{ activeSecondaryImageConfig.type }}
+                                  </VChip>
+
+                                  <div class="d-flex align-center gap-1">
+                                    <VBtn
+                                      icon
+                                      variant="text"
+                                      color="primary"
+                                      size="x-small"
+                                      :disabled="image.isUploading || imageIndex === 0"
+                                      @click.stop="moveImageWithinType(activeSecondaryImageConfig.type, image.local_id, -1)"
+                                    >
+                                      <VIcon
+                                        icon="tabler-arrow-up"
+                                        size="18"
+                                      />
+                                    </VBtn>
+
+                                    <VBtn
+                                      icon
+                                      variant="text"
+                                      color="primary"
+                                      size="x-small"
+                                      :disabled="image.isUploading || imageIndex === getImagesByType(activeSecondaryImageConfig.type).length - 1"
+                                      @click.stop="moveImageWithinType(activeSecondaryImageConfig.type, image.local_id, 1)"
+                                    >
+                                      <VIcon
+                                        icon="tabler-arrow-down"
+                                        size="18"
+                                      />
+                                    </VBtn>
+
+                                    <VBtn
+                                      icon
+                                      variant="text"
+                                      color="error"
+                                      size="x-small"
+                                      :disabled="image.isUploading"
+                                      @click.stop="removeImage(image.local_id)"
+                                    >
+                                      <VIcon
+                                        icon="tabler-trash"
+                                        size="18"
+                                      />
+                                    </VBtn>
+                                  </div>
+                                </div>
+
+                                <div class="text-body-2 font-weight-medium text-truncate mb-1">
+                                  {{ image.original_name || `${activeSecondaryImageConfig.label} image ${imageIndex + 1}` }}
+                                </div>
+
+                                <div class="text-caption text-medium-emphasis mb-1">
+                                  Sort order: {{ imageIndex + 1 }}
+                                </div>
+
+                                <div class="text-caption text-medium-emphasis text-break">
+                                  {{ image.upload_path || image.image_url || 'Waiting for upload...' }}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1801,7 +2427,7 @@ watch(routeProductId, nextId => {
                   color="primary"
                   size="large"
                   :loading="isSavingStep1"
-                  :disabled="isUploading"
+                  :disabled="isUploading || imageConfigLoading || !!imageConfigError || !imageTypeConfigs.length"
                   @click="saveStepOne"
                 >
                   Save Product Basics
@@ -3534,6 +4160,53 @@ watch(routeProductId, nextId => {
   min-width: 180px;
 }
 
+.image-config-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(var(--v-theme-warning), 0.24);
+  border-radius: 16px;
+  background: rgba(var(--v-theme-warning), 0.06);
+}
+
+.image-type-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.image-type-tabs {
+  padding: 0.25rem 0 0.5rem;
+}
+
+.image-type-tabs__nav {
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.image-type-tabs__tab {
+  text-transform: none;
+  letter-spacing: 0;
+  min-width: 0;
+}
+
+.image-type-tabs__count {
+  margin-left: 0.5rem;
+}
+
+.image-type-panel {
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  border-radius: 18px;
+  background: rgba(var(--v-theme-surface), 0.72);
+}
+
+.image-type-panel--cover {
+  border-color: rgba(var(--v-theme-success), 0.2);
+  background:
+    linear-gradient(180deg, rgba(var(--v-theme-success), 0.04), rgba(var(--v-theme-surface), 0.9));
+}
+
 .upload-dropzone {
   display: flex;
   flex-direction: column;
@@ -3558,6 +4231,15 @@ watch(routeProductId, nextId => {
   transform: translateY(-1px);
 }
 
+.image-card__media.upload-dropzone {
+  min-height: 180px;
+  height: 180px;
+  padding: 1rem;
+  border-width: 1px;
+  border-style: dashed;
+  border-radius: 0;
+}
+
 .image-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -3571,9 +4253,9 @@ watch(routeProductId, nextId => {
   background: rgb(var(--v-theme-surface));
 }
 
-.image-card--cover {
-  border-color: rgba(var(--v-theme-success), 0.4);
-  box-shadow: 0 10px 24px rgba(var(--v-theme-success), 0.08);
+.image-card--slot {
+  display: flex;
+  flex-direction: column;
 }
 
 .image-card__media {
@@ -3593,6 +4275,7 @@ watch(routeProductId, nextId => {
 
 .image-card__loading,
 .image-card__error,
+.image-card__placeholder,
 .upcoming-step,
 .empty-panel {
   display: flex;
@@ -3603,7 +4286,8 @@ watch(routeProductId, nextId => {
 }
 
 .image-card__loading,
-.image-card__error {
+.image-card__error,
+.image-card__placeholder {
   width: 100%;
   height: 100%;
   padding: 1rem;

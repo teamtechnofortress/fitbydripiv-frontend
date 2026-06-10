@@ -100,9 +100,6 @@ const buildErrorMessage = error => {
   if (typeof responseData === 'string') return responseData
   if (responseData?.message) return responseData.message
   if (responseData?.err_msg) return responseData.err_msg
-  I’m extending the same Add Product flow so step 2 advances directly into a real step 3. That means adding the new endpoint constants, treatment-detail fields, ingredient autocomplete/search, and a save step that submits the full ingredient list in one payload.
-  
-  
   if (responseData?.errors) {
     const firstKey = Object.keys(responseData.errors)[0]
     if (firstKey) {
@@ -124,7 +121,6 @@ const normalizeImages = () => {
       original_name: image.original_name || '',
       image_type: image.image_type || 'gallery',
       sort_order: index,
-      slot_position: index + 1,
       isUploading: !!image.isUploading,
       uploadError: image.uploadError || '',
     }))
@@ -161,7 +157,6 @@ const appendUploadingImage = file => {
     original_name: file.name,
     image_type: productState.images.length === 0 ? 'cover' : 'gallery',
     sort_order: productState.images.length,
-    slot_position: productState.images.length + 1,
     isUploading: true,
     uploadError: '',
   })
@@ -245,7 +240,6 @@ const buildPayload = () => ({
       image_url: image.image_url,
       image_type: image.image_type === 'cover' ? 'cover' : 'gallery',
       sort_order: index,
-      slot_position: index + 1,
     })),
 })
 

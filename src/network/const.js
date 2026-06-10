@@ -229,6 +229,7 @@ export const getAdminProductUnpublishUrl = productId => `${SERVER_URL}/admin/pro
 export const getAdminProductToggleFeaturedUrl = productId => `${SERVER_URL}/admin/products/${productId}/toggle-featured`
 export const getAdminProductPreviewUrl = productId => `${SERVER_URL}/admin/products/${productId}/preview`
 export const ADMIN_PRODUCTS_SEARCH_SELECTION_URL = `${SERVER_URL}/admin/products/search-selection`
+export const ADMIN_PRODUCTS_IMAGE_CONFIG_URL = `${SERVER_URL}/admin/products/image-config`
 export const ADMIN_PRODUCTS_STEP1_URL = SERVER_URL + "/admin/products/step-1"
 export const ADMIN_PRODUCTS_STEP2_URL = SERVER_URL + "/admin/products/step-2"
 export const ADMIN_PRODUCTS_STEP3_URL = SERVER_URL + "/admin/products/step-3"
