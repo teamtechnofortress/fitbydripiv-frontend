@@ -1,4 +1,5 @@
 /* eslint-disable import/order */
+import '@/polyfills/arrayAt'
 import '@/@iconify/icons-bundle'
 import App from '@/App.vue'
 import ability from '@/plugins/casl/ability'
@@ -18,6 +19,14 @@ import Toast from "vue-toastification"
 import "vue-toastification/dist/index.css"
 
 loadFonts()
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistrations()
+      .then(registrations => Promise.all(registrations.map(registration => registration.unregister())))
+      .catch(() => {})
+  })
+}
 
 
 // Create vue app

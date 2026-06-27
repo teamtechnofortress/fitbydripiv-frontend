@@ -23,6 +23,8 @@ const navigate = path => {
   window.scrollTo(0, 0)
 }
 
+const getLastItem = items => (items.length ? items[items.length - 1] : '')
+
 const getContentPagePath = item => {
   const categorySlug = item?.category?.slug
   if (categorySlug)
@@ -35,13 +37,13 @@ const getContentPagePath = item => {
       if (queryCategory)
         return `/new/${queryCategory}`
 
-      const pathSlug = parsed.pathname.split('/').filter(Boolean).at(-1)
+      const pathSlug = getLastItem(parsed.pathname.split('/').filter(Boolean))
       if (pathSlug)
         return `/new/${pathSlug}`
     } catch {
       const rawSlug = item.cta_link.replace(/^\/+/, '').split('?')[0]
       if (rawSlug)
-        return `/new/${rawSlug.split('/').filter(Boolean).at(-1)}`
+        return `/new/${getLastItem(rawSlug.split('/').filter(Boolean))}`
     }
   }
 

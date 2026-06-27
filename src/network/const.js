@@ -38,6 +38,12 @@ export const PROFILE_PROGRESS_SKIP_URL = PROFILE_PROGRESS_URL + "/skip"
 export const SECURITY_SAVE_URL  = SERVER_URL + "/auth/security-save"
 export const GET_PATIENT_BY_NAME = SERVER_URL + "/get/patient-by-name"
 export const GET_PATIENT_BY_PHONE = SERVER_URL + "/get/patient-by-phone"
+
+// Backend structure changed: intake refactor.
+// These legacy endpoints are still referenced in the frontend, but the backend is
+// moving away from the old `intake_1` / `intake_2` / `intake_3` model structure.
+// Treat their response/request contract as unstable until callers are migrated to
+// the new patient intake endpoints defined later in this file.
 export const GET_PATIENT_AND_HISTORY_BY_NAME = SERVER_URL + "/get/patient-history-by-name"
 export const GET_PATIENT_AND_HISTORY_BY_ID   = SERVER_URL + "/get/patient-history-by-id"
 export const GET_PATIENT_AND_ENCOUNTER_BY_ID = SERVER_URL + "/get/patient-encounter-by-id"
@@ -52,6 +58,10 @@ export const ADD_STAFF_URL    = SERVER_URL + "/add/staff"
 export const UPDATE_STAFF_URL    = SERVER_URL + "/update/staff"
 export const DELETE_STAFF_URL    = SERVER_URL + "/delete/staff"
 export const GET_STAFF_BY_NAME = SERVER_URL + "/get/staff-by-name"
+
+// Backend structure changed: intake refactor.
+// Queue and patient deletion behavior were previously coupled to the old intake
+// tables and should be treated as legacy wiring until fully migrated.
 export const GET_PATIENT_QUE = SERVER_URL + "/get/patient-que"
 export const DELETE_PATIENT_URL = SERVER_URL + "/delete/patient"
 export const SAVE_STAFF_SCHEDULE= SERVER_URL + "/save/staff-schedule"
@@ -70,6 +80,10 @@ export const UPDATE_PATIENT_URL = SERVER_URL + "/update/patient"
 export const SAVE_ENCOUNTER_URL = SERVER_URL + "/save/encounter"
 export const DELETE_ENCOUNTER_URL = SERVER_URL + "/delete/encounter"
 export const GET_REPORTS_URL = SERVER_URL + "/get/reports"
+
+// Backend structure changed: intake refactor.
+// These endpoints still exist in the frontend contract, but backend behavior is tied
+// to the old intake tables and must be reviewed during patient intake migration.
 export const SAVE_INVOICE_URL   = SERVER_URL + "/save/invoice"
 export const INVOICE_SEND_URL   = SERVER_URL + "/send/invoice"
 
@@ -112,6 +126,10 @@ export const GET_ADMIN_NOTES   = SERVER_URL + "/get/admin-notes"
 export const ADD_PROCEDURE_PLAN_NOTES   = SERVER_URL + "/add/procedure-plan-notes"
 export const GET_PROCEDURE_PLAN_NOTES   = SERVER_URL + "/get/procedure-plan-notes"
 export const ADD_CHIEF_COMPLIANT_URL     = SERVER_URL + "/add/chief-complaint"
+
+// Backend structure changed: intake refactor.
+// These today-visit read endpoints were previously populated from the old intake
+// schema, so their payload shape needs revalidation during migration.
 export const GET_CHIEF_COMPLIANT_URL     = SERVER_URL + "/get/chief-complaint"
 export const UPDATE_PHYSICAL_EXAM_URL  = SERVER_URL + "/update/physical-exam"
 export const DELETE_CHIEF_COMPLIANT_URL  = SERVER_URL + "/delete/chief-complaint"
@@ -170,6 +188,8 @@ export const DELETE_INVOICING_SALES_REPORT = SERVER_URL + "/delete/invoicing-sal
 
 export const SAVE_SIGNATURE_URL = SERVER_URL + "/save/signature"
 export const GET_SIGNATURE_URL = SERVER_URL + "/get/signature"
+
+// Preferred intake endpoints after backend intake refactor.
 export const PATIENT_INTAKE_FORM_URL = SERVER_URL + "/patients/intake-form"
 export const getIntakeSubmissionUrl = orderUuid => `${SERVER_URL}/intake/${orderUuid}`
 export const getPatientIntakesUrl = patientId => `${SERVER_URL}/patients/${patientId}/intakes`
@@ -200,11 +220,33 @@ export const getPublicPdfDownloadUrl = (path, name = '') => {
 
 // CMS Admin Endpoints
 export const CMS_ADMIN_CATEGORIES = SERVER_URL + "/cms/admin/categories"
-export const CMS_ADMIN_PRODUCTS = SERVER_URL + "/cms/admin/products"
+
+// Backend structure changed: product refactor.
+// The legacy CMS admin child-resource endpoints below were removed/commented out on
+// the backend. Keep these compatibility aliases only so stale callers remain obvious
+// and easy to migrate without turning imports into `undefined`.
+// Removed on backend:
+// GET /api/v1/cms/admin/products
+// POST /api/v1/cms/admin/products
+// DELETE /api/v1/cms/admin/products/{id}
+// export const CMS_ADMIN_PRODUCTS = SERVER_URL + "/cms/admin/products"
+export const CMS_ADMIN_PRODUCTS_LEGACY = SERVER_URL + "/cms/admin/products"
 export const CMS_ADMIN_RESEARCH_LINKS = SERVER_URL + "/cms/admin/research-links"
-export const CMS_ADMIN_PRICING_OPTIONS = SERVER_URL + "/cms/admin/pricing-options"
-export const CMS_ADMIN_FAQS = SERVER_URL + "/cms/admin/faqs"
-export const CMS_ADMIN_SUBSCRIPTION_DISCOUNTS = SERVER_URL + "/cms/admin/subscription-discounts"
+// Removed on backend:
+// POST /api/v1/cms/admin/pricing-options
+// DELETE /api/v1/cms/admin/pricing-options/{id}
+// export const CMS_ADMIN_PRICING_OPTIONS = SERVER_URL + "/cms/admin/pricing-options"
+export const CMS_ADMIN_PRICING_OPTIONS_LEGACY = SERVER_URL + "/cms/admin/pricing-options"
+// Removed on backend:
+// POST /api/v1/cms/admin/faqs
+// DELETE /api/v1/cms/admin/faqs/{id}
+// export const CMS_ADMIN_FAQS = SERVER_URL + "/cms/admin/faqs"
+export const CMS_ADMIN_FAQS_LEGACY = SERVER_URL + "/cms/admin/faqs"
+// Removed on backend:
+// POST /api/v1/cms/admin/subscription-discounts
+// DELETE /api/v1/cms/admin/subscription-discounts/{id}
+// export const CMS_ADMIN_SUBSCRIPTION_DISCOUNTS = SERVER_URL + "/cms/admin/subscription-discounts"
+export const CMS_ADMIN_SUBSCRIPTION_DISCOUNTS_LEGACY = SERVER_URL + "/cms/admin/subscription-discounts"
 export const CMS_ADMIN_SITE_SETTINGS = SERVER_URL + "/cms/admin/site-settings"
 export const CMS_ADMIN_CONTACT_SUBMISSIONS = SERVER_URL + "/cms/admin/contact-submissions"
 export const CMS_ADMIN_UPLOAD_PRODUCT_IMAGE = SERVER_URL + "/cms/admin/upload/product-image"

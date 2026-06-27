@@ -17,6 +17,19 @@ const headline = computed(() => props.section.headline || content.value.headline
 const intro = computed(() => props.section.intro || content.value.intro || content.value.description)
 const paragraphs = computed(() => props.section.paragraphs || content.value.paragraphs || [])
 const bullets = computed(() => props.section.bullets || content.value.bullets || [])
+const gridBullets = computed(() => {
+  const source = (
+    props.section.grid_bullets
+    || props.section.gridBullets
+    || content.value.grid_bullets
+    || content.value.gridBullets
+    || []
+  )
+
+  return Array.isArray(source)
+    ? source.filter(bullet => String(bullet || '').trim())
+    : []
+})
 const rows = computed(() => props.section.rows || content.value.rows || [])
 const isCentered = computed(() => (props.section.alignment || content.value.alignment) === 'center')
 const isDocumentPage = computed(() => ['terms', 'privacy', 'legal'].includes(String(props.pageSlug || '').toLowerCase()))
@@ -115,6 +128,19 @@ const maxWidthClass = computed(() => {
           </li>
         </ul>
 
+        <ul
+          v-if="gridBullets.length"
+          class="content-block-bullet-grid text-gray-700 list-disc"
+          :class="isDocumentPage ? 'mt-4 text-sm leading-relaxed' : 'mt-6 text-base leading-7'"
+        >
+          <li
+            v-for="(bullet, index) in gridBullets"
+            :key="`grid-bullet-${index}`"
+          >
+            {{ bullet }}
+          </li>
+        </ul>
+
         <div
           v-if="rows.length"
           class="card overflow-hidden text-left"
@@ -134,3 +160,18 @@ const maxWidthClass = computed(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.content-block-bullet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  column-gap: 2rem;
+  row-gap: 0.35rem;
+  padding-left: 1.25rem;
+  text-align: left;
+}
+
+.content-block-bullet-grid li {
+  padding-left: 0.1rem;
+}
+</style>

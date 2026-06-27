@@ -27,18 +27,20 @@ const router = createRouter({
   ],
 })
 
+const isPublicSiteRoute = route => (
+  route.meta?.public
+  || route.path === '/otp'
+  || (route.name && String(route.name).startsWith('site'))
+)
+
 router.beforeEach((to, from) => {
+  if (isPublicSiteRoute(to)) {
+    return
+  }
+
   if(to.path){
     NProgress.start()
     NProgress.set(0.1)
-  }
-
-  const isPublicRoute = to.meta?.public
-    || to.path === '/otp'
-    || (to.name && String(to.name).startsWith('site'))
-
-  if (isPublicRoute) {
-    return
   }
 
   const isLoggedIn = isUserLoggedIn()  

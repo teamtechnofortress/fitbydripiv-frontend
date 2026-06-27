@@ -99,6 +99,7 @@ export const createSectionDraft = (type = 'section_header', sortOrder = 1) => {
       intro: '',
       paragraphs: [''],
       bullets: [],
+      grid_bullets: [],
       rows: [],
       alignment: 'left',
       max_width: 'content',

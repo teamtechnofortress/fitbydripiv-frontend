@@ -74,6 +74,8 @@ const getSlugCandidates = slug => {
   return encoded === normalized ? [normalized] : [normalized, encoded]
 }
 
+const getLastItem = items => (items.length ? items[items.length - 1] : '')
+
 const getRequestedSlug = slug => {
   const normalizedSlug = String(slug || '').trim().replace(/^\/+|\/+$/g, '')
   const pathSlug = String(route.path || '').trim().replace(/^\/+|\/+$/g, '')
@@ -87,7 +89,7 @@ const getRequestedSlug = slug => {
 
   const pathSegments = pathSlug.split('/').filter(Boolean)
   const slugSegments = normalizedSlug.split('/').filter(Boolean)
-  const lastPathSegment = pathSegments.at(-1) || ''
+  const lastPathSegment = getLastItem(pathSegments)
 
   if (slugSegments.length === 1 && pathSegments.length > 1 && normalizedSlug === lastPathSegment)
     return pathSlug
@@ -99,13 +101,14 @@ const loadPage = async slug => {
   if (!slug)
     return
 
-  const requestedSlug = getRequestedSlug(slug)
-
   loading.value = true
   error.value = ''
-  resolvedSlug.value = requestedSlug
 
   try {
+    const requestedSlug = getRequestedSlug(slug)
+
+    resolvedSlug.value = requestedSlug
+
     const candidates = getSlugCandidates(requestedSlug)
     let loaded = false
     let lastError = null
@@ -126,6 +129,8 @@ const loadPage = async slug => {
     if (!loaded)
       throw lastError || new Error('Unable to load content page.')
   } catch (err) {
+    const requestedSlug = resolvedSlug.value || String(slug || '').trim().replace(/^\/+|\/+$/g, '')
+
     try {
       const fallbackResponse = await axios.get(getContentPageUrl('category-template'))
 

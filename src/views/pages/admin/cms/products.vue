@@ -208,7 +208,7 @@ const loadCategories = () => {
 
 const loadProducts = afterLoad => {
   isLoading.value = true
-  Network.getRequest(Const.CMS_ADMIN_PRODUCTS, {}, {}, response => {
+  Network.getRequest(Const.CMS_ADMIN_PRODUCTS_LEGACY, {}, {}, response => {
     isLoading.value = false
     if (response.data?.success) {
       products.value = response.data.data || []
@@ -287,7 +287,7 @@ const saveProduct = () => {
     }
 
     isSaving.value = true
-    Network.postRequest(Const.CMS_ADMIN_PRODUCTS, {}, payload, response => {
+    Network.postRequest(Const.CMS_ADMIN_PRODUCTS_LEGACY, {}, payload, response => {
       isSaving.value = false
       if (response.data?.success) {
         const savedId = response.data?.data?.id
@@ -319,7 +319,7 @@ const doDelete = async value => {
   if (!value || !deletingProductId.value) return
 
   try {
-    await axios.delete(`${Const.CMS_ADMIN_PRODUCTS}/${deletingProductId.value}`, {
+    await axios.delete(`${Const.CMS_ADMIN_PRODUCTS_LEGACY}/${deletingProductId.value}`, {
       headers: {
         Authorization: `Bearer ${getApiToken()}`,
       },
@@ -439,7 +439,7 @@ const saveFaq = () => {
     return
   }
 
-  Network.postRequest(Const.CMS_ADMIN_FAQS, {}, payload, response => {
+  Network.postRequest(Const.CMS_ADMIN_FAQS_LEGACY, {}, payload, response => {
     if (response.data?.success) {
       toast.success(faqDraft.value.id ? "FAQ updated" : "FAQ added")
       faqDraft.value = {
@@ -461,7 +461,7 @@ const saveFaq = () => {
 const deleteFaq = async id => {
   if (!confirm("Delete this FAQ?")) return
   try {
-    await axios.delete(`${Const.CMS_ADMIN_FAQS}/${id}`, {
+    await axios.delete(`${Const.CMS_ADMIN_FAQS_LEGACY}/${id}`, {
       headers: { Authorization: `Bearer ${getApiToken()}` },
     })
     toast.success("FAQ deleted")
@@ -515,7 +515,7 @@ const savePricingOption = () => {
     return
   }
 
-  Network.postRequest(Const.CMS_ADMIN_PRICING_OPTIONS, {}, payload, response => {
+  Network.postRequest(Const.CMS_ADMIN_PRICING_OPTIONS_LEGACY, {}, payload, response => {
     if (response.data?.success) {
       toast.success(pricingDraft.value.id ? "Pricing option updated" : "Pricing option added")
       pricingDraft.value = {
@@ -540,7 +540,7 @@ const savePricingOption = () => {
 const deletePricingOption = async id => {
   if (!confirm("Delete this pricing option?")) return
   try {
-    await axios.delete(`${Const.CMS_ADMIN_PRICING_OPTIONS}/${id}`, {
+    await axios.delete(`${Const.CMS_ADMIN_PRICING_OPTIONS_LEGACY}/${id}`, {
       headers: { Authorization: `Bearer ${getApiToken()}` },
     })
     toast.success("Pricing option deleted")
@@ -653,7 +653,7 @@ const saveDiscount = () => {
     return
   }
 
-  Network.postRequest(Const.CMS_ADMIN_SUBSCRIPTION_DISCOUNTS, {}, payload, response => {
+  Network.postRequest(Const.CMS_ADMIN_SUBSCRIPTION_DISCOUNTS_LEGACY, {}, payload, response => {
     if (response.data?.success) {
       toast.success(discountDraft.value.id ? "Discount updated" : "Discount added")
       discountDraft.value = {
@@ -672,7 +672,7 @@ const saveDiscount = () => {
 const deleteDiscount = async id => {
   if (!confirm("Delete this discount?")) return
   try {
-    await axios.delete(`${Const.CMS_ADMIN_SUBSCRIPTION_DISCOUNTS}/${id}`, {
+    await axios.delete(`${Const.CMS_ADMIN_SUBSCRIPTION_DISCOUNTS_LEGACY}/${id}`, {
       headers: { Authorization: `Bearer ${getApiToken()}` },
     })
     toast.success("Discount deleted")

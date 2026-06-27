@@ -79,7 +79,8 @@ const pdfDocumentFileName = computed(() => {
     return ''
 
   const cleanSource = source.split('?')[0].split('#')[0]
-  const fileName = cleanSource.split('/').filter(Boolean).at(-1) || ''
+  const sourceSegments = cleanSource.split('/').filter(Boolean)
+  const fileName = sourceSegments.length ? sourceSegments[sourceSegments.length - 1] : ''
   if (!fileName)
     return ''
 
@@ -415,6 +416,30 @@ const moveBullet = (index, direction) => {
 
   updated.splice(targetIndex, 0, moved)
   localSection.value.content.bullets = updated
+}
+
+const addGridBullet = () => {
+  ensureContentArray('grid_bullets')
+  localSection.value.content.grid_bullets.push('')
+}
+
+const removeGridBullet = index => {
+  ensureContentArray('grid_bullets')
+  localSection.value.content.grid_bullets.splice(index, 1)
+}
+
+const moveGridBullet = (index, direction) => {
+  ensureContentArray('grid_bullets')
+
+  const targetIndex = index + direction
+  if (targetIndex < 0 || targetIndex >= localSection.value.content.grid_bullets.length)
+    return
+
+  const updated = [...localSection.value.content.grid_bullets]
+  const [moved] = updated.splice(index, 1)
+
+  updated.splice(targetIndex, 0, moved)
+  localSection.value.content.grid_bullets = updated
 }
 
 const addRow = () => {
@@ -1188,6 +1213,62 @@ const saveSection = () => {
               <VTextField
                 v-model="localSection.content.bullets[index]"
                 label="Bullet"
+                variant="outlined"
+              />
+            </VCardText>
+          </VCard>
+
+          <div class="d-flex align-center justify-space-between gap-4">
+            <div class="text-subtitle-2 font-weight-semibold">
+              Responsive Bullet Grid
+            </div>
+            <VBtn
+              color="primary"
+              variant="tonal"
+              prepend-icon="tabler-plus"
+              @click="addGridBullet"
+            >
+              Add Grid Bullet
+            </VBtn>
+          </div>
+
+          <VCard
+            v-for="(bullet, index) in localSection.content.grid_bullets || []"
+            :key="`grid-bullet-${index}`"
+            variant="outlined"
+          >
+            <VCardText class="pa-4">
+              <div class="d-flex align-center justify-space-between gap-3 mb-4">
+                <div class="text-subtitle-2 font-weight-semibold">
+                  Grid Bullet {{ index + 1 }}
+                </div>
+                <div class="d-flex align-center gap-2">
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-up"
+                    :disabled="index === 0"
+                    @click="moveGridBullet(index, -1)"
+                  />
+                  <VBtn
+                    size="small"
+                    variant="text"
+                    icon="tabler-arrow-down"
+                    :disabled="index === (localSection.content.grid_bullets || []).length - 1"
+                    @click="moveGridBullet(index, 1)"
+                  />
+                  <VBtn
+                    size="small"
+                    color="error"
+                    variant="text"
+                    icon="tabler-trash"
+                    @click="removeGridBullet(index)"
+                  />
+                </div>
+              </div>
+              <VTextField
+                v-model="localSection.content.grid_bullets[index]"
+                label="Grid Bullet"
                 variant="outlined"
               />
             </VCardText>
