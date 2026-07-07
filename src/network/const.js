@@ -166,6 +166,7 @@ export const DELETE_REWARD_REPORT = SERVER_URL + "/delete/reward-report"
 export const CHECKOUT_DRAFT_URL = SERVER_URL + "/checkout/draft"
 export const CHECKOUT_APPLY_COUPON_URL = SERVER_URL + "/checkout/apply-coupon"
 export const CHECKOUT_CREATE_URL = SERVER_URL + "/checkout"
+export const CHECKOUT_PAYMENT_CONFIRMATION_URL = SERVER_URL + "/checkout/payment-confirmation"
 export const SAVE_STAFF_REPORT = SERVER_URL + "/save/staff-report"
 export const ALL_STAFF_REPORT = SERVER_URL + "/get/all-staff-report"
 export const DELETE_STAFF_REPORT = SERVER_URL + "/delete/staff-report"
@@ -283,6 +284,16 @@ export const getAdminProductStepUrl = (productId, step) => `${SERVER_URL}/admin/
 
 // Orders
 export const getOrderBySessionUrl = sessionId => `${SERVER_URL}/orders/by-session/${sessionId}`
+export const getCheckoutPaymentConfirmationUrl = sessionId => `${CHECKOUT_PAYMENT_CONFIRMATION_URL}?session_id=${encodeURIComponent(sessionId)}`
+export const getOrderJourneyUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/journey`
+export const getDrNetworkCurrentStepUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/dr-network/current-step`
+export const getDrNetworkDocumentsUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/documents`
+export const getDrNetworkDocumentsCompleteUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/documents/complete`
+export const getDrNetworkIntakeAnswersUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/intake-answers`
+export const getDrNetworkProviderSlotsUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/provider-slots`
+export const getDrNetworkBookProviderSlotUrl = (orderUuid, slotId) => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/provider-slots/${encodeURIComponent(slotId)}/book`
+export const getDrNetworkSubmitUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/dr-network/submit`
+export const getDrNetworkStatusUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/dr-network/status`
 export const ADMIN_ORDERS_URL = `${SERVER_URL}/admin/orders`
 export const ADMIN_SUBSCRIPTIONS_URL = `${SERVER_URL}/admin/subscriptions`
 export const ADMIN_COUPONS_URL = `${SERVER_URL}/admin/coupons`

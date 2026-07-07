@@ -453,8 +453,19 @@ const handleSubmit = async () => {
       },
     })
 
-    submissionResult.value = data?.data || null
+    const result = data?.data || null
+
+    submissionResult.value = result
     submissionMessage.value = data?.message || 'Patient intake submitted successfully.'
+
+    const journeyOrderUuid = result?.order?.order_uuid || result?.order_uuid || orderUuid.value
+    if (journeyOrderUuid) {
+      await router.push(`/orders/${encodeURIComponent(journeyOrderUuid)}/journey`)
+      scrollToTop(false)
+
+      return
+    }
+
     submissionComplete.value = true
     scrollToTop()
   } catch (error) {

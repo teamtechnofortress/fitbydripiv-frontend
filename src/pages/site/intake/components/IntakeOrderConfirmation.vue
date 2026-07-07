@@ -3,6 +3,7 @@ import axios from 'axios'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CHECKOUT_APPLY_COUPON_URL, CHECKOUT_CREATE_URL } from '@/network/const'
+import { devLog } from '@/utils/devLogger'
 
 const props = defineProps({
   confirmationData: {
@@ -28,6 +29,18 @@ const couponError = ref('')
 const checkoutLoading = ref(false)
 const checkoutError = ref('')
 
+const debugCheckoutConfirmation = (event, payload = {}) => {
+  if (!import.meta.env.DEV) return
+
+  devLog(`Checkout confirmation ${event}`, payload)
+
+  if (typeof console !== 'undefined') {
+    console.groupCollapsed(`[Checkout Confirmation] ${event}`)
+    console.log(payload)
+    console.groupEnd()
+  }
+}
+
 watch(
   () => props.confirmationData,
   value => {
@@ -37,6 +50,9 @@ watch(
     couponSuccess.value = ''
     couponError.value = ''
     checkoutError.value = ''
+    debugCheckoutConfirmation('props-confirmation-data', {
+      confirmationData: value,
+    })
   },
   { immediate: true },
 )
@@ -108,14 +124,27 @@ const applyCoupon = async () => {
   couponLoading.value = true
   couponError.value = ''
   couponSuccess.value = ''
+  const requestPayload = { order_uuid: order.value?.order_uuid, coupon_code: code }
+
+  debugCheckoutConfirmation('apply-coupon-request', {
+    url: CHECKOUT_APPLY_COUPON_URL,
+    payload: requestPayload,
+  })
+
   try {
     const { data } = await axios.post(
       CHECKOUT_APPLY_COUPON_URL,
-      { order_uuid: order.value?.order_uuid, coupon_code: code },
+      requestPayload,
       { headers: { Accept: 'application/json' } },
     )
 
     const payload = data?.data || null
+    debugCheckoutConfirmation('apply-coupon-response', {
+      url: CHECKOUT_APPLY_COUPON_URL,
+      response: data,
+      resolvedPayload: payload,
+    })
+
     if (payload) {
       orderState.value = payload
       emit('updated', payload)
@@ -126,6 +155,14 @@ const applyCoupon = async () => {
   } catch (error) {
     const responseData = error?.response?.data
     const couponErrors = responseData?.errors?.coupon_code
+
+    debugCheckoutConfirmation('apply-coupon-error', {
+      url: CHECKOUT_APPLY_COUPON_URL,
+      payload: requestPayload,
+      status: error?.response?.status,
+      response: responseData,
+      message: error?.message,
+    })
 
     couponError.value = Array.isArray(couponErrors) && couponErrors[0]
       ? couponErrors[0]
@@ -146,14 +183,27 @@ const proceedToCheckout = async () => {
   }
   checkoutLoading.value = true
   checkoutError.value = ''
+  const requestPayload = { order_uuid: currentOrderUuid }
+
+  debugCheckoutConfirmation('create-checkout-request', {
+    url: CHECKOUT_CREATE_URL,
+    payload: requestPayload,
+  })
+
   try {
     const { data } = await axios.post(
       CHECKOUT_CREATE_URL,
-      { order_uuid: currentOrderUuid },
+      requestPayload,
       { headers: { Accept: 'application/json' } },
     )
 
     const checkoutUrl = data?.checkout_url
+    debugCheckoutConfirmation('create-checkout-response', {
+      url: CHECKOUT_CREATE_URL,
+      response: data,
+      checkoutUrl,
+    })
+
     if (!checkoutUrl) {
       checkoutError.value = 'Checkout URL was not returned. Please try again.'
       
@@ -163,6 +213,14 @@ const proceedToCheckout = async () => {
   } catch (error) {
     const responseData = error?.response?.data
     const orderErrors = responseData?.errors?.order_uuid
+
+    debugCheckoutConfirmation('create-checkout-error', {
+      url: CHECKOUT_CREATE_URL,
+      payload: requestPayload,
+      status: error?.response?.status,
+      response: responseData,
+      message: error?.message,
+    })
 
     checkoutError.value = Array.isArray(orderErrors) && orderErrors[0]
       ? orderErrors[0]
