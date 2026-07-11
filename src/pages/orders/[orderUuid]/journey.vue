@@ -67,6 +67,36 @@ const prettyLabel = value => String(value || '-')
 
 const canOpenWorkflow = computed(() => journey.value?.is_ready === true && journey.value?.next_action === 'open_workflow')
 
+const isFailedJourney = computed(() => (
+  journey.value?.journey_status === 'failed'
+  || journey.value?.current_step_key === 'failed'
+  || journey.value?.next_action === 'contact_support'
+))
+
+const failureReason = computed(() => journey.value?.failure_reason || workflow.value?.step_data?.failure_reason || workflow.value?.failure_reason || '')
+
+const failedStepKey = computed(() => journey.value?.failed_step_key || workflow.value?.failed_step_key || workflow.value?.current_step_key || '')
+
+const failureTitle = computed(() => {
+  if (failureReason.value === 'rejected_by_provider') return 'Your consultation could not be approved'
+  if (failureReason.value === 'blocking_rule') return 'This order needs support review'
+  if (failureReason.value) return 'Your consultation could not continue'
+
+  return 'This order needs support'
+})
+
+const failureMessage = computed(() => {
+  if (journey.value?.message) return journey.value.message
+  if (failureReason.value === 'rejected_by_provider')
+    return 'A provider reviewed your information and could not approve this consultation. Support can help with next steps.'
+  if (failureReason.value === 'blocking_rule')
+    return 'Based on the information provided, this consultation cannot continue automatically. Support can review the order with you.'
+  if (failureReason.value)
+    return 'We could not complete this consultation workflow. Support can review the order and help with the next step.'
+
+  return 'We could not complete this consultation workflow. Please contact support for help with this order.'
+})
+
 const currentStepKey = computed(() => {
   if (journey.value?.next_action === 'complete' || journey.value?.current_step_key === 'completed') return 'completed'
   if (
@@ -143,6 +173,17 @@ async function refreshJourney() {
     const data = await getOrderJourney(orderUuid.value)
     journey.value = data
 
+    if (
+      data?.journey_status === 'failed'
+      || data?.current_step_key === 'failed'
+      || data?.next_action === 'contact_support'
+    ) {
+      workflow.value = null
+      retryInSeconds.value = null
+
+      return
+    }
+
     const isPaymentConfirmationStep = data?.current_step_key === 'awaiting_payment_confirmation'
 
     if (data?.next_action === 'wait' && (!isPaymentConfirmationStep || !sessionId.value)) {
@@ -204,6 +245,52 @@ onBeforeUnmount(clearPollTimer)
             @click="goHome"
           >
             Go to Home
+          </button>
+          <button
+            class="journey-button"
+            @click="goSupport"
+          >
+            Contact Support
+          </button>
+        </div>
+      </section>
+
+      <section
+        v-else-if="isFailedJourney"
+        class="journey-state-card journey-state-card--error"
+      >
+        <div class="journey-alert">
+          !
+        </div>
+        <p class="journey-eyebrow">
+          Support needed
+        </p>
+        <h1>{{ failureTitle }}</h1>
+        <p>{{ failureMessage }}</p>
+        <div class="journey-meta">
+          <div>
+            <span>Failure reason</span>
+            <strong>{{ prettyLabel(failureReason) }}</strong>
+          </div>
+          <div>
+            <span>Failed step</span>
+            <strong>{{ prettyLabel(failedStepKey) }}</strong>
+          </div>
+          <div>
+            <span>Journey status</span>
+            <strong>{{ prettyLabel(journey?.journey_status) }}</strong>
+          </div>
+          <div>
+            <span>Next action</span>
+            <strong>{{ prettyLabel(journey?.next_action) }}</strong>
+          </div>
+        </div>
+        <div class="journey-actions">
+          <button
+            class="journey-button journey-button--secondary"
+            @click="refreshJourney"
+          >
+            Refresh status
           </button>
           <button
             class="journey-button"

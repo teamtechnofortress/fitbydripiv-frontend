@@ -3,6 +3,7 @@ import Banking from '@/views/pages/admin/banking.vue'
 import Business from '@/views/pages/admin/business.vue'
 import CmsCategories from '@/views/pages/admin/cms/categories.vue'
 import CmsProducts from '@/views/pages/admin/cms/products.vue'
+import DrNetworksAdmin from '@/views/pages/admin/dr-networks/DrNetworksAdmin.vue'
 import Export from '@/views/pages/admin/export.vue'
 import Inventory from '@/views/pages/admin/inventory.vue'
 import Notes from '@/views/pages/admin/notes.vue'
@@ -94,6 +95,11 @@ const tabs = [
     title: 'SITE SETTINGS',
     icon: 'tabler-settings',
     tab: 'site-settings',
+  },
+  {
+    title: 'DR NETWORKS',
+    icon: 'tabler-stethoscope',
+    tab: 'dr-networks',
   },
   {
     title: 'EXPORT',
@@ -205,6 +211,10 @@ const getTabTarget = tab => {
 
       <VWindowItem value="site-settings">
         <SiteSettings />
+      </VWindowItem>
+
+      <VWindowItem value="dr-networks">
+        <DrNetworksAdmin />
       </VWindowItem>
 
       <VWindowItem value="export">

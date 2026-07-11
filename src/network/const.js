@@ -192,6 +192,7 @@ export const GET_SIGNATURE_URL = SERVER_URL + "/get/signature"
 
 // Preferred intake endpoints after backend intake refactor.
 export const PATIENT_INTAKE_FORM_URL = SERVER_URL + "/patients/intake-form"
+export const INTAKE_STATES_URL = SERVER_URL + "/intake/states"
 export const getIntakeSubmissionUrl = orderUuid => `${SERVER_URL}/intake/${orderUuid}`
 export const getPatientIntakesUrl = patientId => `${SERVER_URL}/patients/${patientId}/intakes`
 export const getPatientIntakeDetailUrl = (patientId, intakeId) => `${SERVER_URL}/patients/${patientId}/intakes/${intakeId}`
@@ -250,6 +251,7 @@ export const CMS_ADMIN_FAQS_LEGACY = SERVER_URL + "/cms/admin/faqs"
 export const CMS_ADMIN_SUBSCRIPTION_DISCOUNTS_LEGACY = SERVER_URL + "/cms/admin/subscription-discounts"
 export const CMS_ADMIN_SITE_SETTINGS = SERVER_URL + "/cms/admin/site-settings"
 export const CMS_ADMIN_CONTACT_SUBMISSIONS = SERVER_URL + "/cms/admin/contact-submissions"
+export const CMS_ADMIN_ORDER_STATS_URL = SERVER_URL + "/cms/admin/order-stats"
 export const CMS_ADMIN_UPLOAD_PRODUCT_IMAGE = SERVER_URL + "/cms/admin/upload/product-image"
 export const CMS_ADMIN_UPLOAD_CATEGORY_VIDEO = SERVER_URL + "/cms/admin/upload/category-video"
 export const CMS_ADMIN_UPLOAD_HERO_VIDEO = SERVER_URL + "/cms/admin/upload/hero-video"
@@ -281,6 +283,49 @@ export const ADMIN_PRODUCTS_STEP5_URL = SERVER_URL + "/admin/products/step-5"
 export const ADMIN_INGREDIENTS_URL = SERVER_URL + "/admin/ingredients"
 export const getAdminProductStepStatusUrl = productId => `${SERVER_URL}/admin/products/${productId}/step-status`
 export const getAdminProductStepUrl = (productId, step) => `${SERVER_URL}/admin/products/${productId}/step-${step}`
+
+// Dr Network Admin
+export const ADMIN_DR_NETWORKS_URL = `${SERVER_URL}/admin/dr-networks`
+export const ADMIN_DR_NETWORK_STATE_MAPPINGS_URL = `${SERVER_URL}/admin/dr-networks/state-mappings`
+export const ADMIN_DR_NETWORK_STATES_URL = `${SERVER_URL}/admin/states`
+export const ADMIN_DR_NETWORK_DOCUMENT_TYPES_URL = `${SERVER_URL}/admin/document-types`
+export const getAdminDrNetworkUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}`
+export const getAdminDrNetworkToggleUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/toggle`
+export const getAdminDrNetworkCredentialsUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/credentials`
+export const getAdminDrNetworkCredentialsTestUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/credentials/test`
+export const getAdminDrNetworkFlowsUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/flows`
+export const getAdminDrNetworkFlowContentCoverageUrl = (networkId, flowId) => `${ADMIN_DR_NETWORKS_URL}/${networkId}/flows/${flowId}/content-coverage`
+export const getAdminDrNetworkFinanceSummaryUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/finance/summary`
+export const getAdminDrNetworkFinanceTransactionsUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/finance/transactions`
+export const getAdminDrNetworkFinanceTransactionVoidUrl = (networkId, transactionId) => `${ADMIN_DR_NETWORKS_URL}/${networkId}/finance/transactions/${transactionId}/void`
+export const getAdminDrNetworkFinancePayoutsUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/finance/payouts`
+export const getAdminDrNetworkCasesUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/cases`
+export const getAdminDrNetworkCaseUrl = (networkId, orderId) => `${ADMIN_DR_NETWORKS_URL}/${networkId}/cases/${orderId}`
+export const getAdminDrNetworkProductMappingsUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/product-mappings`
+export const getAdminDrNetworkProductMappingsMatrixUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/product-mappings/matrix`
+export const getAdminDrNetworkQuestionSetsUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/question-sets`
+export const getAdminDrNetworkDocumentRulesUrl = networkId => `${ADMIN_DR_NETWORKS_URL}/${networkId}/document-rules`
+export const getAdminDrNetworkStateMappingUrl = mappingId => `${ADMIN_DR_NETWORK_STATE_MAPPINGS_URL}/${mappingId}`
+export const getAdminDrNetworkStateMappingToggleUrl = mappingId => `${ADMIN_DR_NETWORK_STATE_MAPPINGS_URL}/${mappingId}/toggle`
+export const getAdminDrNetworkCoverageCheckUrl = networkId => `${ADMIN_DR_NETWORK_STATE_MAPPINGS_URL}/coverage-check?network_id=${encodeURIComponent(networkId)}`
+export const getAdminDrNetworkFlowUrl = flowId => `${SERVER_URL}/admin/flows/${flowId}`
+export const getAdminDrNetworkFlowValidateUrl = flowId => `${SERVER_URL}/admin/flows/${flowId}/validate`
+export const getAdminDrNetworkFlowCloneUrl = flowId => `${SERVER_URL}/admin/flows/${flowId}/clone`
+export const getAdminDrNetworkProductMappingUrl = mappingId => `${SERVER_URL}/admin/dr-networks/product-mappings/${mappingId}`
+export const getAdminDrNetworkProductMappingToggleUrl = mappingId => `${SERVER_URL}/admin/dr-networks/product-mappings/${mappingId}/toggle`
+export const getAdminDrNetworkQuestionSetUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}`
+export const getAdminDrNetworkQuestionSetQuestionsUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}/questions`
+export const getAdminDrNetworkQuestionSetValidateUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}/validate`
+export const getAdminDrNetworkQuestionSetPublishUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}/publish`
+export const getAdminDrNetworkQuestionSetArchiveUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}/archive`
+export const getAdminDrNetworkQuestionSetCloneUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}/clone`
+export const getAdminDrNetworkQuestionSetPreviewUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}/preview`
+export const getAdminDrNetworkQuestionSetBulkReorderUrl = setId => `${SERVER_URL}/admin/question-sets/${setId}/reorder-bulk`
+export const getAdminDrNetworkQuestionUrl = questionId => `${SERVER_URL}/admin/questions/${questionId}`
+export const getAdminDrNetworkQuestionReorderUrl = questionId => `${SERVER_URL}/admin/questions/${questionId}/reorder`
+export const getAdminDrNetworkQuestionBlockingRuleTestUrl = questionId => `${SERVER_URL}/admin/questions/${questionId}/test-blocking-rule`
+export const getAdminDrNetworkDocumentRuleUrl = ruleId => `${SERVER_URL}/admin/document-rules/${ruleId}`
+export const getAdminDrNetworkDocumentRulePreviewUrl = ruleId => `${SERVER_URL}/admin/document-rules/${ruleId}/preview`
 
 // Orders
 export const getOrderBySessionUrl = sessionId => `${SERVER_URL}/orders/by-session/${sessionId}`

@@ -63,6 +63,63 @@ export default defineConfig({
           return r
         })
 
+        const manualDrNetworkRoutes = [
+          {
+            path: '/admin/dr-networks/:networkId/finance',
+            name: 'admin-dr-network-finance',
+            component: '/src/pages/admin/dr-networks/[networkId]/finance.vue',
+          },
+          {
+            path: '/admin/dr-networks/:networkId/cases',
+            name: 'admin-dr-network-cases',
+            component: '/src/pages/admin/dr-networks/[networkId]/cases/index.vue',
+          },
+          {
+            path: '/admin/dr-networks/:networkId/cases/:orderId',
+            name: 'admin-dr-network-case-detail',
+            component: '/src/pages/admin/dr-networks/[networkId]/cases/[orderId].vue',
+          },
+          {
+            path: '/admin/dr-networks/:networkId/flows/:flowId/steps',
+            name: 'admin-dr-network-flow-steps',
+            component: '/src/pages/admin/dr-networks/[networkId]/flows/[flowId]/steps.vue',
+          },
+          {
+            path: '/admin/dr-networks/:networkId/flows/:flowId/defaults',
+            name: 'admin-dr-network-flow-defaults',
+            component: '/src/pages/admin/dr-networks/[networkId]/flows/[flowId]/defaults.vue',
+          },
+          {
+            path: '/admin/dr-networks/:networkId/products/:productId/flows/:flowId',
+            name: 'admin-dr-network-product-flow',
+            component: '/src/pages/admin/dr-networks/[networkId]/products/[productId]/flows/[flowId].vue',
+          },
+          {
+            path: '/admin/dr-networks/:networkId/question-sets/:setId',
+            name: 'admin-dr-network-question-set',
+            component: '/src/pages/admin/dr-networks/[networkId]/question-sets/[setId].vue',
+          },
+        ]
+
+        const manualDrNetworkPaths = new Set(manualDrNetworkRoutes.map(route => route.path))
+        const generatedWithoutManualDrNetworkRoutes = mapped.filter(route => !manualDrNetworkPaths.has(route.path))
+
+        const prioritized = generatedWithoutManualDrNetworkRoutes
+          .map((route, index) => ({ route, index }))
+          .sort((a, b) => {
+            const aDrNetwork = a.route.path === '/admin/dr-networks' || a.route.path.startsWith('/admin/dr-networks/')
+            const bDrNetwork = b.route.path === '/admin/dr-networks' || b.route.path.startsWith('/admin/dr-networks/')
+
+            if (aDrNetwork !== bDrNetwork)
+              return aDrNetwork ? -1 : 1
+
+            if (aDrNetwork && bDrNetwork)
+              return b.route.path.length - a.route.path.length
+
+            return a.index - b.index
+          })
+          .map(({ route }) => route)
+
         return [
           {
             path: '/apps/email/:filter',
@@ -82,7 +139,8 @@ export default defineConfig({
               layoutWrapperClasses: 'layout-content-height-fixed',
             },
           },
-          ...mapped,
+          ...manualDrNetworkRoutes,
+          ...prioritized,
         ]
       },
     }),

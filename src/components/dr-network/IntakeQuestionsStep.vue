@@ -22,6 +22,10 @@ const error = ref('')
 const currentIndex = ref(0)
 const reviewMode = ref(false)
 
+const HEIGHT_FEET_KEY = 'glp1_height_feet'
+const HEIGHT_INCHES_KEY = 'glp1_height_inches'
+const BMI_KEY = 'glp1_bmi'
+
 const questionSet = computed(() => props.workflow?.step_data?.question_set || props.workflow?.question_set || null)
 
 const questions = computed(() => {
@@ -38,19 +42,55 @@ const questionByKey = computed(() => questions.value.reduce((acc, question) => {
   return acc
 }, {}))
 
+const questionMetadata = question => question?.metadata || {}
+
+const isFrontendHiddenQuestion = question => (
+  question?.question_key === BMI_KEY
+  || questionMetadata(question).frontend_hidden === true
+  || Boolean(questionMetadata(question).auto_fill)
+)
+
+const isHeightFeetQuestion = question => question?.question_key === HEIGHT_FEET_KEY
+
+const isHeightInchesQuestion = question => question?.question_key === HEIGHT_INCHES_KEY
+
+const heightInchesQuestion = computed(() => questionByKey.value[HEIGHT_INCHES_KEY] || null)
+
+const patientFacingQuestions = computed(() => questions.value.filter(question => (
+  !isFrontendHiddenQuestion(question)
+  && !isHeightInchesQuestion(question)
+)))
+
 watch(
   questions,
   list => {
     list.forEach(question => {
       if (!(question.id in answers)) {
-        answers[question.id] = question.answer_value ?? ''
+        const answerValue = question.answer_value
+        const inputType = String(question.input_type || question.type || 'text').toLowerCase()
+        const isMultiAnswer = ['checkbox', 'checkboxes', 'multiselect', 'multi-select', 'multi_select', 'multiple_select', 'multiple_choice', 'multi_choice'].includes(inputType)
+
+        if (isMultiAnswer) {
+          if (Array.isArray(answerValue))
+            answers[question.id] = answerValue
+          else if (typeof answerValue === 'string' && answerValue.includes(','))
+            answers[question.id] = answerValue.split(',').map(item => item.trim()).filter(Boolean)
+          else if (answerValue)
+            answers[question.id] = [answerValue]
+          else
+            answers[question.id] = []
+        } else {
+          answers[question.id] = answerValue ?? ''
+        }
       }
     })
   },
   { immediate: true },
 )
 
-const questionLabel = question => question.question_text || question.label || question.question_key || 'Question'
+const questionLabel = question => isHeightFeetQuestion(question)
+  ? 'Height'
+  : question.question_text || question.label || question.question_key || 'Question'
 
 const questionInputType = question => question.input_type || question.type || 'text'
 
@@ -109,7 +149,7 @@ const isQuestionVisible = question => {
   return rules.every(conditionMatches)
 }
 
-const visibleQuestions = computed(() => questions.value.filter(isQuestionVisible))
+const visibleQuestions = computed(() => patientFacingQuestions.value.filter(isQuestionVisible))
 
 watch(
   visibleQuestions,
@@ -138,6 +178,13 @@ const progressPercent = computed(() => {
 })
 
 const isAnswered = question => {
+  if (isHeightFeetQuestion(question) && heightInchesQuestion.value) {
+    const feet = String(answers[question.id] ?? '').trim()
+    const inches = String(answers[heightInchesQuestion.value.id] ?? '').trim()
+
+    return Boolean(feet && inches)
+  }
+
   const value = answers[question.id]
   if (Array.isArray(value)) return value.length > 0
 
@@ -164,9 +211,9 @@ const normalizedInputType = question => String(questionInputType(question) || 't
 
 const isLongText = question => ['long_text', 'textarea'].includes(normalizedInputType(question))
 
-const isSingleChoice = question => ['radio', 'select', 'choice', 'single_choice'].includes(normalizedInputType(question))
+const isSingleChoice = question => ['radio', 'select', 'choice', 'single_choice', 'single-select', 'single_select'].includes(normalizedInputType(question))
 
-const isMultiChoice = question => ['checkbox', 'checkboxes', 'multi_select', 'multiple_choice', 'multi_choice'].includes(normalizedInputType(question))
+const isMultiChoice = question => ['checkbox', 'checkboxes', 'multiselect', 'multi-select', 'multi_select', 'multiple_select', 'multiple_choice', 'multi_choice'].includes(normalizedInputType(question))
 
 const isBoolean = question => ['boolean', 'yes_no'].includes(normalizedInputType(question))
 
@@ -192,9 +239,13 @@ const isOptionSelected = (question, option) => {
 const toggleMultiOption = (question, option) => {
   const value = optionValue(option)
   const current = Array.isArray(answers[question.id]) ? [...answers[question.id]] : []
-  const next = current.map(String).includes(String(value))
+  const selectedValues = current.map(String)
+  const isNoneOption = String(value) === 'none'
+  const next = selectedValues.includes(String(value))
     ? current.filter(item => String(item) !== String(value))
-    : [...current, value]
+    : isNoneOption
+      ? [value]
+      : [...current.filter(item => String(item) !== 'none'), value]
 
   answers[question.id] = next
   error.value = ''
@@ -202,6 +253,16 @@ const toggleMultiOption = (question, option) => {
 }
 
 const validateQuestion = question => {
+  if (isHeightFeetQuestion(question) && heightInchesQuestion.value) {
+    const feet = String(answers[question.id] ?? '').trim()
+    const inches = String(answers[heightInchesQuestion.value.id] ?? '').trim()
+    const isRequired = question.is_required || heightInchesQuestion.value.is_required
+
+    if (isRequired && (!feet || !inches)) return 'Height is required.'
+
+    return ''
+  }
+
   const rawValue = answers[question.id]
   const value = Array.isArray(rawValue) ? rawValue : String(rawValue ?? '').trim()
   const label = questionLabel(question)
@@ -290,6 +351,13 @@ const editQuestion = index => {
 }
 
 const displayAnswer = question => {
+  if (isHeightFeetQuestion(question) && heightInchesQuestion.value) {
+    const feet = String(answers[question.id] ?? '').trim()
+    const inches = String(answers[heightInchesQuestion.value.id] ?? '').trim()
+
+    return feet || inches ? `${feet || '-'} ft ${inches || '-'} in` : 'Not answered'
+  }
+
   const value = answers[question.id]
   const options = optionsFor(question)
 
@@ -319,6 +387,20 @@ const saveAnswers = async () => {
 
   try {
     for (const question of visibleQuestions.value) {
+      if (isHeightFeetQuestion(question) && heightInchesQuestion.value) {
+        const heightQuestions = [question, heightInchesQuestion.value]
+
+        for (const heightQuestion of heightQuestions) {
+          const value = answers[heightQuestion.id]
+          const isEmpty = String(value ?? '').trim() === ''
+          if (isEmpty && !heightQuestion.is_required) continue
+
+          await saveIntakeAnswer(props.orderUuid, heightQuestion.id, value)
+        }
+
+        continue
+      }
+
       const value = answers[question.id]
       const isEmpty = Array.isArray(value) ? !value.length : String(value ?? '').trim() === ''
       if (isEmpty && !question.is_required) continue
@@ -447,8 +529,37 @@ const saveAnswers = async () => {
         Select all that apply.
       </p>
 
+      <div
+        v-if="isHeightFeetQuestion(currentQuestion) && heightInchesQuestion"
+        class="dn-height-group"
+      >
+        <label>
+          <span>ft</span>
+          <input
+            v-model="answers[currentQuestion.id]"
+            class="dn-input"
+            type="number"
+            min="0"
+            inputmode="numeric"
+            placeholder="5"
+          >
+        </label>
+        <label>
+          <span>in</span>
+          <input
+            v-model="answers[heightInchesQuestion.id]"
+            class="dn-input"
+            type="number"
+            min="0"
+            max="11"
+            inputmode="numeric"
+            placeholder="10"
+          >
+        </label>
+      </div>
+
       <textarea
-        v-if="isLongText(currentQuestion)"
+        v-else-if="isLongText(currentQuestion)"
         v-model="answers[currentQuestion.id]"
         class="dn-textarea"
         rows="6"
@@ -550,7 +661,7 @@ const saveAnswers = async () => {
       >
 
       <div
-        v-if="maxLength(currentQuestion)"
+        v-if="maxLength(currentQuestion) && !(isHeightFeetQuestion(currentQuestion) && heightInchesQuestion)"
         class="dn-character-count"
       >
         {{ String(answers[currentQuestion.id] || '').length }} / {{ maxLength(currentQuestion) }}
@@ -762,6 +873,26 @@ h1 span {
 .dn-answer-card--selected .dn-choice-box {
   background: var(--green, #059669);
   border-color: var(--green, #059669);
+}
+
+.dn-height-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 160px));
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.dn-height-group label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-3, #5f6368);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dn-height-group .dn-input {
+  margin-top: 0;
 }
 
 .dn-input,

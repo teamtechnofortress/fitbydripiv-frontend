@@ -56,7 +56,11 @@ const loadOrder = async () => {
 }
 
 // ── Navigation ──────────────────────────────────────────
-const goBack            = ()  => router.push('/admin/payments')
+const goBack = () => {
+  const back = typeof route.query.back === 'string' ? route.query.back : ''
+
+  router.push(back || '/admin/payments')
+}
 const openSubscription  = id  => id && router.push(`/admin/subscriptions/${id}`)
 
 // ── Webhooks ────────────────────────────────────────────
@@ -99,7 +103,7 @@ watch(() => route.params.id, loadOrder)
           @click="goBack"
         >
           <span class="mdi mdi-arrow-left" />
-          Back to Payments
+          Back to {{ route.query.back_label || 'Payments' }}
         </button>
       </div>
 

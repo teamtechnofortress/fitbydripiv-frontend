@@ -575,12 +575,31 @@
           </div>
           <div class="field-group">
             <label class="field-label">State <span class="required-star">*</span></label>
-            <input
+            <select
               v-model="form.page3.person.state"
-              type="text"
-              class="form-input"
-              placeholder="TX"
+              class="form-select"
+              :disabled="statesLoading"
             >
+              <option
+                value=""
+                disabled
+              >
+                {{ statesLoading ? 'Loading states...' : 'Select state' }}
+              </option>
+              <option
+                v-for="state in stateOptions"
+                :key="state"
+                :value="state"
+              >
+                {{ state }}
+              </option>
+            </select>
+            <span
+              v-if="statesError"
+              class="field-hint field-hint-error"
+            >
+              {{ statesError }}
+            </span>
           </div>
           <div class="field-group">
             <label class="field-label">Zip Code <span class="required-star">*</span></label>
@@ -769,6 +788,8 @@
 </template>
 
 <script setup>
+import axios from 'axios'
+import { INTAKE_STATES_URL } from '@/network/const'
 import {
   additionalConditionsOptions,
   currentConditionsOptions,
@@ -800,6 +821,41 @@ const props = defineProps({
 })
 
 defineEmits(['next', 'prev', 'submit', 'resetPatient'])
+
+const intakeStates = ref([])
+const statesLoading = ref(false)
+const statesError = ref('')
+
+const stateOptions = computed(() => {
+  const options = intakeStates.value.slice()
+  const selectedState = props.form?.page3?.person?.state
+
+  if (selectedState && !options.includes(selectedState))
+    options.unshift(selectedState)
+
+  return options
+})
+
+const loadIntakeStates = async () => {
+  statesLoading.value = true
+  statesError.value = ''
+
+  try {
+    const { data } = await axios.get(INTAKE_STATES_URL, {
+      headers: { Accept: 'application/json' },
+    })
+
+    const rows = Array.isArray(data?.data) ? data.data : []
+
+    intakeStates.value = rows
+      .map(state => String(state || '').trim())
+      .filter(Boolean)
+  } catch {
+    statesError.value = 'Unable to load state list. Please refresh and try again.'
+  } finally {
+    statesLoading.value = false
+  }
+}
 
 const toggleSelection = (list, value, exclusiveValue = null) => {
   const existingIndex = list.indexOf(value)
@@ -836,6 +892,8 @@ const toggleGoal = value => {
 const toggleMedicalHistory = value => {
   toggleSelection(props.form.page3.medicalHistory, value, 'none')
 }
+
+onMounted(loadIntakeStates)
 </script>
 
 <style scoped>
@@ -1268,6 +1326,14 @@ const toggleMedicalHistory = value => {
   font-weight: 600;
   color: var(--text-2);
   letter-spacing: .03em;
+}
+.field-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
+.field-hint-error {
+  color: #b91c1c;
 }
 .form-input, .form-select, .form-textarea {
   font-family: var(--font-body);

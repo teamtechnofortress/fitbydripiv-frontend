@@ -147,6 +147,12 @@ const quickActions = [
     icon: 'tabler-layout-navbar',
     action: 'global-sections',
   },
+  {
+    title: 'Dr Networks',
+    description: 'Manage Dr Network credentials, flows, routing, and product mappings.',
+    icon: 'tabler-stethoscope',
+    action: 'dr-networks',
+  },
 ]
 
 const groupedSettingsFields = [
@@ -1232,6 +1238,12 @@ const saveLayoutSection = async key => {
 const openPanel = async action => {
   if (!action) return
 
+  if (action === 'dr-networks') {
+    router.push('/admin/dr-networks')
+    
+    return
+  }
+
   activePanel.value = action
 
   if (action === 'general') {
@@ -1284,7 +1296,7 @@ const openPageBuilder = page => {
             v-for="action in quickActions"
             :key="action.title"
             cols="12"
-            md="4"
+            md="3"
           >
             <button
               type="button"

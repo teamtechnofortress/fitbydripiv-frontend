@@ -21,6 +21,7 @@ export const normalizeCurrentStep = response => {
     ...data,
     status: data.status || data.flow_status || null,
     current_step_key: data.current_step_key || data.step || null,
+    failed_step_key: data.failed_step_key || stepData.failed_step_key || null,
     step_data: {
       ...stepData,
       document_requirements: stepData.document_requirements ?? data.document_requirements ?? null,
@@ -28,6 +29,7 @@ export const normalizeCurrentStep = response => {
       slots: stepData.slots ?? data.slots ?? null,
       pause_reason: stepData.pause_reason ?? data.pause_reason ?? null,
       failure_reason: stepData.failure_reason ?? data.failure_reason ?? null,
+      failed_step_key: stepData.failed_step_key ?? data.failed_step_key ?? null,
     },
   }
 }
