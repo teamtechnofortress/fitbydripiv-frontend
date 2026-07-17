@@ -9,6 +9,7 @@ import HeroSection from './sections/HeroSection.vue'
 import PdfLibrarySection from './sections/PdfLibrarySection.vue'
 import ProcessSection from './sections/ProcessSection.vue'
 import ProductGridSection from './sections/ProductGridSection.vue'
+import RichTextSection from './sections/RichTextSection.vue'
 import SpacerSection from './sections/SpacerSection.vue'
 import SectionHeaderSection from './sections/SectionHeaderSection.vue'
 import TelehealthCtaSection from './sections/TelehealthCtaSection.vue'
@@ -35,6 +36,7 @@ const sectionMap = {
   category_cards: CategoryCardsSection,
   process: ProcessSection,
   content_block: ContentBlockSection,
+  rich_text: RichTextSection,
   product_grid: ProductGridSection,
   pdf_library: PdfLibrarySection,
   pen_instruction_library: PdfLibrarySection,
