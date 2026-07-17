@@ -262,6 +262,7 @@ export const ADMIN_CONTENT_PAGES_URL = SERVER_URL + "/admin/content/pages"
 export const ADMIN_CONTENT_LAYOUT_URL = SERVER_URL + "/admin/content/layout"
 export const getAdminContentPageUrl = pageId => `${SERVER_URL}/admin/content/pages/${pageId}`
 export const getAdminContentPageSectionsUrl = pageId => `${SERVER_URL}/admin/content/pages/${pageId}/sections`
+export const ADMIN_CONTENT_DOCUMENT_IMPORTS_URL = SERVER_URL + "/admin/content/document-imports"
 export const ADMIN_CONTENT_SECTIONS_URL = SERVER_URL + "/admin/content/sections"
 export const getAdminContentSectionUrl = sectionId => `${SERVER_URL}/admin/content/sections/${sectionId}`
 export const getAdminContentSectionsReorderUrl = pageId => `${SERVER_URL}/admin/content/pages/${pageId}/sections/reorder`

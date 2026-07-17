@@ -34,6 +34,7 @@ export const sectionTypeOptions = [
   { title: 'Category Cards', value: 'category_cards' },
   { title: 'Process', value: 'process' },
   { title: 'Content Block', value: 'content_block' },
+  { title: 'Rich Text', value: 'rich_text' },
   { title: 'Spacer', value: 'spacer' },
   { title: 'FAQ', value: 'faq' },
   { title: 'Telehealth CTA', value: 'telehealth_cta' },
@@ -103,6 +104,15 @@ export const createSectionDraft = (type = 'section_header', sortOrder = 1) => {
       rows: [],
       alignment: 'left',
       max_width: 'content',
+      background_style: null,
+    }
+  } else if (safeType === 'rich_text') {
+    base.content = {
+      html: '',
+      source: 'manual',
+      source_filename: null,
+      alignment: 'left',
+      max_width: 'wide',
       background_style: null,
     }
   } else if (safeType === 'spacer') {
@@ -206,6 +216,22 @@ export const buildSectionPayload = section => {
       document: normalizedDocument,
       documents: [normalizedDocument],
     }
+  }
+
+  if (section.type === 'rich_text') {
+    const sourceContent = section.content || {}
+
+    payload.content = {
+      html: sourceContent.html || '',
+      source: sourceContent.source || 'manual',
+      source_filename: sourceContent.source_filename || null,
+      alignment: sourceContent.alignment || 'left',
+      max_width: sourceContent.max_width || 'wide',
+      background_style: sourceContent.background_style || null,
+    }
+
+    if (sourceContent.was_edited_after_import !== undefined)
+      payload.content.was_edited_after_import = Boolean(sourceContent.was_edited_after_import)
   }
 
   if (section.type === 'process') {

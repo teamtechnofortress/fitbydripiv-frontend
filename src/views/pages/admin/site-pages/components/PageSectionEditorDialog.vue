@@ -1,8 +1,10 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import axios from 'axios'
+import StarterKit from '@tiptap/starter-kit'
+import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { useToast } from 'vue-toastification'
-import { ADMIN_MEDIA_UPLOAD_URL } from '@/network/const'
+import { ADMIN_CONTENT_DOCUMENT_IMPORTS_URL, ADMIN_MEDIA_UPLOAD_URL } from '@/network/const'
 import { getApiToken } from '@/store/authData'
 import {
   cloneEditableSection,
@@ -48,6 +50,113 @@ const heroMediaDragActive = ref(false)
 const pdfDocumentInput = ref(null)
 const pdfDocumentUploading = ref(false)
 const pdfDocumentDragActive = ref(false)
+const richTextFileInput = ref(null)
+const richTextStep = ref('input')
+const richTextSourceType = ref('manual')
+const richTextSelectedFile = ref(null)
+const richTextHtml = ref('')
+const richTextIsConverting = ref(false)
+const richTextConversionVersion = ref(null)
+const richTextIsDirty = ref(false)
+const richTextDragActive = ref(false)
+const richTextImportedFrom = ref('')
+const richTextEditedAfterImport = ref(false)
+
+const richTextAlignmentOptions = [
+  { title: 'Left', value: 'left' },
+  { title: 'Center', value: 'center' },
+  { title: 'Right', value: 'right' },
+]
+
+const richTextMaxWidthOptions = [
+  { title: 'Content', value: 'content' },
+  { title: 'Wide', value: 'wide' },
+  { title: 'Full', value: 'full' },
+]
+
+const richTextBackgroundStyleOptions = [
+  { title: 'Default', value: null },
+  { title: 'Muted', value: 'muted' },
+  { title: 'Soft Gradient', value: 'soft_gradient' },
+  { title: 'Dark', value: 'dark' },
+]
+
+const richTextToolbarGroups = [
+  {
+    key: 'history',
+    controls: [
+      { key: 'undo', icon: 'tabler-arrow-back-up', label: 'Undo', action: 'undo' },
+      { key: 'redo', icon: 'tabler-arrow-forward-up', label: 'Redo', action: 'redo' },
+    ],
+  },
+  {
+    key: 'structure',
+    controls: [
+      { key: 'paragraph', icon: 'tabler-pilcrow', label: 'Paragraph', action: 'paragraph', activeName: 'paragraph' },
+      { key: 'heading1', icon: 'tabler-h-1', label: 'Heading 1', headingLevel: 1, activeName: 'heading', activeAttributes: { level: 1 } },
+      { key: 'heading2', icon: 'tabler-h-2', label: 'Heading 2', headingLevel: 2, activeName: 'heading', activeAttributes: { level: 2 } },
+      { key: 'heading3', icon: 'tabler-h-3', label: 'Heading 3', headingLevel: 3, activeName: 'heading', activeAttributes: { level: 3 } },
+      { key: 'heading4', icon: 'tabler-h-4', label: 'Heading 4', headingLevel: 4, activeName: 'heading', activeAttributes: { level: 4 } },
+    ],
+  },
+  {
+    key: 'marks',
+    controls: [
+      { key: 'bold', icon: 'tabler-bold', label: 'Bold', action: 'bold', activeName: 'bold' },
+      { key: 'italic', icon: 'tabler-italic', label: 'Italic', action: 'italic', activeName: 'italic' },
+      { key: 'underline', icon: 'tabler-underline', label: 'Underline', action: 'underline', activeName: 'underline' },
+      { key: 'strike', icon: 'tabler-strikethrough', label: 'Strikethrough', action: 'strike', activeName: 'strike' },
+      { key: 'code', icon: 'tabler-code', label: 'Inline code', action: 'code', activeName: 'code' },
+      { key: 'clearFormatting', icon: 'tabler-clear-formatting', label: 'Clear formatting', action: 'clearFormatting' },
+    ],
+  },
+  {
+    key: 'blocks',
+    controls: [
+      { key: 'bulletList', icon: 'tabler-list', label: 'Bulleted list', action: 'bulletList', activeName: 'bulletList' },
+      { key: 'orderedList', icon: 'tabler-list-numbers', label: 'Numbered list', action: 'orderedList', activeName: 'orderedList' },
+      { key: 'blockquote', icon: 'tabler-quote', label: 'Quote', action: 'blockquote', activeName: 'blockquote' },
+      { key: 'codeBlock', icon: 'tabler-terminal-2', label: 'Code block', action: 'codeBlock', activeName: 'codeBlock' },
+      { key: 'horizontalRule', icon: 'tabler-minus', label: 'Divider', action: 'horizontalRule' },
+    ],
+  },
+  {
+    key: 'links',
+    controls: [
+      { key: 'link', icon: 'tabler-link', label: 'Add or edit link', action: 'link', activeName: 'link' },
+      { key: 'unlink', icon: 'tabler-unlink', label: 'Remove link', action: 'unlink' },
+    ],
+  },
+]
+
+const richTextEditor = useEditor({
+  content: '',
+  extensions: [
+    StarterKit.configure({
+      heading: {
+        levels: [1, 2, 3, 4],
+      },
+      link: {
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer nofollow',
+          target: '_blank',
+        },
+      },
+    }),
+  ],
+  editorProps: {
+    attributes: {
+      class: 'rich-text-editor__content',
+      'aria-label': 'Rich text content',
+    },
+  },
+  onUpdate: ({ editor }) => {
+    updateRichTextHtmlFromEditor(editor.getHTML())
+  },
+})
 
 const isEditing = computed(() => Boolean(props.section?.id))
 const isHero = computed(() => localSection.value.type === 'hero')
@@ -56,6 +165,7 @@ const isFeatured = computed(() => localSection.value.type === 'featured_products
 const isCategoryCards = computed(() => localSection.value.type === 'category_cards')
 const isProcess = computed(() => localSection.value.type === 'process')
 const isContentBlock = computed(() => localSection.value.type === 'content_block')
+const isRichText = computed(() => localSection.value.type === 'rich_text')
 const isSpacer = computed(() => localSection.value.type === 'spacer')
 const isFaq = computed(() => localSection.value.type === 'faq')
 const isTelehealth = computed(() => localSection.value.type === 'telehealth_cta')
@@ -65,6 +175,56 @@ const itemEditorLabel = computed(() => 'Step')
 const heroMediaUrl = computed(() => localSection.value.content?.background?.url || '')
 const heroMediaType = computed(() => localSection.value.content?.background?.type || '')
 const isHeroVideo = computed(() => heroMediaType.value === 'video')
+const getRichTextTextContent = html => String(html || '')
+  .replace(/<script[\s\S]*?<\/script>/gi, '')
+  .replace(/<style[\s\S]*?<\/style>/gi, '')
+  .replace(/<[^>]+>/g, '')
+  .replace(/&nbsp;/gi, ' ')
+  .replace(/&amp;/gi, '&')
+  .replace(/\s+/g, ' ')
+  .trim()
+
+const hasMeaningfulRichTextHtml = html => {
+  const source = String(html || '')
+
+  return getRichTextTextContent(source).length > 0 || /<(img|table)\b/i.test(source)
+}
+
+const richTextHasHtml = computed(() => hasMeaningfulRichTextHtml(richTextHtml.value))
+const richTextCurrentFileConverted = computed(() => {
+  if (richTextSourceType.value !== 'docx_import')
+    return true
+
+  if (!richTextSelectedFile.value)
+    return richTextHasHtml.value
+
+  const version = richTextConversionVersion.value
+  const file = richTextSelectedFile.value
+
+  return Boolean(
+    version
+      && file.name === version.filename
+      && file.size === version.size
+      && file.lastModified === version.lastModified,
+  )
+})
+const richTextCanContinue = computed(() => (
+  richTextSourceType.value === 'manual'
+    ? richTextHasHtml.value
+    : Boolean(richTextSelectedFile.value) && !richTextIsConverting.value
+))
+const richTextCanSave = computed(() => (
+  richTextHasHtml.value && richTextCurrentFileConverted.value && !richTextIsConverting.value
+))
+const richTextPrimaryInputAction = computed(() => (
+  richTextSourceType.value === 'manual' ? 'Review & Continue' : 'Convert & Continue'
+))
+const richTextSourceLabel = computed(() => {
+  if (richTextSourceType.value === 'docx_import')
+    return richTextImportedFrom.value || richTextSelectedFile.value?.name || localSection.value.content?.source_filename || 'DOCX import'
+
+  return 'Manual editor'
+})
 
 const pdfDocumentSourceUrl = computed(() => (
   localSection.value.content?.document?.view_url
@@ -137,7 +297,212 @@ const ensurePdfLibraryShape = () => {
   localSection.value.content.documents = [normalized]
 }
 
+const ensureRichTextShape = () => {
+  if (!localSection.value.content || typeof localSection.value.content !== 'object')
+    localSection.value.content = {}
+
+  localSection.value.content = {
+    html: localSection.value.content.html || '',
+    source: localSection.value.content.source || 'manual',
+    source_filename: localSection.value.content.source_filename || null,
+    alignment: localSection.value.content.alignment || 'left',
+    max_width: localSection.value.content.max_width || 'wide',
+    background_style: localSection.value.content.background_style || null,
+    ...(localSection.value.content.was_edited_after_import !== undefined
+      ? { was_edited_after_import: Boolean(localSection.value.content.was_edited_after_import) }
+      : {}),
+  }
+}
+
+const setRichTextEditorContent = async html => {
+  await nextTick()
+  richTextEditor.value?.commands.setContent(html || '', { emitUpdate: false })
+}
+
+const syncRichTextEditorDom = async () => {
+  await setRichTextEditorContent(richTextHtml.value)
+}
+
+const syncRichTextState = async () => {
+  ensureRichTextShape()
+
+  richTextSourceType.value = localSection.value.content.source === 'docx_import' ? 'docx_import' : 'manual'
+  richTextSelectedFile.value = null
+  richTextHtml.value = localSection.value.content.html || ''
+  richTextStep.value = hasMeaningfulRichTextHtml(richTextHtml.value) ? 'review' : 'input'
+  richTextConversionVersion.value = null
+  richTextIsDirty.value = false
+  richTextIsConverting.value = false
+  richTextDragActive.value = false
+  richTextImportedFrom.value = localSection.value.content.source_filename || ''
+  richTextEditedAfterImport.value = Boolean(localSection.value.content.was_edited_after_import)
+
+  await syncRichTextEditorDom()
+}
+
+const applyRichTextHtml = async (html, dirty = true) => {
+  richTextHtml.value = html || ''
+  localSection.value.content.html = richTextHtml.value
+  richTextIsDirty.value = dirty
+
+  if (richTextSourceType.value === 'docx_import' && richTextStep.value === 'review')
+    richTextEditedAfterImport.value = true
+
+  await syncRichTextEditorDom()
+}
+
+const updateRichTextHtmlFromEditor = html => {
+  richTextHtml.value = html || ''
+  localSection.value.content.html = richTextHtml.value
+  richTextIsDirty.value = true
+
+  if (richTextSourceType.value === 'docx_import' && richTextStep.value === 'review')
+    richTextEditedAfterImport.value = true
+}
+
+const isRichTextActive = (name, attributes = {}) => Boolean(richTextEditor.value?.isActive(name, attributes))
+
+const isRichTextControlActive = control => {
+  if (!control.activeName)
+    return false
+
+  return isRichTextActive(control.activeName, control.activeAttributes || {})
+}
+
+const isRichTextControlDisabled = control => {
+  if (!richTextEditor.value)
+    return true
+
+  if (control.key === 'unlink')
+    return !isRichTextActive('link')
+
+  return false
+}
+
+const runRichTextAction = action => {
+  const editor = richTextEditor.value
+  if (!editor)
+    return
+
+  const chain = editor.chain().focus()
+
+  const actions = {
+    bold: () => chain.toggleBold().run(),
+    italic: () => chain.toggleItalic().run(),
+    underline: () => chain.toggleUnderline().run(),
+    strike: () => chain.toggleStrike().run(),
+    code: () => chain.toggleCode().run(),
+    bulletList: () => chain.toggleBulletList().run(),
+    orderedList: () => chain.toggleOrderedList().run(),
+    blockquote: () => chain.toggleBlockquote().run(),
+    codeBlock: () => chain.toggleCodeBlock().run(),
+    horizontalRule: () => chain.setHorizontalRule().run(),
+    undo: () => chain.undo().run(),
+    redo: () => chain.redo().run(),
+    paragraph: () => chain.setParagraph().run(),
+    clearFormatting: () => chain.unsetAllMarks().clearNodes().run(),
+    unlink: () => chain.extendMarkRange('link').unsetLink().run(),
+  }
+
+  actions[action]?.()
+}
+
+const runRichTextControl = control => {
+  if (control.action === 'link') {
+    setRichTextLink()
+
+    return
+  }
+
+  if (control.headingLevel) {
+    runRichTextHeading(control.headingLevel)
+
+    return
+  }
+
+  runRichTextAction(control.action)
+}
+
+const runRichTextHeading = level => {
+  richTextEditor.value
+    ?.chain()
+    .focus()
+    .toggleHeading({ level })
+    .run()
+}
+
+const normalizeRichTextLinkUrl = url => {
+  const trimmed = String(url || '').trim()
+  if (!trimmed)
+    return ''
+
+  if (/^(https?:|mailto:|tel:|#|\/)/i.test(trimmed))
+    return trimmed
+
+  return `https://${trimmed}`
+}
+
+const setRichTextLink = () => {
+  const editor = richTextEditor.value
+  if (!editor)
+    return
+
+  const previousUrl = editor.getAttributes('link').href || ''
+  const url = window.prompt('Enter link URL', previousUrl)
+  if (url === null)
+    return
+
+  const normalizedUrl = normalizeRichTextLinkUrl(url)
+
+  if (!normalizedUrl) {
+    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+
+    return
+  }
+
+  editor.chain().focus().extendMarkRange('link').setLink({ href: normalizedUrl }).run()
+}
+
+const selectRichTextSource = async sourceType => {
+  if (richTextIsConverting.value)
+    return
+
+  if (richTextSourceType.value === sourceType)
+    return
+
+  richTextSourceType.value = sourceType
+  localSection.value.content.source = sourceType
+  richTextStep.value = 'input'
+  richTextConversionVersion.value = null
+  richTextIsDirty.value = true
+
+  if (sourceType === 'manual') {
+    richTextSelectedFile.value = null
+    richTextImportedFrom.value = ''
+    localSection.value.content.source_filename = null
+    await applyRichTextHtml('', true)
+  } else {
+    await applyRichTextHtml('', true)
+  }
+
+  await syncRichTextEditorDom()
+}
+
+const hasRichTextBlockingState = () => (
+  isRichText.value && (richTextIsConverting.value || richTextIsDirty.value)
+)
+
+const confirmRichTextClose = () => {
+  if (!hasRichTextBlockingState())
+    return true
+
+  return window.confirm('The document conversion or unsaved edits will be lost.')
+}
+
 const closeDialog = () => {
+  if (!confirmRichTextClose())
+    return
+
   emit('update:modelValue', false)
 }
 
@@ -170,7 +535,7 @@ const buildErrorMessage = error => {
   return error?.message || 'Request failed. Please try again.'
 }
 
-const syncSection = () => {
+const syncSection = async () => {
   const source = props.section
     ? cloneEditableSection(props.section, props.nextSortOrder)
     : createSectionDraft('section_header', props.nextSortOrder)
@@ -179,6 +544,8 @@ const syncSection = () => {
   localSection.value = source
   if (isPdfLibrary.value)
     ensurePdfLibraryShape()
+  if (isRichText.value)
+    await syncRichTextState()
 }
 
 watch(() => props.modelValue, value => {
@@ -200,9 +567,14 @@ watch(() => localSection.value.type, (type, previousType) => {
 
   if (['pdf_library', 'pen_instruction_library'].includes(type))
     ensurePdfLibraryShape()
+  if (type === 'rich_text')
+    syncRichTextState()
 })
 
 const updateDialog = value => {
+  if (!value && !confirmRichTextClose())
+    return
+
   emit('update:modelValue', value)
 }
 
@@ -554,9 +926,190 @@ const onPdfDocumentDrop = async event => {
   await uploadPdfDocumentFile(file)
 }
 
+const isDocxFile = file => {
+  const mime = String(file?.type || '').toLowerCase()
+  const name = String(file?.name || '').toLowerCase()
+
+  return name.endsWith('.docx') || mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+}
+
+const handleRichTextFileChange = async file => {
+  if (!file)
+    return
+
+  if (!isDocxFile(file)) {
+    toast.error('Only DOCX files are supported.')
+
+    return
+  }
+
+  richTextSelectedFile.value = file
+  richTextHtml.value = ''
+  richTextConversionVersion.value = null
+  richTextImportedFrom.value = file.name
+  richTextEditedAfterImport.value = false
+  richTextIsDirty.value = true
+  richTextStep.value = 'input'
+  localSection.value.content.html = ''
+  localSection.value.content.source = 'docx_import'
+  localSection.value.content.source_filename = file.name
+
+  await syncRichTextEditorDom()
+}
+
+const openRichTextFilePicker = () => {
+  if (richTextIsConverting.value)
+    return
+
+  richTextFileInput.value?.click()
+}
+
+const onRichTextFileInputChange = async event => {
+  const file = event?.target?.files?.[0]
+
+  await handleRichTextFileChange(file)
+  if (event?.target)
+    event.target.value = ''
+}
+
+const activateRichTextDropzone = event => {
+  event.preventDefault()
+  if (richTextIsConverting.value)
+    return
+
+  richTextDragActive.value = true
+}
+
+const onRichTextDragLeave = event => {
+  const container = event?.currentTarget
+  const nextTarget = event?.relatedTarget
+  if (container && nextTarget && container.contains(nextTarget))
+    return
+
+  richTextDragActive.value = false
+}
+
+const onRichTextDrop = async event => {
+  event.preventDefault()
+  richTextDragActive.value = false
+  if (richTextIsConverting.value)
+    return
+
+  const file = event?.dataTransfer?.files?.[0]
+
+  await handleRichTextFileChange(file)
+}
+
+const convertRichTextDocument = async () => {
+  const file = richTextSelectedFile.value
+
+  if (!file) {
+    toast.error('Select a DOCX file before continuing.')
+
+    return
+  }
+
+  richTextIsConverting.value = true
+  try {
+    const formData = new FormData()
+
+    formData.append('document', file)
+    formData.append('source', 'docx_import')
+
+    const response = await axios.post(ADMIN_CONTENT_DOCUMENT_IMPORTS_URL, formData, {
+      headers: getUploadHeaders(),
+    })
+
+    const data = response?.data?.data || {}
+    const html = data.html || ''
+
+    if (!html.trim())
+      throw new Error('The converter returned empty content.')
+
+    richTextHtml.value = html
+    localSection.value.content.html = html
+    localSection.value.content.source = data.source || 'docx_import'
+    localSection.value.content.source_filename = data.source_filename || file.name
+    richTextImportedFrom.value = data.source_filename || file.name
+    richTextConversionVersion.value = {
+      filename: file.name,
+      size: file.size,
+      lastModified: file.lastModified,
+    }
+    richTextEditedAfterImport.value = false
+    richTextIsDirty.value = false
+    richTextStep.value = 'review'
+
+    await syncRichTextEditorDom()
+    toast.success('Document converted successfully.')
+  } catch (error) {
+    toast.error(buildErrorMessage(error))
+  } finally {
+    richTextIsConverting.value = false
+  }
+}
+
+const continueRichText = async () => {
+  if (richTextSourceType.value === 'manual') {
+    if (!richTextHasHtml.value) {
+      toast.error('Enter rich text content before continuing.')
+
+      return
+    }
+
+    localSection.value.content.source = 'manual'
+    localSection.value.content.source_filename = null
+    richTextImportedFrom.value = ''
+    richTextConversionVersion.value = null
+    richTextIsDirty.value = false
+    richTextStep.value = 'review'
+    await syncRichTextEditorDom()
+
+    return
+  }
+
+  await convertRichTextDocument()
+}
+
+const backToRichTextInput = async () => {
+  if (richTextIsConverting.value)
+    return
+
+  richTextStep.value = 'input'
+  await syncRichTextEditorDom()
+}
+
+const saveRichTextSection = () => {
+  if (!richTextCanSave.value) {
+    toast.error(
+      richTextSourceType.value === 'docx_import'
+        ? 'Convert the currently selected DOCX before saving.'
+        : 'Enter rich text content before saving.',
+    )
+
+    return
+  }
+
+  localSection.value.content.html = richTextHtml.value
+  localSection.value.content.source = richTextSourceType.value
+  localSection.value.content.source_filename = richTextSourceType.value === 'docx_import'
+    ? (richTextImportedFrom.value || richTextSelectedFile.value?.name || localSection.value.content.source_filename || null)
+    : null
+  localSection.value.content.was_edited_after_import = richTextSourceType.value === 'docx_import'
+    ? richTextEditedAfterImport.value
+    : false
+
+  richTextIsDirty.value = false
+  saveSection()
+}
+
 const saveSection = () => {
   if (isPdfLibrary.value)
     ensurePdfLibraryShape()
+  if (isRichText.value) {
+    ensureRichTextShape()
+    localSection.value.content.html = richTextHtml.value
+  }
 
   emit('save', {
     ...localSection.value,
@@ -1349,6 +1902,227 @@ const saveSection = () => {
         </div>
 
         <div
+          v-else-if="isRichText"
+          class="rich-text-config d-flex flex-column gap-4"
+        >
+          <div class="d-flex flex-wrap align-center justify-space-between gap-3">
+            <div>
+              <div class="text-subtitle-1 font-weight-semibold">
+                {{ richTextStep === 'input' ? 'Rich Text Configuration' : 'Review Rich Text' }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                Step {{ richTextStep === 'input' ? '1' : '2' }} of 2
+              </div>
+            </div>
+
+            <VChip
+              v-if="richTextStep === 'review'"
+              color="success"
+              variant="tonal"
+              size="small"
+              prepend-icon="tabler-check"
+            >
+              {{ richTextSourceType === 'docx_import' ? 'Conversion completed' : 'Ready to save' }}
+            </VChip>
+          </div>
+
+          <template v-if="richTextStep === 'input'">
+            <div class="rich-text-source-toggle">
+              <VBtn
+                :color="richTextSourceType === 'manual' ? 'primary' : 'default'"
+                :variant="richTextSourceType === 'manual' ? 'flat' : 'tonal'"
+                :disabled="richTextIsConverting"
+                prepend-icon="tabler-edit"
+                @click="selectRichTextSource('manual')"
+              >
+                Manual Editor
+              </VBtn>
+              <VBtn
+                :color="richTextSourceType === 'docx_import' ? 'primary' : 'default'"
+                :variant="richTextSourceType === 'docx_import' ? 'flat' : 'tonal'"
+                :disabled="richTextIsConverting"
+                prepend-icon="tabler-file-type-docx"
+                @click="selectRichTextSource('docx_import')"
+              >
+                Import DOCX
+              </VBtn>
+            </div>
+
+            <template v-if="richTextSourceType === 'manual'">
+              <div class="rich-text-editor-shell">
+                <div class="rich-text-toolbar">
+                  <div
+                    v-for="group in richTextToolbarGroups"
+                    :key="group.key"
+                    class="rich-text-toolbar__group"
+                  >
+                    <VBtn
+                      v-for="control in group.controls"
+                      :key="control.key"
+                      size="small"
+                      variant="text"
+                      :color="isRichTextControlActive(control) ? 'primary' : 'default'"
+                      :disabled="isRichTextControlDisabled(control)"
+                      :icon="control.icon"
+                      :title="control.label"
+                      :aria-label="control.label"
+                      @click="runRichTextControl(control)"
+                    />
+                  </div>
+                </div>
+                <EditorContent
+                  :editor="richTextEditor"
+                  class="rich-text-editor"
+                />
+              </div>
+            </template>
+
+            <template v-else>
+              <input
+                ref="richTextFileInput"
+                class="d-none"
+                type="file"
+                accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                @change="onRichTextFileInputChange"
+              >
+
+              <div
+                class="rich-text-docx-dropzone"
+                :class="{ 'rich-text-docx-dropzone--active': richTextDragActive }"
+                role="button"
+                tabindex="0"
+                @click="openRichTextFilePicker"
+                @keydown.enter.prevent="openRichTextFilePicker"
+                @keydown.space.prevent="openRichTextFilePicker"
+                @dragenter="activateRichTextDropzone"
+                @dragover="activateRichTextDropzone"
+                @dragleave="onRichTextDragLeave"
+                @drop="onRichTextDrop"
+              >
+                <VIcon
+                  :icon="richTextIsConverting ? 'tabler-loader-2' : 'tabler-file-type-docx'"
+                  :class="{ 'spin-icon': richTextIsConverting }"
+                  size="38"
+                  color="primary"
+                />
+                <div class="text-subtitle-2 font-weight-semibold mt-3">
+                  {{ richTextIsConverting ? `Converting ${richTextSelectedFile?.name || 'document'}...` : (richTextDragActive ? 'Drop DOCX to import' : 'Drag and drop a DOCX here') }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis mt-1">
+                  or click to browse your files
+                </div>
+                <div class="text-caption text-medium-emphasis mt-2">
+                  Only `.docx` files are supported
+                </div>
+              </div>
+
+              <VChip
+                v-if="richTextSelectedFile"
+                color="primary"
+                variant="tonal"
+                size="small"
+                prepend-icon="tabler-file-type-docx"
+                class="align-self-start"
+              >
+                {{ richTextSelectedFile.name }}
+              </VChip>
+
+              <VAlert
+                v-if="richTextIsConverting"
+                color="info"
+                variant="tonal"
+                density="compact"
+              >
+                Converting {{ richTextSelectedFile?.name || 'document' }}...
+              </VAlert>
+            </template>
+          </template>
+
+          <template v-else>
+            <VAlert
+              :color="richTextSourceType === 'docx_import' ? 'success' : 'info'"
+              variant="tonal"
+              density="compact"
+            >
+              Source: {{ richTextSourceLabel }}
+            </VAlert>
+
+            <div class="rich-text-editor-shell">
+              <div class="rich-text-toolbar">
+                <div
+                  v-for="group in richTextToolbarGroups"
+                  :key="group.key"
+                  class="rich-text-toolbar__group"
+                >
+                  <VBtn
+                    v-for="control in group.controls"
+                    :key="control.key"
+                    size="small"
+                    variant="text"
+                    :color="isRichTextControlActive(control) ? 'primary' : 'default'"
+                    :disabled="isRichTextControlDisabled(control)"
+                    :icon="control.icon"
+                    :title="control.label"
+                    :aria-label="control.label"
+                    @click="runRichTextControl(control)"
+                  />
+                </div>
+              </div>
+              <EditorContent
+                :editor="richTextEditor"
+                class="rich-text-editor rich-text-editor--review"
+              />
+            </div>
+
+            <VRow>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VSelect
+                  v-model="localSection.content.alignment"
+                  :items="richTextAlignmentOptions"
+                  label="Alignment"
+                  variant="outlined"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VSelect
+                  v-model="localSection.content.max_width"
+                  :items="richTextMaxWidthOptions"
+                  label="Max Width"
+                  variant="outlined"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VSelect
+                  v-model="localSection.content.background_style"
+                  :items="richTextBackgroundStyleOptions"
+                  label="Background Style"
+                  variant="outlined"
+                  clearable
+                />
+              </VCol>
+            </VRow>
+
+            <VAlert
+              v-if="richTextSourceType === 'docx_import' && !richTextCurrentFileConverted"
+              color="warning"
+              variant="tonal"
+              density="compact"
+            >
+              The selected DOCX has changed. Convert the current file before saving.
+            </VAlert>
+          </template>
+        </div>
+
+        <div
           v-else-if="isPdfLibrary"
           class="d-flex flex-column gap-4"
         >
@@ -1737,7 +2511,53 @@ const saveSection = () => {
         </div>
       </VCardText>
 
-      <VCardActions class="px-6 py-4 border-t">
+      <VCardActions
+        v-if="isRichText"
+        class="px-6 py-4 border-t"
+      >
+        <template v-if="richTextStep === 'input'">
+          <VBtn
+            variant="text"
+            :disabled="richTextIsConverting"
+            @click="closeDialog"
+          >
+            Cancel
+          </VBtn>
+          <VSpacer />
+          <VBtn
+            color="primary"
+            :loading="richTextIsConverting"
+            :disabled="!richTextCanContinue"
+            @click="continueRichText"
+          >
+            {{ richTextPrimaryInputAction }}
+          </VBtn>
+        </template>
+
+        <template v-else>
+          <VBtn
+            variant="text"
+            :disabled="richTextIsConverting || saving"
+            @click="backToRichTextInput"
+          >
+            Back
+          </VBtn>
+          <VSpacer />
+          <VBtn
+            color="primary"
+            :loading="saving"
+            :disabled="!richTextCanSave || richTextIsConverting"
+            @click="saveRichTextSection"
+          >
+            Save Section
+          </VBtn>
+        </template>
+      </VCardActions>
+
+      <VCardActions
+        v-else
+        class="px-6 py-4 border-t"
+      >
         <VSpacer />
         <VBtn
           variant="text"
@@ -1875,6 +2695,170 @@ const saveSection = () => {
 
 .pdf-document-uploader__meta {
   min-height: 28px;
+}
+
+.rich-text-source-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rich-text-editor-shell {
+  overflow: hidden;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  border-radius: 16px;
+  background: rgba(var(--v-theme-surface), 0.98);
+}
+
+.rich-text-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--v-theme-primary), 0.04);
+}
+
+.rich-text-toolbar__group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding-inline-end: 8px;
+  border-inline-end: 1px solid rgba(var(--v-theme-on-surface), 0.1);
+}
+
+.rich-text-toolbar__group:last-child {
+  padding-inline-end: 0;
+  border-inline-end: 0;
+}
+
+.rich-text-editor {
+  display: block;
+}
+
+.rich-text-editor :deep(.ProseMirror) {
+  min-height: 260px;
+  padding: 18px;
+  color: rgba(var(--v-theme-on-surface), 0.9);
+  line-height: 1.7;
+  outline: none;
+}
+
+.rich-text-editor--review :deep(.ProseMirror) {
+  min-height: 340px;
+}
+
+.rich-text-editor :deep(.ProseMirror:empty::before) {
+  color: rgba(var(--v-theme-on-surface), 0.42);
+  content: 'Start typing rich text content...';
+}
+
+.rich-text-editor :deep(.ProseMirror h1),
+.rich-text-editor :deep(.ProseMirror h2),
+.rich-text-editor :deep(.ProseMirror h3),
+.rich-text-editor :deep(.ProseMirror h4) {
+  margin-block: 0.65em 0.35em;
+  color: rgba(var(--v-theme-on-surface), 0.96);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.rich-text-editor :deep(.ProseMirror h1) {
+  font-size: 2rem;
+}
+
+.rich-text-editor :deep(.ProseMirror h2) {
+  font-size: 1.65rem;
+}
+
+.rich-text-editor :deep(.ProseMirror h3) {
+  font-size: 1.35rem;
+}
+
+.rich-text-editor :deep(.ProseMirror h4) {
+  font-size: 1.15rem;
+}
+
+.rich-text-editor :deep(.ProseMirror p) {
+  margin-block: 0 0.75em;
+}
+
+.rich-text-editor :deep(.ProseMirror ul),
+.rich-text-editor :deep(.ProseMirror ol) {
+  padding-inline-start: 1.35rem;
+  margin-block: 0.5em 0.9em;
+}
+
+.rich-text-editor :deep(.ProseMirror blockquote) {
+  margin: 1rem 0;
+  padding: 0.65rem 0.9rem;
+  border-left: 4px solid rgba(var(--v-theme-primary), 0.55);
+  background: rgba(var(--v-theme-primary), 0.06);
+}
+
+.rich-text-editor :deep(.ProseMirror a) {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rich-text-editor :deep(.ProseMirror code) {
+  padding: 0.14rem 0.32rem;
+  border-radius: 6px;
+  background: rgba(var(--v-theme-on-surface), 0.08);
+  color: rgba(var(--v-theme-on-surface), 0.92);
+  font-size: 0.92em;
+}
+
+.rich-text-editor :deep(.ProseMirror pre) {
+  overflow-x: auto;
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  background: #111827;
+  color: #f9fafb;
+  line-height: 1.6;
+}
+
+.rich-text-editor :deep(.ProseMirror pre code) {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.rich-text-editor :deep(.ProseMirror hr) {
+  margin: 1.2rem 0;
+  border: 0;
+  border-top: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.rich-text-docx-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 210px;
+  padding: 24px 20px;
+  border: 1px dashed rgba(var(--v-theme-primary), 0.32);
+  border-radius: 16px;
+  background: rgba(var(--v-theme-primary), 0.04);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.rich-text-docx-dropzone:hover {
+  border-color: rgba(var(--v-theme-primary), 0.56);
+  background: rgba(var(--v-theme-primary), 0.07);
+}
+
+.rich-text-docx-dropzone--active {
+  border-color: rgba(var(--v-theme-primary), 0.72);
+  background: rgba(var(--v-theme-primary), 0.11);
+  transform: translateY(-1px);
 }
 
 .hero-video-dialog__video {

@@ -39,6 +39,14 @@ const getSectionSummary = section => {
   if (section.type === 'content_block')
     return section.headline || section.content?.headline || `${section.content?.paragraphs?.length || 0} paragraphs configured`
 
+  if (section.type === 'rich_text') {
+    const source = section.content?.source === 'docx_import'
+      ? `Imported from ${section.content?.source_filename || 'DOCX'}`
+      : 'Manual rich text'
+
+    return `${source} • ${section.content?.html ? 'content ready' : 'empty'}`
+  }
+
   if (section.type === 'spacer')
     return `${section.height || section.content?.height || 0}px vertical spacing`
 
