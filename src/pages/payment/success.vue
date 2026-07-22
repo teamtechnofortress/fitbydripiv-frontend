@@ -44,7 +44,7 @@ const goToJourney = orderUuid => {
   if (!orderUuid) return
   clearTimers()
   router.push({
-    path: `/orders/${orderUuid}/journey`,
+    path: `/journey/${encodeURIComponent(orderUuid)}`,
     query: sessionId ? { session_id: sessionId } : {},
   })
   window.scrollTo(0, 0)

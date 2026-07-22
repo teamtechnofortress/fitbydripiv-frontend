@@ -1,11 +1,16 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { saveIntakeAnswer } from '@/api/drNetworkApi'
+import DrNetworkStepShell from './DrNetworkStepShell.vue'
 
 const props = defineProps({
   orderUuid: {
     type: String,
     required: true,
+  },
+  journey: {
+    type: Object,
+    default: null,
   },
   workflow: {
     type: Object,
@@ -13,7 +18,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['refresh-journey', 'refresh-workflow'])
+const emit = defineEmits(['refreshJourney', 'refreshWorkflow'])
 
 const answers = reactive({})
 const saving = ref(false)
@@ -21,10 +26,17 @@ const message = ref('')
 const error = ref('')
 const currentIndex = ref(0)
 const reviewMode = ref(false)
+const direction = ref('forward')
+const hasReachedReview = ref(false)
+const pendingConditionalReviewCheck = ref(null)
 
 const HEIGHT_FEET_KEY = 'glp1_height_feet'
 const HEIGHT_INCHES_KEY = 'glp1_height_inches'
 const BMI_KEY = 'glp1_bmi'
+
+const CONDITIONAL_TRIGGER_KEYS = new Set([
+  'wellness_requested_substances',
+])
 
 const questionSet = computed(() => props.workflow?.step_data?.question_set || props.workflow?.question_set || null)
 
@@ -67,8 +79,8 @@ watch(
     list.forEach(question => {
       if (!(question.id in answers)) {
         const answerValue = question.answer_value
-        const inputType = String(question.input_type || question.type || 'text').toLowerCase()
-        const isMultiAnswer = ['checkbox', 'checkboxes', 'multiselect', 'multi-select', 'multi_select', 'multiple_select', 'multiple_choice', 'multi_choice'].includes(inputType)
+        const inputTypeValue = String(question.input_type || question.type || 'text').toLowerCase()
+        const isMultiAnswer = ['checkbox', 'checkboxes', 'multiselect', 'multi-select', 'multi_select', 'multiple_select', 'multiple_choice', 'multi_choice'].includes(inputTypeValue)
 
         if (isMultiAnswer) {
           if (Array.isArray(answerValue))
@@ -119,26 +131,70 @@ const answerForQuestionKey = key => {
   return answers[question.id]
 }
 
+const conditionSourceKey = condition => {
+  const source = condition?.when || condition?.source || ''
+
+  return String(source).replace(/^answers\./, '')
+}
+
+const conditionExpectedValues = condition => {
+  if (Array.isArray(condition?.in)) return condition.in
+  if (Array.isArray(condition?.value)) return condition.value
+  if (Object.prototype.hasOwnProperty.call(condition || {}, 'equals')) return [condition.equals]
+  if (Object.prototype.hasOwnProperty.call(condition || {}, 'not_equals')) return [condition.not_equals]
+  if (Object.prototype.hasOwnProperty.call(condition || {}, 'value')) return [condition.value]
+
+  return []
+}
+
 const conditionMatches = condition => {
-  if (!condition?.when) return true
+  const sourceKey = conditionSourceKey(condition)
+  if (!sourceKey) return true
 
-  const answer = answerForQuestionKey(condition.when)
+  const answer = answerForQuestionKey(sourceKey)
   const normalizedAnswers = Array.isArray(answer) ? answer.map(String) : [String(answer ?? '')]
+  const expectedValues = conditionExpectedValues(condition).map(String)
+  const operator = String(condition?.operator || '').toLowerCase()
 
-  if (Object.prototype.hasOwnProperty.call(condition, 'equals')) {
-    return normalizedAnswers.includes(String(condition.equals))
+  if (operator === 'equals' || Object.prototype.hasOwnProperty.call(condition, 'equals')) {
+    return expectedValues.some(value => normalizedAnswers.includes(value))
   }
 
-  if (Array.isArray(condition.in)) {
-    return condition.in.map(String).some(value => normalizedAnswers.includes(value))
+  if (operator === 'in' || Array.isArray(condition.in)) {
+    return expectedValues.some(value => normalizedAnswers.includes(value))
   }
 
-  if (Object.prototype.hasOwnProperty.call(condition, 'not_equals')) {
-    return !normalizedAnswers.includes(String(condition.not_equals))
+  if (operator === 'not_equals' || operator === 'not_equals_any' || Object.prototype.hasOwnProperty.call(condition, 'not_equals')) {
+    return expectedValues.every(value => !normalizedAnswers.includes(value))
+  }
+
+  if (operator === 'not_in') {
+    return expectedValues.every(value => !normalizedAnswers.includes(value))
+  }
+
+  if (operator === 'contains') {
+    return expectedValues.some(value => normalizedAnswers.includes(value))
   }
 
   return Array.isArray(answer) ? answer.length > 0 : Boolean(answer)
 }
+
+const conditionalTriggerKeys = computed(() => {
+  const keys = new Set(CONDITIONAL_TRIGGER_KEYS)
+
+  questions.value.forEach(question => {
+    const rules = Array.isArray(question.condition_rules) ? question.condition_rules : []
+
+    rules.forEach(rule => {
+      const key = conditionSourceKey(rule)
+      if (key) keys.add(key)
+    })
+  })
+
+  return keys
+})
+
+const isConditionalTriggerQuestion = question => Boolean(question?.question_key && conditionalTriggerKeys.value.has(question.question_key))
 
 const isQuestionVisible = question => {
   if (!question.is_conditional) return true
@@ -157,11 +213,25 @@ watch(
     if (!list.length) {
       currentIndex.value = 0
       reviewMode.value = false
+      pendingConditionalReviewCheck.value = null
 
       return
     }
 
     if (currentIndex.value > list.length - 1) currentIndex.value = list.length - 1
+
+    const pendingCheck = pendingConditionalReviewCheck.value
+
+    if (pendingCheck && reviewMode.value && list.length > pendingCheck.questionCount) {
+      const triggerIndex = list.findIndex(question => question.id === pendingCheck.questionId)
+
+      if (triggerIndex >= 0 && triggerIndex < list.length - 1) {
+        currentIndex.value = triggerIndex + 1
+        reviewMode.value = false
+      }
+
+      pendingConditionalReviewCheck.value = null
+    }
   },
   { immediate: true },
 )
@@ -221,6 +291,15 @@ const isCurrentQuestionAnswered = computed(() => currentQuestion.value ? isAnswe
 
 const isLastQuestion = computed(() => currentIndex.value >= visibleQuestions.value.length - 1)
 
+const transitionName = computed(() => (direction.value === 'forward' ? 'slide-next' : 'slide-prev'))
+
+const isReviewReturnMode = computed(() => hasReachedReview.value && !reviewMode.value && Boolean(currentQuestion.value))
+
+const shellSubtitle = computed(() => (
+  props.journey?.message
+  || 'Answer the clinical questions required for your consultation.'
+))
+
 const setSingleOption = (question, value) => {
   answers[question.id] = value
   error.value = ''
@@ -241,6 +320,7 @@ const toggleMultiOption = (question, option) => {
   const current = Array.isArray(answers[question.id]) ? [...answers[question.id]] : []
   const selectedValues = current.map(String)
   const isNoneOption = String(value) === 'none'
+
   const next = selectedValues.includes(String(value))
     ? current.filter(item => String(item) !== String(value))
     : isNoneOption
@@ -252,6 +332,7 @@ const toggleMultiOption = (question, option) => {
   message.value = ''
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 const validateQuestion = question => {
   if (isHeightFeetQuestion(question) && heightInchesQuestion.value) {
     const feet = String(answers[question.id] ?? '').trim()
@@ -314,9 +395,41 @@ const validateCurrentQuestion = () => {
   return true
 }
 
+const saveAnswerForQuestion = async question => {
+  if (isHeightFeetQuestion(question) && heightInchesQuestion.value) {
+    await saveIntakeAnswer(props.orderUuid, question.id, answers[question.id])
+    await saveIntakeAnswer(props.orderUuid, heightInchesQuestion.value.id, answers[heightInchesQuestion.value.id])
+
+    return
+  }
+
+  await saveIntakeAnswer(props.orderUuid, question.id, answers[question.id])
+}
+
+const saveCurrentAnswerIfNeeded = async question => {
+  if (!isConditionalTriggerQuestion(question)) return true
+
+  saving.value = true
+  error.value = ''
+
+  try {
+    await saveAnswerForQuestion(question)
+    emit('refreshWorkflow')
+
+    return true
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'Unable to save this answer. Please try again.'
+
+    return false
+  } finally {
+    saving.value = false
+  }
+}
+
 const goPrevious = () => {
   message.value = ''
   error.value = ''
+  direction.value = 'back'
 
   if (reviewMode.value) {
     reviewMode.value = false
@@ -328,13 +441,28 @@ const goPrevious = () => {
   currentIndex.value = Math.max(currentIndex.value - 1, 0)
 }
 
-const goNext = () => {
+const goNext = async () => {
   if (!validateCurrentQuestion()) return
+
+  const question = currentQuestion.value
+  const shouldCheckConditionalReview = isLastQuestion.value && isConditionalTriggerQuestion(question)
+  const questionCount = visibleQuestions.value.length
+
+  if (!await saveCurrentAnswerIfNeeded(question)) return
+
+  if (shouldCheckConditionalReview) {
+    pendingConditionalReviewCheck.value = {
+      questionCount,
+      questionId: question.id,
+    }
+  }
 
   message.value = ''
   error.value = ''
+  direction.value = 'forward'
 
   if (isLastQuestion.value) {
+    hasReachedReview.value = true
     reviewMode.value = true
 
     return
@@ -344,12 +472,35 @@ const goNext = () => {
 }
 
 const editQuestion = index => {
+  direction.value = index > currentIndex.value ? 'forward' : 'back'
   currentIndex.value = index
   reviewMode.value = false
   message.value = ''
   error.value = ''
 }
 
+const goNextReviewQuestion = async () => {
+  if (isLastQuestion.value || !validateCurrentQuestion()) return
+  if (!await saveCurrentAnswerIfNeeded(currentQuestion.value)) return
+
+  message.value = ''
+  error.value = ''
+  direction.value = 'forward'
+  currentIndex.value += 1
+}
+
+const goToReview = async () => {
+  if (!validateCurrentQuestion()) return
+  if (!await saveCurrentAnswerIfNeeded(currentQuestion.value)) return
+
+  message.value = ''
+  error.value = ''
+  direction.value = 'forward'
+  hasReachedReview.value = true
+  reviewMode.value = true
+}
+
+// eslint-disable-next-line sonarjs/cognitive-complexity
 const displayAnswer = question => {
   if (isHeightFeetQuestion(question) && heightInchesQuestion.value) {
     const feet = String(answers[question.id] ?? '').trim()
@@ -378,6 +529,7 @@ const displayAnswer = question => {
   return String(value)
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 const saveAnswers = async () => {
   if (saving.value || !validate()) return
 
@@ -408,653 +560,938 @@ const saveAnswers = async () => {
       await saveIntakeAnswer(props.orderUuid, question.id, value)
     }
 
-    message.value = 'Answers saved. Checking your next consultation step.'
-    emit('refresh-journey')
+    emit('refreshWorkflow')
+    emit('refreshJourney')
   } catch (err) {
     error.value = err?.response?.data?.message || 'Unable to save your answers. Please try again.'
   } finally {
     saving.value = false
   }
 }
+
+const panelKey = computed(() => {
+  if (!visibleQuestions.value.length) return 'empty'
+  if (reviewMode.value) return 'review'
+
+  return `question-${currentQuestion.value?.id ?? currentIndex.value}`
+})
 </script>
 
 <template>
-  <section class="dn-intake-page">
-    <header class="dn-flow-header">
-      <button
-        v-if="!isFirstQuestion || reviewMode"
-        type="button"
-        class="dn-back-button"
-        @click="goPrevious"
-      >
-        <VIcon
-          icon="tabler-chevron-left"
-          size="24"
-        />
-        Back
-      </button>
-      <div class="dn-brand">
-        FitBy<span>Shot</span>
+  <DrNetworkStepShell
+    title="Answer your intake questions"
+    :subtitle="shellSubtitle"
+    badge="Clinical Intake"
+  >
+    <section class="dn-intake-page">
+      <div class="wizard-topbar">
+        <div class="wizard-progress-track">
+          <div
+            class="wizard-progress-fill"
+            :style="{ width: `${progressPercent}%` }"
+          />
+        </div>
+
+        <span class="wizard-step-count">
+          {{ reviewMode ? 'Review' : `Step ${currentIndex + 1} of ${visibleQuestions.length || 1}` }}
+        </span>
       </div>
-      <div class="dn-step-count">
-        {{ reviewMode ? visibleQuestions.length : currentIndex + 1 }}/{{ visibleQuestions.length || 1 }}
-      </div>
-    </header>
 
-    <div class="dn-progress-track">
-      <span :style="{ width: `${progressPercent}%` }" />
-    </div>
-
-    <div
-      v-if="!visibleQuestions.length"
-      class="dn-empty-state"
-    >
-      <p class="dn-kicker">
-        Clinical intake
-      </p>
-      <h1>No questions were returned for this step.</h1>
-      <p>Refresh the journey if this does not update automatically.</p>
-    </div>
-
-    <section
-      v-else-if="reviewMode"
-      class="dn-review-panel"
-    >
-      <p class="dn-kicker">
-        Review
-      </p>
-      <h1>Review your answers</h1>
-      <p class="dn-subtitle">
-        Your answers will be submitted together when you continue.
-      </p>
-
-      <div class="dn-review-list">
-        <button
-          v-for="(question, index) in visibleQuestions"
-          :key="question.id"
-          type="button"
-          class="dn-review-item"
-          @click="editQuestion(index)"
+      <div class="wizard-panel-frame">
+        <Transition
+          :name="transitionName"
+          mode="out-in"
         >
-          <span>Question {{ index + 1 }}</span>
-          <strong>{{ questionLabel(question) }}</strong>
-          <em>{{ displayAnswer(question) }}</em>
-        </button>
-      </div>
-
-      <p
-        v-if="message"
-        class="dn-message dn-message--success"
-      >
-        {{ message }}
-      </p>
-      <p
-        v-if="error"
-        class="dn-message dn-message--error"
-      >
-        {{ error }}
-      </p>
-
-      <button
-        type="button"
-        class="dn-primary-button"
-        :disabled="saving"
-        @click="saveAnswers"
-      >
-        {{ saving ? 'Submitting answers...' : 'Submit answers' }}
-      </button>
-    </section>
-
-    <section
-      v-else-if="currentQuestion"
-      class="dn-question-stage"
-    >
-      <p class="dn-kicker">
-        {{ questionSet?.set_name || 'Clinical intake' }}
-      </p>
-      <h1>
-        {{ questionLabel(currentQuestion) }}
-        <span v-if="currentQuestion.is_required">*</span>
-      </h1>
-      <p
-        v-if="currentQuestion.help_text"
-        class="dn-subtitle"
-      >
-        {{ currentQuestion.help_text }}
-      </p>
-      <p
-        v-else-if="isMultiChoice(currentQuestion)"
-        class="dn-subtitle"
-      >
-        Select all that apply.
-      </p>
-
-      <div
-        v-if="isHeightFeetQuestion(currentQuestion) && heightInchesQuestion"
-        class="dn-height-group"
-      >
-        <label>
-          <span>ft</span>
-          <input
-            v-model="answers[currentQuestion.id]"
-            class="dn-input"
-            type="number"
-            min="0"
-            inputmode="numeric"
-            placeholder="5"
+          <div
+            v-if="!visibleQuestions.length"
+            key="empty"
+            class="wizard-panel dn-empty-state"
           >
-        </label>
-        <label>
-          <span>in</span>
-          <input
-            v-model="answers[heightInchesQuestion.id]"
-            class="dn-input"
-            type="number"
-            min="0"
-            max="11"
-            inputmode="numeric"
-            placeholder="10"
+            <p class="wizard-eyebrow">
+              Clinical intake
+            </p>
+            <h2 class="wizard-title">
+              No questions were returned for this step.
+            </h2>
+            <p class="wizard-subtitle">
+              Refresh the journey if this does not update automatically.
+            </p>
+          </div>
+
+          <div
+            v-else-if="reviewMode"
+            key="review"
+            class="wizard-panel"
           >
-        </label>
+            <p class="wizard-eyebrow">
+              Review
+            </p>
+            <h2 class="wizard-title">
+              Review your answers
+            </h2>
+            <p class="wizard-subtitle">
+              Your answers will be submitted and the workflow will update when you continue.
+            </p>
+
+            <div class="dn-review-list">
+              <button
+                v-for="(question, index) in visibleQuestions"
+                :key="question.id"
+                type="button"
+                class="dn-review-item"
+                @click="editQuestion(index)"
+              >
+                <div class="dn-review-item__text">
+                  <span>Question {{ index + 1 }}</span>
+                  <strong>{{ questionLabel(question) }}</strong>
+                  <em>{{ displayAnswer(question) }}</em>
+                </div>
+                <svg
+                  class="dn-review-item__chevron"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M9 6l6 6-6 6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div
+              v-if="message || error"
+              class="status-stack"
+            >
+              <p
+                v-if="message"
+                class="status-banner status-banner--success"
+              >
+                {{ message }}
+              </p>
+              <p
+                v-if="error"
+                class="status-banner"
+              >
+                {{ error }}
+              </p>
+            </div>
+
+            <div class="wizard-actions">
+              <button
+                type="button"
+                class="ghost-btn"
+                @click="goPrevious"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                ><path
+                  d="M15 18l-6-6 6-6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg>
+                Back
+              </button>
+              <button
+                type="button"
+                class="primary-btn"
+                :disabled="saving"
+                @click="saveAnswers"
+              >
+                {{ saving ? 'Submitting\u2026' : 'Submit answers' }}
+              </button>
+            </div>
+          </div>
+
+          <div
+            v-else-if="currentQuestion"
+            :key="panelKey"
+            class="wizard-panel"
+          >
+            <p class="wizard-eyebrow">
+              {{ questionSet?.set_name || 'Clinical intake' }}
+            </p>
+            <h2 class="wizard-title">
+              {{ questionLabel(currentQuestion) }}
+              <span
+                v-if="currentQuestion.is_required"
+                class="dn-required-dot"
+              >*</span>
+            </h2>
+            <p
+              v-if="currentQuestion.help_text"
+              class="wizard-subtitle"
+            >
+              {{ currentQuestion.help_text }}
+            </p>
+            <p
+              v-else-if="isMultiChoice(currentQuestion)"
+              class="wizard-subtitle"
+            >
+              Select all that apply.
+            </p>
+
+            <div class="step-fields">
+              <div
+                v-if="isHeightFeetQuestion(currentQuestion) && heightInchesQuestion"
+                class="dn-height-group"
+              >
+                <label class="field-group">
+                  <span>Feet</span>
+                  <input
+                    v-model="answers[currentQuestion.id]"
+                    class="field-input"
+                    type="number"
+                    min="0"
+                    inputmode="numeric"
+                    placeholder="5"
+                  >
+                </label>
+                <label class="field-group">
+                  <span>Inches</span>
+                  <input
+                    v-model="answers[heightInchesQuestion.id]"
+                    class="field-input"
+                    type="number"
+                    min="0"
+                    max="11"
+                    inputmode="numeric"
+                    placeholder="10"
+                  >
+                </label>
+              </div>
+
+              <textarea
+                v-else-if="isLongText(currentQuestion)"
+                v-model="answers[currentQuestion.id]"
+                class="field-input field-textarea"
+                rows="6"
+                :maxlength="maxLength(currentQuestion) || undefined"
+                :minlength="minLength(currentQuestion) || undefined"
+                :placeholder="placeholder(currentQuestion)"
+              />
+
+              <div
+                v-else-if="isSingleChoice(currentQuestion)"
+                class="dn-answer-list"
+              >
+                <button
+                  v-for="option in optionsFor(currentQuestion)"
+                  :key="optionValue(option)"
+                  type="button"
+                  class="dn-answer-card"
+                  :class="{ 'is-selected': isOptionSelected(currentQuestion, option) }"
+                  @click="setSingleOption(currentQuestion, optionValue(option))"
+                >
+                  <span class="dn-choice-mark">
+                    <svg
+                      v-if="isOptionSelected(currentQuestion, option)"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                    >
+                      <path
+                        d="M20 6L9 17l-5-5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span>{{ optionLabel(option) }}</span>
+                </button>
+              </div>
+
+              <div
+                v-else-if="isMultiChoice(currentQuestion)"
+                class="dn-answer-list"
+              >
+                <button
+                  v-for="option in optionsFor(currentQuestion)"
+                  :key="optionValue(option)"
+                  type="button"
+                  class="dn-answer-card"
+                  :class="{ 'is-selected': isOptionSelected(currentQuestion, option) }"
+                  @click="toggleMultiOption(currentQuestion, option)"
+                >
+                  <span class="dn-choice-mark dn-choice-mark--square">
+                    <svg
+                      v-if="isOptionSelected(currentQuestion, option)"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                    >
+                      <path
+                        d="M20 6L9 17l-5-5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span>{{ optionLabel(option) }}</span>
+                </button>
+              </div>
+
+              <div
+                v-else-if="isBoolean(currentQuestion)"
+                class="dn-answer-list dn-answer-list--compact"
+              >
+                <button
+                  type="button"
+                  class="dn-answer-card"
+                  :class="{ 'is-selected': answers[currentQuestion.id] === 'yes' }"
+                  @click="setSingleOption(currentQuestion, 'yes')"
+                >
+                  <span class="dn-choice-mark">
+                    <svg
+                      v-if="answers[currentQuestion.id] === 'yes'"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                    >
+                      <path
+                        d="M20 6L9 17l-5-5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span>Yes</span>
+                </button>
+                <button
+                  type="button"
+                  class="dn-answer-card"
+                  :class="{ 'is-selected': answers[currentQuestion.id] === 'no' }"
+                  @click="setSingleOption(currentQuestion, 'no')"
+                >
+                  <span class="dn-choice-mark">
+                    <svg
+                      v-if="answers[currentQuestion.id] === 'no'"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                    >
+                      <path
+                        d="M20 6L9 17l-5-5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span>No</span>
+                </button>
+              </div>
+
+              <input
+                v-else
+                v-model="answers[currentQuestion.id]"
+                class="field-input"
+                :type="inputType(currentQuestion)"
+                :maxlength="maxLength(currentQuestion) || undefined"
+                :minlength="minLength(currentQuestion) || undefined"
+                :placeholder="placeholder(currentQuestion)"
+              >
+
+              <div
+                v-if="maxLength(currentQuestion) && !(isHeightFeetQuestion(currentQuestion) && heightInchesQuestion)"
+                class="dn-character-count"
+              >
+                {{ String(answers[currentQuestion.id] || '').length }} / {{ maxLength(currentQuestion) }}
+              </div>
+            </div>
+
+            <div
+              v-if="message || error"
+              class="status-stack"
+            >
+              <p
+                v-if="message"
+                class="status-banner status-banner--success"
+              >
+                {{ message }}
+              </p>
+              <p
+                v-if="error"
+                class="status-banner"
+              >
+                {{ error }}
+              </p>
+            </div>
+
+            <div
+              v-if="isReviewReturnMode"
+              class="wizard-actions"
+            >
+              <button
+                type="button"
+                class="ghost-btn"
+                :disabled="isFirstQuestion"
+                @click="goPrevious"
+              >
+                Previous question
+              </button>
+
+              <div class="wizard-action-group">
+                <button
+                  type="button"
+                  class="ghost-btn"
+                  :disabled="isLastQuestion"
+                  @click="goNextReviewQuestion"
+                >
+                  Next question
+                </button>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  :disabled="saving || (currentQuestion.is_required && !isCurrentQuestionAnswered)"
+                  @click="goToReview"
+                >
+                  Back to review
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-else
+              class="wizard-actions"
+            >
+              <button
+                type="button"
+                class="ghost-btn"
+                :disabled="isFirstQuestion"
+                @click="goPrevious"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                ><path
+                  d="M15 18l-6-6 6-6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg>
+                Back
+              </button>
+              <button
+                type="button"
+                class="primary-btn"
+                :disabled="saving || (currentQuestion.is_required && !isCurrentQuestionAnswered)"
+                @click="goNext"
+              >
+                {{ isLastQuestion ? 'Review answers' : 'Continue' }}
+              </button>
+            </div>
+          </div>
+        </Transition>
       </div>
-
-      <textarea
-        v-else-if="isLongText(currentQuestion)"
-        v-model="answers[currentQuestion.id]"
-        class="dn-textarea"
-        rows="6"
-        :maxlength="maxLength(currentQuestion) || undefined"
-        :minlength="minLength(currentQuestion) || undefined"
-        :placeholder="placeholder(currentQuestion)"
-      />
-
-      <div
-        v-else-if="isSingleChoice(currentQuestion)"
-        class="dn-answer-list"
-      >
-        <button
-          v-for="option in optionsFor(currentQuestion)"
-          :key="optionValue(option)"
-          type="button"
-          class="dn-answer-card"
-          :class="{ 'dn-answer-card--selected': isOptionSelected(currentQuestion, option) }"
-          @click="setSingleOption(currentQuestion, optionValue(option))"
-        >
-          <span class="dn-choice-box">
-            <VIcon
-              v-if="isOptionSelected(currentQuestion, option)"
-              icon="tabler-check"
-              size="14"
-            />
-          </span>
-          <span>{{ optionLabel(option) }}</span>
-        </button>
-      </div>
-
-      <div
-        v-else-if="isMultiChoice(currentQuestion)"
-        class="dn-answer-list"
-      >
-        <button
-          v-for="option in optionsFor(currentQuestion)"
-          :key="optionValue(option)"
-          type="button"
-          class="dn-answer-card"
-          :class="{ 'dn-answer-card--selected': isOptionSelected(currentQuestion, option) }"
-          @click="toggleMultiOption(currentQuestion, option)"
-        >
-          <span class="dn-choice-box">
-            <VIcon
-              v-if="isOptionSelected(currentQuestion, option)"
-              icon="tabler-check"
-              size="14"
-            />
-          </span>
-          <span>{{ optionLabel(option) }}</span>
-        </button>
-      </div>
-
-      <div
-        v-else-if="isBoolean(currentQuestion)"
-        class="dn-answer-list dn-answer-list--compact"
-      >
-        <button
-          type="button"
-          class="dn-answer-card"
-          :class="{ 'dn-answer-card--selected': answers[currentQuestion.id] === 'yes' }"
-          @click="setSingleOption(currentQuestion, 'yes')"
-        >
-          <span class="dn-choice-box">
-            <VIcon
-              v-if="answers[currentQuestion.id] === 'yes'"
-              icon="tabler-check"
-              size="14"
-            />
-          </span>
-          <span>Yes</span>
-        </button>
-        <button
-          type="button"
-          class="dn-answer-card"
-          :class="{ 'dn-answer-card--selected': answers[currentQuestion.id] === 'no' }"
-          @click="setSingleOption(currentQuestion, 'no')"
-        >
-          <span class="dn-choice-box">
-            <VIcon
-              v-if="answers[currentQuestion.id] === 'no'"
-              icon="tabler-check"
-              size="14"
-            />
-          </span>
-          <span>No</span>
-        </button>
-      </div>
-
-      <input
-        v-else
-        v-model="answers[currentQuestion.id]"
-        class="dn-input"
-        :type="inputType(currentQuestion)"
-        :maxlength="maxLength(currentQuestion) || undefined"
-        :minlength="minLength(currentQuestion) || undefined"
-        :placeholder="placeholder(currentQuestion)"
-      >
-
-      <div
-        v-if="maxLength(currentQuestion) && !(isHeightFeetQuestion(currentQuestion) && heightInchesQuestion)"
-        class="dn-character-count"
-      >
-        {{ String(answers[currentQuestion.id] || '').length }} / {{ maxLength(currentQuestion) }}
-      </div>
-
-      <p
-        v-if="message"
-        class="dn-message dn-message--success"
-      >
-        {{ message }}
-      </p>
-      <p
-        v-if="error"
-        class="dn-message dn-message--error"
-      >
-        {{ error }}
-      </p>
-
-      <button
-        type="button"
-        class="dn-primary-button"
-        :disabled="saving || (currentQuestion.is_required && !isCurrentQuestionAnswered)"
-        @click="goNext"
-      >
-        {{ isLastQuestion ? 'Review answers' : 'Continue' }}
-      </button>
     </section>
-  </section>
+  </DrNetworkStepShell>
 </template>
 
 <style scoped>
 .dn-intake-page {
-  width: min(900px, 100%);
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #a1a1a6;
+  --hairline: #e5e5ea;
+  --surface: #ffffff;
+  --surface-2: #fafafe;
+  --accent: #0071e3;
+  --accent-ink: #ffffff;
+  --success: #1a936f;
+  --danger: #d70015;
+  --danger-bg: #fff1f0;
+  --danger-border: #ffd6d3;
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 18px 44px rgba(15, 23, 42, 0.055), 0 2px 7px rgba(15, 23, 42, 0.035);
+  --ease: cubic-bezier(0.28, 0.11, 0.32, 1);
+  width: min(620px, 100%);
   margin: 0 auto;
-  color: var(--text, #171717);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: var(--ink);
 }
 
-.dn-flow-header {
-  position: relative;
+/* ---------- top bar ---------- */
+
+.wizard-topbar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 44px;
+  gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
 
-.dn-back-button,
-.dn-step-count {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.dn-back-button {
-  left: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15rem;
-  min-height: 36px;
-  padding: 0;
-  color: var(--green, #059669);
-  font-size: 0.9rem;
-  font-weight: 700;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-.dn-brand {
-  color: var(--text, #222);
-  font-family: var(--font-display, Georgia, "Times New Roman", serif);
-  font-size: 1.55rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.dn-brand span {
-  color: var(--green, #059669);
-}
-
-.dn-step-count {
-  right: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  min-height: 30px;
-  padding: 0 0.65rem;
-  color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 700;
-  background: var(--green, #059669);
+.wizard-progress-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  background: var(--hairline);
   border-radius: 999px;
-}
-
-.dn-progress-track {
-  height: 6px;
   overflow: hidden;
-  background: var(--border, #e5e7eb);
+}
+
+.wizard-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
   border-radius: 999px;
+  transition: width 0.4s var(--ease);
 }
 
-.dn-progress-track span {
-  display: block;
-  height: 100%;
-  background: var(--gradient, linear-gradient(135deg, #059669, #2563eb));
-  border-radius: inherit;
-  transition: width 0.25s ease;
+.wizard-step-count {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
 }
 
-.dn-question-stage,
-.dn-review-panel,
+/* ---------- panel ---------- */
+
+.wizard-panel-frame {
+  min-height: 360px;
+}
+
+.wizard-panel {
+  background: var(--surface);
+  border: 1px solid rgba(229, 229, 234, 0.8);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.35rem 1.45rem 1.25rem;
+}
+
 .dn-empty-state {
-  width: min(760px, 100%);
-  margin: 1.5rem auto 0;
-  padding: 28px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: var(--radius-lg, 18px);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.06));
+  text-align: center;
 }
 
-.dn-kicker,
-.dn-subtitle,
-.dn-message,
-h1,
-p {
-  margin: 0;
-}
-
-.dn-kicker {
-  margin-bottom: 0.45rem;
-  color: var(--green, #059669);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-h1 {
-  color: var(--text, #171717);
-  font-family: var(--font-display, Georgia, "Times New Roman", serif);
-  font-size: 1.55rem;
+.wizard-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.76rem;
   font-weight: 650;
-  line-height: 1.28;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
-h1 span {
-  color: #dc2626;
+.wizard-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 640;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--ink);
 }
 
-.dn-subtitle {
-  margin-top: 0.5rem;
-  color: var(--text-3, #5f6368);
-  font-size: 0.92rem;
-  font-weight: 500;
-  line-height: 1.5;
+.dn-required-dot {
+  color: var(--danger);
 }
+
+.wizard-subtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #66739a;
+}
+
+.step-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1.05rem;
+}
+
+/* ---------- answer choices ---------- */
 
 .dn-answer-list {
   display: grid;
-  gap: 0.65rem;
-  margin-top: 1.25rem;
-  text-align: left;
+  gap: 0.6rem;
 }
 
 .dn-answer-list--compact {
-  width: min(620px, 100%);
-  margin-inline: auto;
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .dn-answer-card {
-  width: 100%;
-  min-height: 52px;
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding: 0.75rem 0.9rem;
-  color: var(--text-2, #374151);
-  font-size: 0.92rem;
-  font-weight: 600;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.72rem 0.85rem;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 560;
+  color: var(--ink);
   text-align: left;
-  background: var(--surface-2, #f8fafc) !important;
-  border: 1.5px solid var(--border, #d1d5db);
-  border-radius: var(--radius-sm, 10px);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.1s ease;
 }
 
-.dn-answer-card--selected {
-  color: var(--green-dark, #065f46);
-  background: var(--green-light, #ecfdf5) !important;
-  border-color: var(--green, #059669);
-  box-shadow: none;
+.dn-answer-card:hover {
+  background: var(--surface);
+  border-color: rgba(0, 113, 227, 0.28);
 }
 
-.dn-choice-box {
-  width: 19px;
-  height: 19px;
-  flex: 0 0 auto;
-  display: inline-flex;
+.dn-answer-card.is-selected {
+  color: var(--accent);
+  background: rgba(0, 113, 227, 0.08);
+  border-color: var(--accent);
+}
+
+.dn-choice-mark {
+  display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  border: 1.5px solid currentColor;
-  border-radius: 5px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: #fff;
+  background: transparent;
+  border: 1.5px solid var(--ink-3);
+  border-radius: 999px;
+  transition: background 0.16s ease, border-color 0.16s ease;
 }
 
-.dn-answer-card--selected .dn-choice-box {
-  background: var(--green, #059669);
-  border-color: var(--green, #059669);
+.dn-choice-mark--square {
+  border-radius: 6px;
+}
+
+.dn-answer-card.is-selected .dn-choice-mark {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------- inputs ---------- */
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field-group span {
+  font-size: 0.83rem;
+  font-weight: 560;
+  color: var(--ink-2);
 }
 
 .dn-height-group {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 160px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
-  margin-top: 1.25rem;
 }
 
-.dn-height-group label {
-  display: grid;
-  gap: 0.35rem;
-  color: var(--text-3, #5f6368);
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.dn-height-group .dn-input {
-  margin-top: 0;
-}
-
-.dn-input,
-.dn-textarea {
+.field-input {
+  appearance: none;
   width: 100%;
-  margin-top: 1.25rem;
-  padding: 0.65rem 0.8rem;
-  color: var(--text, #171717);
-  font-size: 0.92rem;
-  font-weight: 500;
-  background: var(--surface, #ffffff);
-  border: 1.5px solid var(--border, #d1d5db);
-  border-radius: var(--radius-sm, 10px);
-}
-
-.dn-textarea {
-  resize: vertical;
-}
-
-.dn-input:focus,
-.dn-textarea:focus {
+  min-height: 44px;
+  padding: 0 0.9rem;
+  font: inherit;
+  font-size: 0.98rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   outline: none;
-  border-color: var(--green, #059669);
-  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.13);
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 }
 
-.dn-review-list {
-  display: grid;
-  gap: 0.65rem;
-  margin-top: 1.25rem;
-  text-align: left;
+.field-textarea {
+  min-height: 132px;
+  padding: 0.75rem 0.9rem;
+  resize: vertical;
+  line-height: 1.5;
 }
 
-.dn-review-item {
-  width: 100%;
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.85rem 0.95rem;
-  text-align: left;
-  background: var(--surface-2, #f8fafc);
-  border: 1.5px solid var(--border, #d1d5db);
-  border-radius: var(--radius-sm, 10px);
-  cursor: pointer;
+.field-input::placeholder {
+  color: var(--ink-3);
 }
 
-.dn-review-item span {
-  color: var(--green, #059669);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.dn-review-item strong {
-  color: var(--text, #171717);
-  font-size: 0.92rem;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.dn-review-item em {
-  color: var(--text-3, #4b5563);
-  font-size: 0.86rem;
-  font-style: normal;
-  font-weight: 500;
-  overflow-wrap: anywhere;
+.field-input:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14);
 }
 
 .dn-character-count {
-  margin-top: 0.55rem;
-  color: var(--text-3, #6b7280);
+  margin-top: -0.35rem;
   font-size: 0.78rem;
   font-weight: 600;
+  color: var(--ink-3);
   text-align: right;
 }
 
-.dn-primary-button {
+/* ---------- review list ---------- */
+
+.dn-review-list {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.05rem;
+}
+
+.dn-review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.82rem 0.9rem;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.dn-review-item:hover {
+  background: var(--surface);
+  border-color: rgba(0, 113, 227, 0.22);
+}
+
+.dn-review-item__text {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.dn-review-item__text span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.dn-review-item__text strong {
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.dn-review-item__text em {
+  font-size: 0.85rem;
+  font-style: normal;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.dn-review-item__chevron {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+}
+
+/* ---------- status + actions ---------- */
+
+.status-stack {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.status-banner {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.87rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+}
+
+.status-banner--success {
+  color: var(--success);
+  background: rgba(26, 147, 111, 0.1);
+  border-color: rgba(26, 147, 111, 0.25);
+}
+
+.wizard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.wizard-action-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.ghost-btn,
+.primary-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  margin-top: 1.25rem;
-  padding: 0.7rem 1.5rem;
-  color: #ffffff;
-  font-size: 0.92rem;
-  font-weight: 700;
-  background: var(--gradient, linear-gradient(135deg, #059669, #2563eb));
-  border: 0;
+  gap: 0.3rem;
+  min-height: 42px;
+  padding: 0 1.2rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
   border-radius: 999px;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
-.dn-primary-button:disabled {
+.ghost-btn {
+  color: #2f3850;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(229, 229, 234, 0.95);
+}
+
+.ghost-btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--surface);
+  border-color: rgba(0, 113, 227, 0.28);
+}
+
+.ghost-btn:disabled {
+  color: var(--ink-3);
+  background: var(--surface-2);
+  border-color: transparent;
+  opacity: 0.7;
   cursor: not-allowed;
-  opacity: 0.55;
 }
 
-.dn-message {
-  margin-top: 1rem;
-  font-size: 0.88rem;
-  font-weight: 600;
-  text-align: center;
+.primary-btn {
+  min-width: 168px;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
-.dn-message--success {
-  color: #065f46;
+.primary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #0077ed;
 }
 
-.dn-message--error {
-  color: #b91c1c;
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-@media (max-width: 620px) {
-  .dn-flow-header {
-    min-height: 42px;
+/* ---------- transitions ---------- */
+
+.slide-next-enter-active,
+.slide-prev-enter-active {
+  transition: opacity 0.24s var(--ease), transform 0.24s var(--ease);
+}
+
+.slide-next-leave-active,
+.slide-prev-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.slide-next-enter-from {
+  opacity: 0;
+  transform: translateX(14px);
+}
+
+.slide-next-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.slide-prev-enter-from {
+  opacity: 0;
+  transform: translateX(-14px);
+}
+
+.slide-prev-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-next-enter-active,
+  .slide-prev-enter-active,
+  .slide-next-leave-active,
+  .slide-prev-leave-active {
+    transition: opacity 0.15s linear;
   }
 
-  .dn-brand {
-    font-size: 1.35rem;
+  .slide-next-enter-from,
+  .slide-next-leave-to,
+  .slide-prev-enter-from,
+  .slide-prev-leave-to {
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .wizard-panel-frame {
+    min-height: 0;
   }
 
-  .dn-back-button {
-    font-size: 0.95rem;
+  .wizard-panel {
+    padding: 1.25rem 1.15rem;
+    border-radius: var(--radius-md);
   }
 
-  .dn-step-count {
-    min-width: 34px;
-    min-height: 28px;
-    padding: 0 0.5rem;
-    font-size: 0.78rem;
+  .wizard-title {
+    font-size: 1.3rem;
   }
 
-  .dn-question-stage,
-  .dn-review-panel,
-  .dn-empty-state {
-    margin-top: 1rem;
-    padding: 20px;
+  .dn-answer-list--compact {
+    grid-template-columns: 1fr;
   }
 
-  h1 {
-    font-size: 1.32rem;
+  .dn-height-group {
+    grid-template-columns: 1fr;
   }
 
-  .dn-subtitle {
-    font-size: 0.88rem;
+  .wizard-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 
-  .dn-answer-list {
-    margin-top: 1rem;
+  .wizard-action-group {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 
-  .dn-answer-card {
-    min-height: 48px;
-    padding: 0.7rem 0.8rem;
-    font-size: 0.88rem;
-  }
-
-  .dn-primary-button {
+  .primary-btn,
+  .ghost-btn {
     width: 100%;
-    min-height: 42px;
-    margin-top: 1rem;
   }
 }
 </style>

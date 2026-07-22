@@ -206,7 +206,7 @@ const handleStartJourney = async () => {
       
       return
     }
-    router.push({ path: '/telehealth-intake', query: { order_uuid: orderUuid } })
+    router.push(`/journey/${encodeURIComponent(orderUuid)}`)
   } catch (error) {
     const message = error?.response?.data?.message
       || error?.response?.data?.err_msg

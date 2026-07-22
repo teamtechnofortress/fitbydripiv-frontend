@@ -1,11 +1,16 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { completeDocumentUpload, uploadDocument } from '@/api/drNetworkApi'
+import DrNetworkStepShell from './DrNetworkStepShell.vue'
 
 const props = defineProps({
   orderUuid: {
     type: String,
     required: true,
+  },
+  journey: {
+    type: Object,
+    default: null,
   },
   workflow: {
     type: Object,
@@ -13,7 +18,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['refresh-journey', 'refresh-workflow'])
+const emit = defineEmits(['refreshJourney', 'refreshWorkflow'])
 
 const OPERATOR_ANY = 'any'
 const OPERATOR_ALL = 'all'
@@ -99,8 +104,6 @@ const isRequirementSatisfied = requirement => {
   return count >= needed
 }
 
-const satisfiedRequirementCount = computed(() => requirements.value.filter(isRequirementSatisfied).length)
-
 const canContinue = computed(() => {
   if (latestUploadResponse.value?.can_continue) return true
   if (latestUploadResponse.value?.all_satisfied) return true
@@ -110,19 +113,28 @@ const canContinue = computed(() => {
 })
 
 const operatorTitle = requirement => {
-  if (requirement.operator === OPERATOR_ALL) return 'Upload all required document types'
-  if (requirement.operator === OPERATOR_EXACT) return `Upload exactly ${requiredCount(requirement)} document${requiredCount(requirement) === 1 ? '' : 's'}`
+  const needed = requiredCount(requirement)
 
-  return `Upload any ${requiredCount(requirement)} accepted document${requiredCount(requirement) === 1 ? '' : 's'}`
+  if (requirement.operator === OPERATOR_ALL) return 'Upload every required document'
+  if (requirement.operator === OPERATOR_EXACT) return `Choose exactly ${needed} document${needed === 1 ? '' : 's'}`
+
+  return needed === 1
+    ? 'Choose one accepted document'
+    : `Choose any ${needed} accepted documents`
 }
 
 const requirementStatusText = requirement => {
-  if (isRequirementSatisfied(requirement)) return 'Satisfied'
+  if (isRequirementSatisfied(requirement)) return 'Ready'
 
   const remaining = Math.max(requiredCount(requirement) - uploadedCount(requirement), 0)
 
-  return `${remaining} more required`
+  return remaining === 1 ? '1 needed' : `${remaining} needed`
 }
+
+const shellSubtitle = computed(() => (
+  props.journey?.message
+  || 'Upload the required document so your information can be verified.'
+))
 
 const acceptedMimeTypes = requirement => {
   const types = requirement.upload?.accepted_mime_types
@@ -139,6 +151,7 @@ const acceptedMimeTypes = requirement => {
 const acceptedDescription = requirement => {
   const extensions = requirement.upload?.accepted_extensions
   const size = requirement.upload?.max_size_mb
+
   const extensionText = Array.isArray(extensions) && extensions.length
     ? extensions.map(ext => String(ext).replace(/^\./, '').toUpperCase()).join(', ')
     : 'JPG, PNG, WEBP, PDF'
@@ -156,6 +169,7 @@ const optionUploadDisabled = (requirement, option) => {
 
 const onFileChange = (requirement, option, event) => {
   const state = getRequirementState(requirement)
+
   state.files[option.id] = event.target.files?.[0] || null
   message.value = ''
   error.value = ''
@@ -211,6 +225,7 @@ const submitDocument = async (requirement, option) => {
 
   try {
     const response = await uploadDocument(props.orderUuid, file, option.id)
+
     latestUploadResponse.value = response
     state.lastResponse = response
 
@@ -243,11 +258,12 @@ const continueWorkflow = async () => {
 
   try {
     const response = await completeDocumentUpload(props.orderUuid)
+
     latestUploadResponse.value = response
     markBackendSatisfaction(response)
 
     message.value = response?.message || 'Document requirements completed.'
-    emit('refresh-journey')
+    emit('refreshJourney')
   } catch (err) {
     const response = err?.response?.data || null
     if (response) {
@@ -263,474 +279,485 @@ const continueWorkflow = async () => {
 </script>
 
 <template>
-  <section class="dn-upload-page">
-    <header class="dn-flow-header">
-      <div class="dn-brand">
-        FitBy<span>Shot</span>
-      </div>
-      <div class="dn-count-pill">
-        {{ satisfiedRequirementCount }}/{{ requirements.length || 1 }}
-      </div>
-    </header>
-
-    <div class="dn-progress-track">
-      <span :style="{ width: requirements.length ? `${(satisfiedRequirementCount / requirements.length) * 100}%` : '0%' }" />
-    </div>
-
-    <section class="dn-upload-hero">
-      <p class="dn-kicker">
-        Document verification
-      </p>
-      <h1>Upload your required documents</h1>
-      <p>Complete each requirement below. When the backend confirms everything is satisfied, you can continue to the next step.</p>
-    </section>
-
-    <section class="dn-upload-panel">
+  <DrNetworkStepShell
+    title="Upload your documents"
+    :subtitle="shellSubtitle"
+    badge="Document Verification"
+  >
+    <section class="dn-upload-page">
       <div
         v-if="!requirements.length"
-        class="dn-empty"
+        class="dn-panel dn-empty-state"
       >
         No document requirements were returned. Refreshing the workflow may show the next step.
       </div>
 
-      <article
-        v-for="(requirement, requirementIndex) in requirements"
-        :key="requirementKey(requirement)"
-        class="dn-requirement"
-        :class="{ 'dn-requirement--done': isRequirementSatisfied(requirement) }"
+      <div
+        v-else
+        class="dn-panel dn-upload-card"
       >
-        <div class="dn-requirement-header">
-          <div class="dn-requirement-index">
-            {{ requirementIndex + 1 }}
-          </div>
-          <div class="dn-requirement-copy">
-            <span>{{ prettyLabel(requirement.requirement_type || requirement.operator) }}</span>
-            <h2>{{ requirement.rule_name || prettyLabel(requirement.rule_key) }}</h2>
-            <p v-if="requirement.help_text">
-              {{ requirement.help_text }}
-            </p>
-            <p v-else-if="requirement.satisfaction?.description">
-              {{ requirement.satisfaction.description }}
-            </p>
-          </div>
-          <div class="dn-rule-status">
-            <strong>{{ requirementStatusText(requirement) }}</strong>
-            <small>{{ operatorTitle(requirement) }}</small>
-          </div>
-        </div>
-
-        <div
-          v-if="requirement.error_message"
-          class="dn-guidance"
+        <article
+          v-for="requirement in requirements"
+          :key="requirementKey(requirement)"
+          class="dn-requirement"
+          :class="{ 'is-done': isRequirementSatisfied(requirement) }"
         >
-          {{ requirement.error_message }}
-        </div>
-
-        <div class="dn-upload-meta">
-          <span>{{ acceptedDescription(requirement) }}</span>
-          <span v-if="requirement.conditions?.max_age_days">
-            Max age {{ requirement.conditions.max_age_days }} days
-          </span>
-        </div>
-
-        <div class="dn-document-options">
-          <article
-            v-for="option in documentOptions(requirement)"
-            :key="option.id"
-            class="dn-document-option"
-            :class="{ 'dn-document-option--uploaded': isOptionUploaded(requirement, option) }"
-          >
-            <div class="dn-option-header">
-              <div>
-                <span class="dn-option-category">{{ prettyLabel(option.category || 'Document') }}</span>
-                <h3>{{ option.name || `Document Type ${option.id}` }}</h3>
-              </div>
-              <span
-                v-if="isOptionUploaded(requirement, option)"
-                class="dn-uploaded-badge"
-              >
-                Uploaded
+          <div class="dn-requirement-header">
+            <div class="dn-requirement-copy">
+              <span class="dn-requirement-kicker">
+                {{ prettyLabel(requirement.requirement_type || 'Requirement') }}
               </span>
+              <h2>{{ requirement.rule_name || prettyLabel(requirement.rule_key) }}</h2>
+              <p v-if="requirement.help_text">
+                {{ requirement.help_text }}
+              </p>
+              <p v-else-if="requirement.satisfaction?.description">
+                {{ requirement.satisfaction.description }}
+              </p>
             </div>
 
-            <p v-if="option.description">
-              {{ option.description }}
-            </p>
-            <p
-              v-if="option.metadata?.requires_back_side"
-              class="dn-option-note"
+            <div
+              class="dn-rule-status"
+              :class="{ 'is-done': isRequirementSatisfied(requirement) }"
             >
-              Include the front and back side when uploading this document.
-            </p>
-            <p
-              v-if="option.metadata?.requires_expiry_date"
-              class="dn-option-note"
-            >
-              Make sure the expiration date is visible.
-            </p>
+              <span class="dn-status-dot" />
+              <strong>{{ requirementStatusText(requirement) }}</strong>
+            </div>
+          </div>
 
-            <label
-              class="dn-file-control"
-              :class="{ 'dn-file-control--disabled': optionUploadDisabled(requirement, option) }"
+          <div
+            v-if="requirement.error_message"
+            class="dn-guidance"
+          >
+            {{ requirement.error_message }}
+          </div>
+
+          <div class="dn-upload-meta">
+            <span>{{ operatorTitle(requirement) }}</span>
+            <span>{{ acceptedDescription(requirement) }}</span>
+            <span v-if="requirement.conditions?.max_age_days">
+              Max age {{ requirement.conditions.max_age_days }} days
+            </span>
+          </div>
+
+          <div class="dn-document-options">
+            <article
+              v-for="option in documentOptions(requirement)"
+              :key="option.id"
+              class="dn-document-option"
+              :class="{ 'is-uploaded': isOptionUploaded(requirement, option) }"
             >
-              <VIcon
-                icon="tabler-cloud-upload"
-                size="28"
-              />
-              <span>{{ getRequirementState(requirement).files[option.id]?.name || 'Choose a file to upload' }}</span>
-              <small>{{ acceptedDescription(requirement) }}</small>
-              <input
-                type="file"
-                :accept="acceptedMimeTypes(requirement)"
-                :disabled="optionUploadDisabled(requirement, option)"
-                @change="onFileChange(requirement, option, $event)"
+              <div class="dn-option-header">
+                <div class="dn-option-title">
+                  <h3>{{ option.name || `Document Type ${option.id}` }}</h3>
+                  <p
+                    v-if="option.description"
+                    class="dn-option-desc"
+                  >
+                    {{ option.description }}
+                  </p>
+                </div>
+                <span
+                  v-if="isOptionUploaded(requirement, option)"
+                  class="dn-uploaded-badge"
+                >
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                  >
+                    <path
+                      d="M20 6L9 17l-5-5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  Uploaded
+                </span>
+              </div>
+
+              <div
+                v-if="option.metadata?.requires_back_side || option.metadata?.requires_expiry_date"
+                class="dn-option-notes"
               >
-            </label>
+                <span v-if="option.metadata?.requires_back_side">Front and back</span>
+                <span v-if="option.metadata?.requires_expiry_date">Expiration visible</span>
+              </div>
 
-            <button
-              type="button"
-              class="dn-upload-button"
-              :disabled="optionUploadDisabled(requirement, option) || !getRequirementState(requirement).files[option.id]"
-              @click="submitDocument(requirement, option)"
-            >
-              <span v-if="uploadingKey === `${requirementKey(requirement)}:${option.id}`">Uploading...</span>
-              <span v-else-if="isOptionUploaded(requirement, option)">Uploaded</span>
-              <span v-else>Upload document</span>
-            </button>
-          </article>
+              <label
+                class="dn-file-control"
+                :class="{ 'is-disabled': optionUploadDisabled(requirement, option), 'is-filled': !!getRequirementState(requirement).files[option.id] }"
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                >
+                  <path
+                    d="M12 16V4m0 0L7 9m5-5l5 5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span>{{ getRequirementState(requirement).files[option.id]?.name || 'Choose a file to upload' }}</span>
+                <input
+                  type="file"
+                  :accept="acceptedMimeTypes(requirement)"
+                  :disabled="optionUploadDisabled(requirement, option)"
+                  @change="onFileChange(requirement, option, $event)"
+                >
+              </label>
+
+              <button
+                type="button"
+                class="dn-upload-button"
+                :class="{ 'is-done': isOptionUploaded(requirement, option) }"
+                :disabled="optionUploadDisabled(requirement, option) || !getRequirementState(requirement).files[option.id]"
+                @click="submitDocument(requirement, option)"
+              >
+                <span
+                  v-if="uploadingKey === `${requirementKey(requirement)}:${option.id}`"
+                  class="dn-btn-spinner"
+                />
+                {{
+                  uploadingKey === `${requirementKey(requirement)}:${option.id}`
+                    ? 'Uploading\u2026'
+                    : isOptionUploaded(requirement, option)
+                      ? 'Uploaded'
+                      : 'Upload'
+                }}
+              </button>
+            </article>
+          </div>
+        </article>
+
+        <div
+          v-if="message || error"
+          class="status-stack"
+        >
+          <p
+            v-if="message"
+            class="status-banner status-banner--success"
+          >
+            {{ message }}
+          </p>
+          <p
+            v-if="error"
+            class="status-banner"
+          >
+            {{ error }}
+          </p>
         </div>
-      </article>
 
-      <p
-        v-if="message"
-        class="dn-message dn-message--success"
-      >
-        {{ message }}
-      </p>
-      <p
-        v-if="error"
-        class="dn-message dn-message--error"
-      >
-        {{ error }}
-      </p>
-
-      <button
-        type="button"
-        class="dn-continue"
-        :disabled="!canContinue || completing"
-        @click="continueWorkflow"
-      >
-        {{ completing ? 'Continuing...' : 'Continue' }}
-      </button>
+        <div class="dn-continue-row">
+          <button
+            type="button"
+            class="primary-btn"
+            :disabled="!canContinue || completing"
+            @click="continueWorkflow"
+          >
+            {{ completing ? 'Continuing\u2026' : 'Continue' }}
+          </button>
+        </div>
+      </div>
     </section>
-  </section>
+  </DrNetworkStepShell>
 </template>
 
 <style scoped>
 .dn-upload-page {
-  width: min(900px, 100%);
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #a1a1a6;
+  --hairline: #e5e5ea;
+  --surface: #ffffff;
+  --surface-2: #fafafe;
+  --accent: #0071e3;
+  --success: #1a936f;
+  --success-bg: rgba(26, 147, 111, 0.1);
+  --warning: #b7791f;
+  --warning-bg: #fff8e8;
+  --warning-border: #f5deb3;
+  --danger: #d70015;
+  --danger-bg: #fff1f0;
+  --danger-border: #ffd6d3;
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 18px 44px rgba(15, 23, 42, 0.055), 0 2px 7px rgba(15, 23, 42, 0.035);
+  --ease: cubic-bezier(0.28, 0.11, 0.32, 1);
+  width: min(680px, 100%);
   margin: 0 auto;
-  color: var(--text, #171717);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: var(--ink);
+  display: grid;
+  gap: 0.8rem;
 }
 
-.dn-flow-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  margin-bottom: 0.75rem;
-}
-
-h2,
-h3,
-p {
+h1, h2, h3, p {
   margin: 0;
 }
 
-.dn-brand {
-  color: var(--text, #222);
-  font-family: var(--font-display, Georgia, "Times New Roman", serif);
-  font-size: 1.55rem;
-  font-weight: 800;
-  line-height: 1;
+/* ---------- shared panel ---------- */
+
+.dn-panel {
+  background: var(--surface);
+  border: 1px solid rgba(229, 229, 234, 0.85);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  animation: panel-in 0.32s var(--ease) both;
 }
 
-.dn-brand span {
-  color: var(--green, #059669);
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.dn-count-pill {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  min-height: 30px;
-  padding: 0 0.65rem;
-  color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 700;
-  background: var(--green, #059669);
-  border-radius: 999px;
-}
-
-.dn-progress-track {
-  height: 6px;
-  overflow: hidden;
-  background: var(--border, #e5e7eb);
-  border-radius: 999px;
-}
-
-.dn-progress-track span {
-  display: block;
-  height: 100%;
-  background: var(--gradient, linear-gradient(135deg, #059669, #2563eb));
-  border-radius: inherit;
-  transition: width 0.25s ease;
-}
-
-.dn-upload-hero {
-  width: min(760px, 100%);
-  margin: 1.5rem auto 1rem;
-  padding: 28px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: var(--radius-lg, 18px);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.06));
-}
-
-.dn-kicker {
-  margin-bottom: 0.45rem;
-  color: var(--green, #059669);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.dn-upload-hero h1 {
-  color: var(--text, #171717);
-  font-family: var(--font-display, Georgia, "Times New Roman", serif);
-  font-size: 1.55rem;
-  font-weight: 650;
-  line-height: 1.28;
-}
-
-.dn-upload-hero p {
-  max-width: 640px;
-  margin: 0.5rem 0 0;
-  color: var(--text-3, #5f6368);
+.dn-empty-state {
+  color: var(--ink-2);
   font-size: 0.92rem;
-  font-weight: 500;
-  line-height: 1.55;
+  text-align: center;
 }
 
-.dn-upload-panel {
+/* ---------- requirement list ---------- */
+
+.dn-upload-card {
   display: grid;
-  gap: 1rem;
-}
-
-.dn-empty {
-  padding: 1rem;
-  color: var(--text-3, #4b5563);
-  background: var(--surface, #ffffff);
-  border: 1.5px dashed var(--border, #d1d5db);
-  border-radius: var(--radius, 14px);
+  gap: 0;
 }
 
 .dn-requirement {
-  padding: 1rem;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #d1d5db);
-  border-radius: var(--radius-lg, 18px);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.06));
+  min-width: 0;
 }
 
-.dn-requirement--done {
-  background: var(--green-light, #ecfdf5);
-  border-color: var(--green, #059669);
+.dn-requirement + .dn-requirement {
+  padding-top: 1.25rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--hairline);
 }
 
 .dn-requirement-header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(180px, 0.32fr);
-  gap: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
   align-items: start;
 }
 
-.dn-requirement-index {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 0.86rem;
-  font-weight: 700;
-  background: var(--green, #059669);
-  border-radius: 999px;
-}
-
-.dn-requirement-copy span,
-.dn-option-category {
-  color: var(--green, #059669);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+.dn-requirement-kicker {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.075em;
   text-transform: uppercase;
+  color: var(--accent);
 }
 
 .dn-requirement-copy h2 {
-  margin-top: 0.2rem;
-  color: var(--text, #171717);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.3;
+  margin-top: 0.35rem;
+  font-size: 1.08rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--ink);
 }
 
-.dn-requirement-copy p,
-.dn-document-option p {
-  margin-top: 0.45rem;
-  color: var(--text-3, #4b5563);
+.dn-requirement-copy p {
+  margin-top: 0.4rem;
   font-size: 0.86rem;
-  line-height: 1.55;
+  line-height: 1.5;
+  color: var(--ink-2);
 }
 
 .dn-rule-status {
-  padding: 0.7rem 0.75rem;
-  background: var(--surface-2, #f8fafc);
-  border: 1.5px solid var(--border, #d1d5db);
-  border-radius: var(--radius-sm, 10px);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 30px;
+  padding: 0.35rem 0.62rem;
+  background: rgba(0, 113, 227, 0.08);
+  border-radius: 999px;
+}
+
+.dn-rule-status.is-done {
+  background: var(--success-bg);
+}
+
+.dn-status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.dn-rule-status.is-done .dn-status-dot {
+  background: var(--success);
 }
 
 .dn-rule-status strong {
-  display: block;
-  color: var(--text, #171717);
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1;
+  color: var(--accent);
 }
 
-.dn-rule-status small {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--text-3, #6b7280);
-  font-size: 0.78rem;
-  font-weight: 500;
-  line-height: 1.4;
+.dn-rule-status.is-done strong {
+  color: var(--success);
 }
 
 .dn-guidance {
-  padding: 0.7rem 0.8rem;
+  padding: 0.62rem 0.75rem;
   margin-top: 0.85rem;
-  color: #92400e;
-  font-size: 0.86rem;
-  font-weight: 600;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: var(--radius-sm, 10px);
+  font-size: 0.82rem;
+  font-weight: 560;
+  color: var(--warning);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
 }
 
 .dn-upload-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin-top: 0.85rem;
+  margin-top: 1rem;
 }
 
 .dn-upload-meta span {
   display: inline-flex;
   align-items: center;
-  white-space: nowrap;
-  padding: 0.28rem 0.55rem;
-  color: var(--text-2, #4b5563);
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
+  padding: 0.32rem 0.62rem;
+  font-size: 0.74rem;
+  font-weight: 560;
+  color: #596789;
+  background: var(--surface-2);
+  border: 1px solid rgba(229, 229, 234, 0.75);
   border-radius: 999px;
 }
 
+/* ---------- document options ---------- */
+
 .dn-document-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.7rem;
+  margin-top: 1.1rem;
 }
 
 .dn-document-option {
   display: grid;
-  gap: 0.65rem;
-  padding: 0.85rem;
-  background: var(--surface-2, #f8fafc);
-  border: 1.5px solid var(--border, #d1d5db);
-  border-radius: var(--radius, 14px);
+  gap: 0.7rem;
+  padding: 1rem;
+  background: var(--surface-2);
+  border: 1px solid rgba(229, 229, 234, 0.75);
+  border-radius: var(--radius-md);
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
 }
 
-.dn-document-option--uploaded {
-  background: var(--green-light, #ecfdf5);
-  border-color: var(--green, #059669);
+.dn-document-option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 113, 227, 0.22);
+}
+
+.dn-document-option.is-uploaded {
+  background: var(--success-bg);
+  border-color: rgba(26, 147, 111, 0.35);
 }
 
 .dn-option-header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
-.dn-option-header h3 {
-  margin-top: 0.25rem;
-  color: var(--text, #171717);
-  font-size: 0.96rem;
-  font-weight: 700;
+.dn-option-title h3 {
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--ink);
 }
 
 .dn-uploaded-badge {
-  align-self: start;
-  padding: 0.24rem 0.5rem;
-  color: var(--green-dark, #065f46);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+  padding: 0.25rem 0.55rem;
   font-size: 0.72rem;
   font-weight: 700;
-  background: #d1fae5;
+  color: var(--success);
+  background: rgba(26, 147, 111, 0.14);
   border-radius: 999px;
 }
 
-.dn-option-note {
-  color: #0369a1;
-  font-size: 0.82rem;
-  font-weight: 600;
+.dn-option-desc {
+  margin-top: 0.25rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.dn-option-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dn-option-notes span {
+  padding: 0.28rem 0.55rem;
+  color: #0066cc;
+  font-size: 0.74rem;
+  font-weight: 560;
+  background: rgba(0, 113, 227, 0.08);
+  border-radius: 999px;
 }
 
 .dn-file-control {
   position: relative;
   display: grid;
-  align-items: center;
   justify-items: center;
-  gap: 0.25rem;
-  min-height: 96px;
-  padding: 0.85rem;
-  color: var(--text-2, #374151);
+  gap: 0.45rem;
+  min-height: 86px;
+  padding: 0.9rem;
   text-align: center;
-  background: var(--surface, #ffffff);
-  border: 1.5px dashed var(--border, #a3a3a3);
-  border-radius: var(--radius-sm, 10px);
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1.5px dashed var(--hairline);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.dn-file-control:hover {
+  border-color: var(--accent);
+}
+
+.dn-file-control.is-filled {
+  color: var(--ink);
+  border-style: solid;
+  border-color: var(--accent);
+  background: rgba(0, 113, 227, 0.05);
 }
 
 .dn-file-control span {
   max-width: 100%;
   overflow-wrap: anywhere;
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-
-.dn-file-control small {
-  color: var(--text-3, #6b7280);
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.84rem;
+  font-weight: 560;
+  line-height: 1.35;
 }
 
 .dn-file-control input {
@@ -740,95 +767,163 @@ p {
   cursor: pointer;
 }
 
-.dn-file-control--disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.dn-upload-button,
-.dn-continue {
-  width: 100%;
-  min-height: 42px;
-  padding: 0.65rem 1rem;
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 700;
-  background: var(--gradient, linear-gradient(135deg, #059669, #2563eb));
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
-}
-
-.dn-upload-button:disabled,
-.dn-continue:disabled {
+.dn-file-control.is-disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
 
-.dn-continue {
-  justify-self: end;
-  width: auto;
-  min-width: 150px;
-  margin-top: 0.25rem;
-}
-
-.dn-message {
-  font-size: 0.88rem;
+.dn-upload-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 40px;
+  padding: 0 1rem;
+  font: inherit;
   font-weight: 600;
+  font-size: 0.86rem;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 113, 227, 0.16);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.dn-upload-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #0077ed;
+  box-shadow: 0 10px 22px rgba(0, 113, 227, 0.2);
+}
+
+.dn-upload-button:disabled {
+  color: #7d89aa;
+  background: #edf2fb;
+  border-color: rgba(229, 229, 234, 0.9);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.dn-upload-button.is-done {
+  color: #fff;
+  background: var(--success);
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgba(26, 147, 111, 0.16);
+  opacity: 1;
+}
+
+.dn-btn-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- status + continue ---------- */
+
+.status-stack {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.1rem;
+}
+
+.status-banner {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.87rem;
+  font-weight: 600;
+  line-height: 1.4;
   text-align: center;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
 }
 
-.dn-message--success {
-  color: #065f46;
+.status-banner--success {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: rgba(26, 147, 111, 0.25);
 }
 
-.dn-message--error {
-  color: #b91c1c;
+.dn-continue-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.15rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 170px;
+  min-height: 48px;
+  padding: 0 1.3rem;
+  font: inherit;
+  font-weight: 650;
+  font-size: 0.96rem;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.primary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #0077ed;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dn-panel {
+    animation: none;
+  }
 }
 
 @media (max-width: 760px) {
-  .dn-flow-header {
-    min-height: 42px;
+  .dn-upload-page {
+    width: min(620px, 100%);
   }
 
-  .dn-brand {
-    font-size: 1.35rem;
-  }
-
-  .dn-count-pill {
-    min-width: 34px;
-    min-height: 28px;
-    padding: 0 0.5rem;
-    font-size: 0.78rem;
-  }
-
-  .dn-upload-hero {
-    margin-top: 1rem;
-    padding: 20px;
-  }
-
-  .dn-upload-hero h1 {
-    font-size: 1.32rem;
-  }
-
-  .dn-upload-hero p {
-    font-size: 0.88rem;
+  .dn-panel {
+    padding: 1.25rem 1.15rem;
+    border-radius: var(--radius-md);
   }
 
   .dn-requirement-header {
-    grid-template-columns: auto minmax(0, 1fr);
+    flex-direction: column;
+    gap: 0.8rem;
   }
 
   .dn-rule-status {
-    grid-column: 1 / -1;
+    align-self: flex-start;
   }
 
   .dn-document-options {
     grid-template-columns: 1fr;
   }
 
-  .dn-continue {
+  .dn-continue-row {
+    justify-content: stretch;
+  }
+
+  .primary-btn {
     width: 100%;
   }
 }

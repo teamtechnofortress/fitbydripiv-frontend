@@ -10,7 +10,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['refresh-journey', 'refresh-workflow'])
+const emit = defineEmits(['refreshJourney', 'refreshWorkflow'])
 
 const toDateKey = value => {
   const dateValue = value instanceof Date ? value : new Date(value)
@@ -44,6 +44,7 @@ const message = ref('')
 const slotStart = slot => slot?.scheduled_time || slot?.start_datetime || slot?.start_time || slot?.starts_at || null
 const slotEnd = slot => slot?.end_datetime || slot?.end_time || slot?.ends_at || null
 const slotProviderId = slot => slot?.provider_id || slot?.provider_guid || slot?.provider?.id || null
+
 const slotProviderName = slot => {
   const details = slot?.provider_details || slot?.provider || {}
   const fullName = [details.first_name, details.last_name].filter(Boolean).join(' ').trim()
@@ -234,7 +235,7 @@ const bookSlot = async () => {
     })
 
     message.value = 'Slot booked. Checking your next consultation step.'
-    emit('refresh-journey')
+    emit('refreshJourney')
   } catch (err) {
     if (err?.response?.status === 409 || err?.response?.data?.action === 'refresh_slots') {
       error.value = err?.response?.data?.message || 'This time slot is no longer available. Please select another.'
@@ -260,24 +261,6 @@ onMounted(loadSlots)
     :order-uuid="orderUuid"
   >
     <section class="dn-card">
-      <div class="dn-controls">
-        <label>
-          <span>Timezone</span>
-          <input
-            v-model="timezone"
-            type="text"
-            @change="loadSlots"
-          >
-        </label>
-        <button
-          class="dn-button dn-button--secondary"
-          :disabled="loading"
-          @click="loadSlots"
-        >
-          {{ loading ? 'Loading...' : 'Refresh slots' }}
-        </button>
-      </div>
-
       <div class="dn-scheduler">
         <div class="dn-calendar-panel">
           <div class="dn-calendar-header">
@@ -291,7 +274,14 @@ onMounted(loadSlots)
             </button>
             <div>
               <h3>{{ monthTitle }}</h3>
-              <p>{{ timezone }}</p>
+              <label class="dn-timezone-control">
+                <span>Timezone</span>
+                <input
+                  v-model="timezone"
+                  type="text"
+                  @change="loadSlots"
+                >
+              </label>
             </div>
             <button
               type="button"
@@ -343,7 +333,17 @@ onMounted(loadSlots)
               <p>Selected date</p>
               <h3>{{ selectedDateTitle }}</h3>
             </div>
-            <span>{{ selectedDateSlots.length }} slots</span>
+            <div class="dn-slots-actions">
+              <span>{{ selectedDateSlots.length }} slots</span>
+              <button
+                type="button"
+                class="dn-refresh-button"
+                :disabled="loading"
+                @click="loadSlots"
+              >
+                {{ loading ? 'Loading...' : 'Refresh' }}
+              </button>
+            </div>
           </div>
 
           <div
@@ -375,9 +375,9 @@ onMounted(loadSlots)
               <span class="dn-slot-time">{{ formatSlotRange(slot) }}</span>
               <span class="dn-slot-meta">
                 <span>{{ formatDuration(slot) }}</span>
-                <span>{{ slot.providerName }}</span>
+                <!-- <span>{{ slot.providerName }}</span> -->
               </span>
-              <span class="dn-slot-provider">
+              <!-- <span class="dn-slot-provider">
                 <img
                   v-if="slot.provider_details?.user_avatar || slot.provider?.user_avatar"
                   :src="slot.provider_details?.user_avatar || slot.provider?.user_avatar"
@@ -385,26 +385,25 @@ onMounted(loadSlots)
                 >
                 <span v-else>{{ slot.providerName.slice(0, 1) }}</span>
                 <small>{{ slot.providerId || 'Provider available' }}</small>
-              </span>
+              </span> -->
             </button>
           </div>
         </div>
       </div>
 
-      <div
-        v-if="selectedSlot"
-        class="dn-selection-summary"
-      >
-        <div>
-          <span>Selected appointment</span>
-          <strong>{{ formatSlotRange(selectedSlot) }} with {{ selectedSlot.providerName }}</strong>
-        </div>
-        <img
-          v-if="selectedProvider?.user_avatar"
-          :src="selectedProvider.user_avatar"
-          alt=""
+      <Transition name="selection-expand">
+        <div
+          v-if="selectedSlot"
+          class="dn-selection-summary"
         >
-      </div>
+          <div>
+            <span>Selected appointment</span>
+            <!-- <strong>{{ formatSlotRange(selectedSlot) }} with {{ selectedSlot.providerName }}</strong> -->
+            <strong>{{ formatSlotRange(selectedSlot) }}</strong>
+
+          </div>
+        </div>
+      </Transition>
 
       <p
         v-if="message"
@@ -432,64 +431,125 @@ onMounted(loadSlots)
 
 <style scoped>
 .dn-card {
-  padding: 1.25rem;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --accent: #0071e3;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+  --accent-soft-2: rgba(0, 113, 227, 0.06);
+  --success: #0a7f45;
+  --success-soft: rgba(52, 199, 89, 0.12);
+  --danger: #d92d20;
+  --danger-soft: rgba(255, 59, 48, 0.08);
+  --ink: #1d1d1f;
+  --muted: #637098;
+  --line: #e4e8f5;
+  --surface: #ffffff;
+  --surface-soft: #f7f7fb;
+  box-sizing: border-box;
+  display: grid;
+  gap: 0;
+  width: min(1100px, 100%);
+  padding: 1.15rem;
+  margin: 0 auto;
+  overflow: visible;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 18px 48px rgba(26, 38, 74, 0.08), 0 2px 10px rgba(26, 38, 74, 0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: scheduler-card-in 0.34s cubic-bezier(0.28, 0.11, 0.32, 1) both;
+  transition: min-height 0.28s cubic-bezier(0.28, 0.11, 0.32, 1);
 }
 
-.dn-controls {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto;
-  gap: 0.8rem;
-  align-items: end;
-  padding-bottom: 1rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #e2e8f0;
+@keyframes scheduler-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 label {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.38rem;
 }
 
 label span {
-  color: #475569;
-  font-size: 0.86rem;
-  font-weight: 800;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 input {
   width: 100%;
   min-height: 44px;
-  padding: 0.65rem 0.75rem;
-  color: #0f172a;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  padding: 0 0.85rem;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 520;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+input:focus {
+  background: #ffffff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12);
+}
+
+.dn-timezone-control {
+  width: min(220px, 100%);
+  margin-top: 0.45rem;
+}
+
+.dn-timezone-control input {
+  min-height: 34px;
+  padding: 0 0.65rem;
+  font-size: 0.78rem;
+  border-radius: 10px;
 }
 
 .dn-empty {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 1rem;
-  color: #475569;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 560;
+  background: #ffffff;
+  border: 1px dashed #ccd6eb;
   border-radius: 14px;
 }
 
 .dn-scheduler {
   display: grid;
-  grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(300px, 0.86fr) minmax(0, 1.14fr);
   gap: 1rem;
+  height: clamp(460px, calc(100dvh - 320px), 590px);
+  min-height: 0;
+  transition: height 0.28s cubic-bezier(0.28, 0.11, 0.32, 1);
 }
 
 .dn-calendar-panel,
 .dn-slots-panel {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
   padding: 1rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
   border-radius: 16px;
 }
 
@@ -497,6 +557,7 @@ input {
 .dn-slots-header {
   display: flex;
   gap: 0.75rem;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
@@ -505,62 +566,111 @@ input {
 .dn-calendar-header h3,
 .dn-slots-header h3 {
   margin: 0;
-  color: #0f172a;
-  font-size: 1.05rem;
-  font-weight: 900;
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 670;
+  line-height: 1.2;
 }
 
 .dn-calendar-header p,
 .dn-slots-header p {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.8rem;
-  font-weight: 750;
+  margin: 0 0 0.2rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 650;
 }
 
-.dn-slots-header > span {
+.dn-slots-actions {
+  display: inline-flex;
   flex: 0 0 auto;
-  padding: 0.35rem 0.65rem;
-  color: #075985;
-  font-size: 0.78rem;
-  font-weight: 850;
-  background: #e0f2fe;
-  border: 1px solid #bae6fd;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dn-slots-actions > span {
+  padding: 0.36rem 0.64rem;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 680;
+  white-space: nowrap;
+  background: var(--accent-soft);
   border-radius: 999px;
+}
+
+.dn-refresh-button {
+  min-height: 34px;
+  padding: 0 0.75rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 680;
+  line-height: 1;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.dn-refresh-button:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft-2);
+  border-color: rgba(0, 113, 227, 0.24);
+  transform: translateY(-1px);
+}
+
+.dn-refresh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .dn-icon-button {
   display: inline-grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  color: #0f172a;
+  width: 38px;
+  height: 38px;
+  color: var(--ink);
   background: #ffffff;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--line);
   border-radius: 12px;
   cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.dn-icon-button:hover {
+  background: var(--accent-soft-2);
+  border-color: rgba(0, 113, 227, 0.24);
+  transform: translateY(-1px);
 }
 
 .dn-weekdays,
 .dn-month-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 0.34rem;
 }
 
 .dn-weekdays {
+  flex: 0 0 auto;
   margin-bottom: 0.45rem;
 }
 
+.dn-month-grid {
+  flex: 1 1 auto;
+  grid-auto-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
 .dn-weekdays span {
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 850;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-align: center;
 }
 
 .dn-day-cell {
-  aspect-ratio: 1;
+  min-height: 0;
 }
 
 .dn-day-cell.blank {
@@ -573,98 +683,126 @@ input {
   place-items: center;
   width: 100%;
   height: 100%;
-  color: #334155;
-  font-weight: 850;
+  min-height: 0;
+  color: #3f4652;
+  font-size: 0.86rem;
+  font-weight: 650;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--line);
   border-radius: 12px;
   cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.dn-day-cell button:hover {
+  border-color: rgba(0, 113, 227, 0.24);
+  transform: translateY(-1px);
 }
 
 .dn-day-cell.today button {
-  color: #075985;
-  border-color: #7dd3fc;
+  color: var(--accent);
+  border-color: rgba(0, 113, 227, 0.35);
 }
 
 .dn-day-cell.selected button {
   color: #ffffff;
-  background: #0f172a;
-  border-color: #0f172a;
-  box-shadow: 0 12px 25px rgba(15, 23, 42, 0.18);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 10px 22px rgba(0, 113, 227, 0.18);
 }
 
 .dn-day-cell.available:not(.selected) button {
-  border-color: #86efac;
+  background: #ffffff;
+  border-color: rgba(0, 113, 227, 0.22);
 }
 
 .dn-day-cell small {
   position: absolute;
-  right: 0.25rem;
-  bottom: 0.25rem;
+  right: 0.22rem;
+  bottom: 0.22rem;
   display: inline-grid;
   place-items: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 0.25rem;
-  color: #065f46;
-  font-size: 0.68rem;
-  font-weight: 900;
-  background: #dcfce7;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 0.24rem;
+  color: var(--accent);
+  font-size: 0.64rem;
+  font-weight: 720;
+  background: var(--accent-soft);
   border-radius: 999px;
 }
 
 .dn-day-cell.selected small {
-  color: #0f172a;
+  color: var(--accent);
   background: #ffffff;
 }
 
 .dn-slots {
   display: grid;
-  gap: 0.7rem;
-  max-height: 480px;
-  padding-right: 0.25rem;
+  align-content: start;
+  flex: 1 1 auto;
+  gap: 0.65rem;
+  min-height: 0;
+  max-height: none;
+  padding-right: 0.2rem;
   overflow: auto;
+}
+
+.dn-slots::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dn-slots::-webkit-scrollbar-thumb {
+  background: #d9dfef;
+  border-radius: 999px;
 }
 
 .dn-slot {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.55rem 0.8rem;
   align-items: center;
-  min-height: 92px;
-  padding: 0.9rem;
+  min-height: 88px;
+  padding: 0.85rem;
   text-align: left;
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
+  border: 1px solid var(--line);
   border-radius: 14px;
   cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.dn-slot:hover {
+  border-color: rgba(0, 113, 227, 0.24);
+  transform: translateY(-1px);
 }
 
 .dn-slot.active {
-  background: #ecfdf5;
-  border-color: #059669;
-  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.12);
+  background: rgba(0, 113, 227, 0.045);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.11);
 }
 
 .dn-slot-time {
-  color: #0f172a;
-  font-size: 1rem;
-  font-weight: 850;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 680;
 }
 
 .dn-slot-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.38rem;
   grid-column: 1 / -1;
 }
 
 .dn-slot-meta span {
   padding: 0.3rem 0.55rem;
-  color: #334155;
-  font-size: 0.78rem;
-  font-weight: 800;
-  background: #f1f5f9;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 620;
+  background: var(--surface-soft);
   border-radius: 999px;
 }
 
@@ -681,9 +819,9 @@ input {
   place-items: center;
   width: 32px;
   height: 32px;
-  color: #0f172a;
-  font-weight: 900;
-  background: #e0f2fe;
+  color: var(--accent);
+  font-weight: 720;
+  background: var(--accent-soft);
   border-radius: 999px;
 }
 
@@ -694,9 +832,9 @@ input {
 .dn-slot-provider small {
   max-width: 150px;
   overflow: hidden;
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 620;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -706,81 +844,140 @@ input {
   gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
-  margin-top: 1rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  padding: 0.95rem 1rem;
+  margin-top: 0.9rem;
+  background: var(--accent-soft-2);
+  border: 1px solid rgba(0, 113, 227, 0.18);
   border-radius: 16px;
 }
 
 .dn-selection-summary span {
   display: block;
-  color: #047857;
-  font-size: 0.8rem;
-  font-weight: 850;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .dn-selection-summary strong {
-  color: #0f172a;
-  font-weight: 900;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 670;
 }
 
 .dn-selection-summary img {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   object-fit: cover;
   border: 2px solid #ffffff;
   border-radius: 999px;
 }
 
+.selection-expand-enter-active,
+.selection-expand-leave-active {
+  overflow: hidden;
+  transition: opacity 0.24s cubic-bezier(0.28, 0.11, 0.32, 1), max-height 0.28s cubic-bezier(0.28, 0.11, 0.32, 1), margin-top 0.28s cubic-bezier(0.28, 0.11, 0.32, 1);
+}
+
+.selection-expand-enter-from,
+.selection-expand-leave-to {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+}
+
+.selection-expand-enter-to,
+.selection-expand-leave-from {
+  max-height: 140px;
+  opacity: 1;
+}
+
 .dn-button {
-  min-height: 48px;
-  padding: 0.75rem 1.15rem;
-  margin-top: 1rem;
+  min-height: 44px;
+  padding: 0 1.05rem;
   color: #ffffff;
-  font-weight: 850;
-  background: linear-gradient(135deg, #059669, #0284c7);
+  font-size: 0.9rem;
+  font-weight: 680;
+  line-height: 1;
+  background: var(--accent);
   border: 0;
   border-radius: 999px;
   cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0, 113, 227, 0.18);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.dn-button:hover:not(:disabled) {
+  background: #0068d6;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(0, 113, 227, 0.22);
 }
 
 .dn-button--secondary {
-  margin-top: 0;
-  color: #065f46;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.dn-button--secondary:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft-2);
+  border-color: rgba(0, 113, 227, 0.24);
+  box-shadow: none;
 }
 
 .dn-button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+  transform: none;
+  box-shadow: none;
 }
 
 .dn-card > .dn-button:not(.dn-button--secondary) {
   width: 100%;
+  margin-top: 0.9rem;
 }
 
 .dn-message {
-  margin: 1rem 0 0;
-  font-weight: 750;
+  margin: 0.9rem 0 0;
+  padding: 0.72rem 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 620;
+  line-height: 1.4;
+  border-radius: 12px;
 }
 
 .dn-message--success {
-  color: #065f46;
+  color: var(--success);
+  background: var(--success-soft);
 }
 
 .dn-message--error {
-  color: #b91c1c;
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 @media (max-width: 780px) {
-  .dn-controls {
-    grid-template-columns: 1fr;
+  .dn-card {
+    height: auto;
+    padding: 1rem;
+    overflow: visible;
+    border-radius: 18px;
   }
 
   .dn-scheduler {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .dn-slots {
+    max-height: 360px;
+  }
+
+  .dn-day-cell {
+    aspect-ratio: 1;
   }
 
   .dn-slot {
@@ -789,6 +986,44 @@ input {
 
   .dn-slot-provider {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .dn-card {
+    padding: 0.85rem;
+  }
+
+  .dn-calendar-panel,
+  .dn-slots-panel {
+    padding: 0.85rem;
+  }
+
+  .dn-weekdays,
+  .dn-month-grid {
+    gap: 0.25rem;
+  }
+
+  .dn-day-cell button {
+    border-radius: 10px;
+  }
+
+  .dn-selection-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dn-card {
+    animation: none;
+  }
+
+  .dn-button,
+  .dn-day-cell button,
+  .dn-icon-button,
+  .dn-slot {
+    transition: none;
   }
 }
 </style>

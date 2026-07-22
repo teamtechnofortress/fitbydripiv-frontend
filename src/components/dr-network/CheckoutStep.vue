@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import IntakeOrderConfirmation from '@/pages/site/intake/components/IntakeOrderConfirmation.vue'
+import CheckoutOrderConfirmation from '@/components/dr-network/CheckoutOrderConfirmation.vue'
 import { devLog } from '@/utils/devLogger'
 
 const props = defineProps({
@@ -32,6 +32,7 @@ const debugCheckoutStep = (event, payload = {}) => {
 
 const normalizeConfirmationData = journey => {
   const source = journey || {}
+
   const summary = source.checkout
     || source.checkout_summary
     || source.order_summary
@@ -40,6 +41,7 @@ const normalizeConfirmationData = journey => {
     || source
 
   const sourceOrder = summary.order || source.order || {}
+
   const order = {
     ...sourceOrder,
     order_uuid: pickFirst(sourceOrder.order_uuid, source.order_uuid, props.orderUuid),
@@ -68,7 +70,7 @@ const confirmationData = computed(() => appliedOrderState.value || normalizeConf
 
 const confirmationMessage = computed(() => (
   props.journey?.message
-  || 'Your intake has been received. Review your treatment selection and order totals below before proceeding to checkout.'
+  || 'Your patient information has been saved. Review your treatment selection and order totals below before proceeding to checkout.'
 ))
 
 const updateOrderState = value => {
@@ -94,9 +96,10 @@ watch(
 </script>
 
 <template>
-  <IntakeOrderConfirmation
+  <CheckoutOrderConfirmation
     :confirmation-data="confirmationData"
     :confirmation-message="confirmationMessage"
+    :order-uuid="orderUuid"
     @updated="updateOrderState"
   />
 </template>

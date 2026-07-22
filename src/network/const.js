@@ -190,10 +190,8 @@ export const DELETE_INVOICING_SALES_REPORT = SERVER_URL + "/delete/invoicing-sal
 export const SAVE_SIGNATURE_URL = SERVER_URL + "/save/signature"
 export const GET_SIGNATURE_URL = SERVER_URL + "/get/signature"
 
-// Preferred intake endpoints after backend intake refactor.
-export const PATIENT_INTAKE_FORM_URL = SERVER_URL + "/patients/intake-form"
+// Patient info support endpoints.
 export const INTAKE_STATES_URL = SERVER_URL + "/intake/states"
-export const getIntakeSubmissionUrl = orderUuid => `${SERVER_URL}/intake/${orderUuid}`
 export const getPatientIntakesUrl = patientId => `${SERVER_URL}/patients/${patientId}/intakes`
 export const getPatientIntakeDetailUrl = (patientId, intakeId) => `${SERVER_URL}/patients/${patientId}/intakes/${intakeId}`
 
@@ -212,6 +210,7 @@ export const CMS_GET_FAQS = SERVER_URL + "/cms/faqs"
 export const CMS_GET_SITE_SETTINGS = SERVER_URL + "/cms/site-settings"
 export const CMS_SUBMIT_CONTACT = SERVER_URL + "/cms/contact"
 export const getContentPageUrl = slug => `${SERVER_URL}/content/pages/${slug}`
+export const PUBLIC_GENERAL_SETTINGS_URL = SERVER_URL + "/content/settings?group=general"
 export const PUBLIC_LAYOUT_URL = SERVER_URL + "/layout"
 export const getPublicPdfDownloadUrl = (path, name = '') => {
   const normalizedPath = encodeURIComponent(String(path || '').replace(/^\/+/, ''))
@@ -332,6 +331,7 @@ export const getAdminDrNetworkDocumentRulePreviewUrl = ruleId => `${SERVER_URL}/
 export const getOrderBySessionUrl = sessionId => `${SERVER_URL}/orders/by-session/${sessionId}`
 export const getCheckoutPaymentConfirmationUrl = sessionId => `${CHECKOUT_PAYMENT_CONFIRMATION_URL}?session_id=${encodeURIComponent(sessionId)}`
 export const getOrderJourneyUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/journey`
+export const getOrderPatientInfoUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/patient-info`
 export const getDrNetworkCurrentStepUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/dr-network/current-step`
 export const getDrNetworkDocumentsUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/documents`
 export const getDrNetworkDocumentsCompleteUrl = orderUuid => `${SERVER_URL}/orders/${encodeURIComponent(orderUuid)}/documents/complete`
